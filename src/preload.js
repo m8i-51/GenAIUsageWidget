@@ -5,4 +5,5 @@ contextBridge.exposeInMainWorld('api', {
   getCodexUsage: () => ipcRenderer.invoke('get-codex-usage'),
   getCursorUsage: () => ipcRenderer.invoke('get-cursor-usage'),
   getAntigravityUsage: () => ipcRenderer.invoke('get-antigravity-usage'),
+  resizeTo: (height) => ipcRenderer.send('resize-to', height),
 });

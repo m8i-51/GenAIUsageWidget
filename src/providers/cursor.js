@@ -2,6 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const initSqlJs = require('sql.js');
+const { notConfigured } = require('./not-configured');
 
 function getStateDbPath() {
   if (process.platform === 'win32') {
@@ -16,7 +17,15 @@ function getStateDbPath() {
 
 async function readAccessToken() {
   const dbPath = getStateDbPath();
-  const fileBuffer = fs.readFileSync(dbPath);
+  let fileBuffer;
+  try {
+    fileBuffer = fs.readFileSync(dbPath);
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      throw notConfigured('Cursor is not installed on this machine');
+    }
+    throw err;
+  }
   const SQL = await initSqlJs();
   const db = new SQL.Database(fileBuffer);
 
@@ -25,7 +34,7 @@ async function readAccessToken() {
 
   const token = result?.[0]?.values?.[0]?.[0];
   if (!token) {
-    throw new Error('cursorAuth/accessToken not found in state.vscdb');
+    throw notConfigured('Cursor is not signed in on this machine');
   }
   return token;
 }
@@ -61,6 +70,8 @@ async function fetchCursorUsage() {
 
   return {
     percent: plan?.totalPercentUsed ?? null,
+    autoPercent: plan?.autoPercentUsed ?? null,
+    apiPercent: plan?.apiPercentUsed ?? null,
     billingCycleEnd: data.billingCycleEnd ?? null,
   };
 }
