@@ -1,0 +1,17 @@
+{
+  "name": "codex-tray-bar",
+  "version": "0.1.0",
+  "description": "Cross-platform tray app tracking AI coding provider usage limits (inspired by CodexBar)",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^32.0.0"
+  },
+  "dependencies": {
+    "sql.js": "^1.14.1"
+  }
+}
