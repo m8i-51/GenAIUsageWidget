@@ -1,5 +1,6 @@
 const path = require('path');
 const { execFileSync } = require('child_process');
+const { notConfigured } = require('./not-configured');
 
 const CRED_TARGET = 'gemini:antigravity';
 const LOAD_CODE_ASSIST_URL = 'https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist';
@@ -7,14 +8,20 @@ const QUOTA_SUMMARY_URL = 'https://cloudcode-pa.googleapis.com/v1internal:retrie
 
 function readAccessToken() {
   if (process.platform !== 'win32') {
-    throw new Error('Antigravity provider currently only supports Windows Credential Manager');
+    throw notConfigured('Antigravity provider currently only supports Windows Credential Manager');
   }
   const scriptPath = path.join(__dirname, 'win-cred-read.py');
-  const output = execFileSync('python', [scriptPath, CRED_TARGET], { encoding: 'utf8' });
+  let output;
+  try {
+    output = execFileSync('python', [scriptPath, CRED_TARGET], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  } catch (err) {
+    // Python missing, or the gemini:antigravity credential doesn't exist.
+    throw notConfigured('Antigravity credential not available (needs agy sign-in and Python)');
+  }
   const parsed = JSON.parse(output);
   const token = parsed?.token?.access_token;
   if (!token) {
-    throw new Error('access_token not found in gemini:antigravity credential');
+    throw notConfigured('access_token not found in gemini:antigravity credential');
   }
   return token;
 }

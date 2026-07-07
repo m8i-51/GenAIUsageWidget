@@ -1,7 +1,8 @@
 {
-  "name": "codex-tray-bar",
+  "name": "genai-usage-widget",
+  "productName": "GenAIUsageWidget",
   "version": "0.1.0",
-  "description": "Cross-platform tray app tracking AI coding provider usage limits (inspired by CodexBar)",
+  "description": "Cross-platform tray app / desktop widget tracking AI coding provider usage limits (inspired by CodexBar)",
   "main": "src/main.js",
   "scripts": {
     "start": "electron ."

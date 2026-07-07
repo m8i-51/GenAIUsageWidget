@@ -1,16 +1,25 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { notConfigured } = require('./not-configured');
 
 const AUTH_PATH = path.join(os.homedir(), '.codex', 'auth.json');
 const USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage';
 
 function readAccessToken() {
-  const raw = fs.readFileSync(AUTH_PATH, 'utf8');
+  let raw;
+  try {
+    raw = fs.readFileSync(AUTH_PATH, 'utf8');
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      throw notConfigured('Codex CLI is not signed in on this machine');
+    }
+    throw err;
+  }
   const auth = JSON.parse(raw);
   const token = auth?.tokens?.access_token;
   if (!token) {
-    throw new Error('access_token not found in auth file');
+    throw notConfigured('access_token not found in auth file');
   }
   return token;
 }
