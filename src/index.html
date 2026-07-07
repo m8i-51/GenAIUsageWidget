@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>Codex Tray Bar</title>
+<style>
+  :root {
+    color-scheme: light dark;
+
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --border: rgba(11, 11, 11, 0.10);
+    --gridline: #e1e0d9;
+
+    --accent: #2a78d6;
+    --warning: #fab219;
+    --critical: #d03b3b;
+
+    --id-claude: #4a3aa7;
+    --id-codex: #1baf7a;
+    --id-cursor: #e87ba4;
+    --id-antigravity: #eb6834;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-1: #1a1a19;
+      --page: #0d0d0d;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted: #898781;
+      --border: rgba(255, 255, 255, 0.10);
+      --gridline: #2c2c2a;
+
+      --accent: #3987e5;
+      --warning: #fab219;
+      --critical: #d03b3b;
+
+      --id-claude: #9085e9;
+      --id-codex: #199e70;
+      --id-cursor: #d55181;
+      --id-antigravity: #d95926;
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  body.widget-mode {
+    background: transparent;
+  }
+
+  body.widget-mode .app {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    padding: 12px;
+  }
+
+  body.widget-mode .app-header {
+    -webkit-app-region: drag;
+    cursor: move;
+  }
+
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 4px 4px;
+  }
+
+  .app-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .app-updated {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  .tile {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+
+  body.widget-mode .tile {
+    background: rgba(127, 127, 127, 0.06);
+  }
+
+  .tile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .tile-identity {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .tile-label {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tile-value {
+    font-size: 15px;
+    font-weight: 600;
+    font-variant-numeric: proportional-nums;
+    flex-shrink: 0;
+  }
+
+  .meter {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--gridline);
+    overflow: hidden;
+  }
+
+  .meter-fill {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    background: var(--accent);
+    transition: width 0.3s ease, background-color 0.3s ease;
+  }
+
+  .meter-fill.warning {
+    background: var(--warning);
+  }
+
+  .meter-fill.critical {
+    background: var(--critical);
+  }
+
+  .tile-sub {
+    margin-top: 7px;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  .tile-sub.error {
+    color: var(--critical);
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="app-header">
+      <span class="app-title">AI Usage</span>
+      <span class="app-updated" id="last-updated"></span>
+    </div>
+
+    <div class="tile" id="claude-provider">
+      <div class="tile-header">
+        <span class="tile-identity">
+          <span class="dot" style="background: var(--id-claude)"></span>
+          <span class="tile-label">Claude</span>
+        </span>
+        <span class="tile-value" id="claude-value">–</span>
+      </div>
+      <div class="meter"><span class="meter-fill" id="claude-bar" style="width: 0%"></span></div>
+      <div class="tile-sub" id="claude-reset">Loading…</div>
+    </div>
+
+    <div class="tile" id="codex-provider">
+      <div class="tile-header">
+        <span class="tile-identity">
+          <span class="dot" style="background: var(--id-codex)"></span>
+          <span class="tile-label">Codex</span>
+        </span>
+        <span class="tile-value" id="codex-value">–</span>
+      </div>
+      <div class="meter"><span class="meter-fill" id="codex-bar" style="width: 0%"></span></div>
+      <div class="tile-sub" id="codex-reset">Loading…</div>
+    </div>
+
+    <div class="tile" id="cursor-provider">
+      <div class="tile-header">
+        <span class="tile-identity">
+          <span class="dot" style="background: var(--id-cursor)"></span>
+          <span class="tile-label">Cursor</span>
+        </span>
+        <span class="tile-value" id="cursor-value">–</span>
+      </div>
+      <div class="meter"><span class="meter-fill" id="cursor-bar" style="width: 0%"></span></div>
+      <div class="tile-sub" id="cursor-reset">Loading…</div>
+    </div>
+
+    <div class="tile" id="antigravity-provider">
+      <div class="tile-header">
+        <span class="tile-identity">
+          <span class="dot" style="background: var(--id-antigravity)"></span>
+          <span class="tile-label">Antigravity</span>
+        </span>
+        <span class="tile-value" id="antigravity-value">–</span>
+      </div>
+      <div class="meter"><span class="meter-fill" id="antigravity-bar" style="width: 0%"></span></div>
+      <div class="tile-sub" id="antigravity-reset">Loading…</div>
+    </div>
+  </div>
+
+  <script>
+    if (new URLSearchParams(window.location.search).get('mode') === 'widget') {
+      document.body.classList.add('widget-mode');
+    }
+  </script>
+  <script src="renderer.js"></script>
+</body>
+</html>
