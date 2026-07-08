@@ -21,6 +21,7 @@
   "build": {
     "appId": "com.github.m8i-51.genaiusagewidget",
     "productName": "GenAIUsageWidget",
+    "publish": null,
     "directories": {
       "output": "dist"
     },
