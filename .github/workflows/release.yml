@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -32,9 +32,18 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
+      # Every push to main gets its own release, tagged by date + short sha
+      # so it's unique without requiring a manual package.json version bump.
+      - name: Compute release tag
+        id: tag
+        shell: bash
+        run: echo "tag=v$(date -u +%Y.%m.%d)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.tag }}
           files: |
             dist/*.exe
             dist/*.AppImage
