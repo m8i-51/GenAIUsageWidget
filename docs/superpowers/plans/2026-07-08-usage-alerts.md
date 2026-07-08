@@ -104,6 +104,7 @@ const PROVIDER_LABELS = {
   codex: 'Codex',
   cursor: 'Cursor',
   antigravity: 'Antigravity',
+  copilot: 'Copilot',
 };
 
 // per provider: { warning: 'below'|'notified', critical: 'below'|'notified' }
@@ -301,7 +302,20 @@ reportUsage('antigravity', maxPercent, true, { label: 'max group' });
 
 （`maxPercent` は既存の `setMeter` 用変数を再利用）
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: `updateCopilotCard()`**（[Copilot プロバイダプラン](2026-07-08-github-copilot-provider.md) 実装後）
+
+エラー時: `reportUsage('copilot', null, false)`  
+primary/secondary なし: `reportUsage('copilot', null, true)`  
+成功時:
+
+```javascript
+const headline = primary ?? secondary;
+reportUsage('copilot', headline?.percent ?? null, true, {
+  label: primary ? 'premium' : 'chat',
+});
+```
+
+- [ ] **Step 7: Commit**
 
 ```bash
 git add src/renderer.js
