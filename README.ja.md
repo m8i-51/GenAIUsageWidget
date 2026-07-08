@@ -43,6 +43,24 @@ npm install
 npm start
 ```
 
+### インストーラ
+
+タグ付きバージョンごとに、ビルド済みインストーラ(Windows `.exe`、Linux
+`.AppImage` / `.deb`)を[Releasesページ](https://github.com/m8i-51/GenAIUsageWidget/releases)
+に公開しています。[`.github/workflows/release.yml`](.github/workflows/release.yml)
+が自動でビルドします。
+
+自分でビルドする場合:
+
+```
+npm install
+npm run dist -- --win     # Windowsインストーラ (dist/*.exe)
+npm run dist -- --linux   # Linux AppImage + deb (dist/*.AppImage, dist/*.deb)
+```
+
+PC起動時の自動起動にも対応しています — トレイアイコンの右クリックメニューの
+「Start at Login」で切り替えられます(デフォルトOFF)。
+
 ## 各プロバイダの認証情報の取得元
 
 | プロバイダ | 取得元 | 備考 |
@@ -74,3 +92,5 @@ assets/icon.png        トレイアイコン
 - Antigravity対応はWindowsとLinuxです。macOSは未対応です(Cursor/Claude/CodexはmacOSも含めクロスプラットフォーム)。
 - トークンのリフレッシュ処理は未実装です — プロバイダのトークンが期限切れになると、
   各プロバイダのCLI/アプリで再認証するまでカードはエラー表示になります。
+- インストーラは未署名です。初回実行時にWindows SmartScreenやLinuxのパッケージ
+  マネージャーが警告を出すことがあります(Windowsは「詳細情報」→「実行」で進めます)。

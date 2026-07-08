@@ -5,14 +5,51 @@
   "description": "Cross-platform tray app / desktop widget tracking AI coding provider usage limits (inspired by CodexBar)",
   "main": "src/main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "electron-builder"
   },
-  "author": "",
+  "author": "m8i-51 <51511166+m8i-51@users.noreply.github.com>",
+  "homepage": "https://github.com/m8i-51/GenAIUsageWidget",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^32.0.0"
+    "electron": "^32.0.0",
+    "electron-builder": "^25.1.8"
   },
   "dependencies": {
     "sql.js": "^1.14.1"
+  },
+  "build": {
+    "appId": "com.github.m8i-51.genaiusagewidget",
+    "productName": "GenAIUsageWidget",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/sql.js/dist/*.wasm"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.png",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "runAfterFinish": false
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Utility"
+    }
   }
 }
