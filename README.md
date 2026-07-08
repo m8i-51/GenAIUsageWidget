@@ -43,6 +43,24 @@ npm install
 npm start
 ```
 
+### Installers
+
+Prebuilt installers (Windows `.exe`, Linux `.AppImage` / `.deb`) are published
+on the [Releases page](https://github.com/m8i-51/GenAIUsageWidget/releases)
+for every tagged version, built automatically by
+[`.github/workflows/release.yml`](.github/workflows/release.yml).
+
+To build them yourself:
+
+```
+npm install
+npm run dist -- --win     # Windows installer (dist/*.exe)
+npm run dist -- --linux   # Linux AppImage + deb (dist/*.AppImage, dist/*.deb)
+```
+
+The app can launch automatically at login — toggle **Start at Login** from the
+tray icon's right-click menu (off by default).
+
 ## Where each provider's credentials come from
 
 | Provider | Source | Notes |
@@ -74,3 +92,5 @@ assets/icon.png        Tray icon
 - Antigravity support covers Windows and Linux; macOS isn't implemented yet (Cursor/Claude/Codex are cross-platform including macOS).
 - No token-refresh handling yet — if a provider's token expires, its card shows
   an error until you re-authenticate with that provider's own CLI/app.
+- Installers are unsigned, so Windows SmartScreen / Linux package managers may
+  warn on first run — click through ("More info" → "Run anyway" on Windows).

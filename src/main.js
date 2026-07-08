@@ -5,6 +5,7 @@ const { fetchClaudeUsage } = require('./providers/claude');
 const { fetchCodexUsage } = require('./providers/codex');
 const { fetchCursorUsage } = require('./providers/cursor');
 const { fetchAntigravityUsage } = require('./providers/antigravity');
+const autostart = require('./autostart');
 
 let tray = null;
 let popup = null;
@@ -120,6 +121,13 @@ function createTray() {
       {
         label: widget?.isVisible() ? 'Hide Desktop Widget' : 'Show Desktop Widget',
         click: () => toggleWidget(),
+      },
+      { type: 'separator' },
+      {
+        label: 'Start at Login',
+        type: 'checkbox',
+        checked: autostart.isEnabled(),
+        click: (menuItem) => autostart.setEnabled(menuItem.checked),
       },
       { type: 'separator' },
       { label: 'Quit', click: () => app.quit() },
