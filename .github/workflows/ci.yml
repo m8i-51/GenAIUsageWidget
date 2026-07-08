@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            build-args: --win --dir
+          - os: ubuntu-latest
+            build-args: --linux --dir
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # --dir skips installer creation (NSIS/AppImage/deb) and just verifies
+      # the packaging pipeline (asar, icon, file layout) still works.
+      - run: npm run dist -- ${{ matrix.build-args }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
