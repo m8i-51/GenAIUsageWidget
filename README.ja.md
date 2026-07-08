@@ -50,7 +50,7 @@ npm start
 | Claude | `~/.claude/.credentials.json` | Claude Code CLI のログイン時に書き込まれます |
 | Codex | `~/.codex/auth.json` | `codex` CLI が書き込みます(`npm i -g @openai/codex` → `codex login`) |
 | Cursor | Cursorアプリの `state.vscdb`(SQLite、`sql.js` 経由) | Cursorデスクトップアプリのインストールとサインインが必要です |
-| Antigravity | Windows資格情報マネージャー、ターゲット `gemini:antigravity` | `agy` CLI(`winget install Google.AntigravityCLI`)で一度サインインしている必要があります。**Windows専用** — 小さなPythonヘルパースクリプト(`src/providers/win-cred-read.py`)で資格情報を読むため、Pythonが `PATH` にある必要があります。 |
+| Antigravity | Windowsは資格情報マネージャー(ターゲット `gemini:antigravity`)、Linuxは `~/.gemini/antigravity-cli/antigravity-oauth-token` | `agy` CLI で一度サインインしている必要があります(Windowsは `winget install Google.AntigravityCLI`、Linuxは公式インストールスクリプト)。Windowsでは小さなPythonヘルパースクリプト(`src/providers/win-cred-read.py`)で資格情報を読むため、Pythonが `PATH` にある必要があります。LinuxはプレーンなJSONファイルを直接読むだけで追加の依存はありません。macOSは未対応です。 |
 
 プロバイダが未セットアップの場合、そのカードは非表示になります。セットアップ済み
 なのにAPI呼び出しが失敗した場合はエラー表示になります(Claudeの場合は、最後に
@@ -71,6 +71,6 @@ assets/icon.png        トレイアイコン
 
 ## 既知の制限
 
-- Antigravity対応は今のところWindowsのみです(Cursor/Claude/Codexはクロスプラットフォーム)。
+- Antigravity対応はWindowsとLinuxです。macOSは未対応です(Cursor/Claude/CodexはmacOSも含めクロスプラットフォーム)。
 - トークンのリフレッシュ処理は未実装です — プロバイダのトークンが期限切れになると、
   各プロバイダのCLI/アプリで再認証するまでカードはエラー表示になります。
