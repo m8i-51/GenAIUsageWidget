@@ -50,7 +50,7 @@ npm start
 | Claude | `~/.claude/.credentials.json` | Written by the Claude Code CLI on login |
 | Codex | `~/.codex/auth.json` | Written by the `codex` CLI (`npm i -g @openai/codex`, then `codex login`) |
 | Cursor | Cursor app's `state.vscdb` (SQLite, via `sql.js`) | Requires the Cursor desktop app to be installed and signed in |
-| Antigravity | Windows Credential Manager, target `gemini:antigravity` | Requires the `agy` CLI (`winget install Google.AntigravityCLI`) to have been used to sign in at least once. **Windows only** — reads the credential via a small Python helper script (`src/providers/win-cred-read.py`), so Python must be on `PATH`. |
+| Antigravity | Windows Credential Manager (target `gemini:antigravity`) on Windows; `~/.gemini/antigravity-cli/antigravity-oauth-token` on Linux | Requires the `agy` CLI to have been used to sign in at least once (`winget install Google.AntigravityCLI` on Windows, or the official install script on Linux). On Windows the credential is read via a small Python helper script (`src/providers/win-cred-read.py`), so Python must be on `PATH`. On Linux it's a plain JSON file, no extra dependency needed. Not yet supported on macOS. |
 
 If a provider isn't set up, its card is hidden. If a provider is set up but its
 API call fails, the card shows an error state (or, for Claude, the last
@@ -71,6 +71,6 @@ assets/icon.png        Tray icon
 
 ## Known limitations
 
-- Antigravity support is Windows-only for now (Cursor/Claude/Codex are cross-platform).
+- Antigravity support covers Windows and Linux; macOS isn't implemented yet (Cursor/Claude/Codex are cross-platform including macOS).
 - No token-refresh handling yet — if a provider's token expires, its card shows
   an error until you re-authenticate with that provider's own CLI/app.
