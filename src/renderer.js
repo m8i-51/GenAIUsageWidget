@@ -177,17 +177,36 @@ async function updateAntigravityCard() {
     return;
   }
 
-  const maxPercent = Math.max(...groups.map((g) => g.percent ?? 0));
+  const allBuckets = groups.flatMap((g) => g.buckets ?? []);
+  const maxPercent = allBuckets.length > 0 ? Math.max(...allBuckets.map((b) => b.percent ?? 0)) : 0;
   setMeter('antigravity', maxPercent);
-  // One group per line (name + percent only, so a line never wraps);
-  // reset countdowns live in the expanded detail rows.
-  resetEl.textContent = groups.map((g) => `${g.name} ${g.percent}%`).join('\n');
+
+  const groupSummaries = groups.map((g) => {
+    const groupMax = g.buckets && g.buckets.length > 0 ? Math.max(...g.buckets.map((b) => b.percent ?? 0)) : 0;
+    return `${g.name} ${groupMax}%`;
+  });
+  resetEl.textContent = groupSummaries.join('\n');
   resetEl.style.webkitLineClamp = String(groups.length);
-  setDetail('antigravity', groups.map((g) => ({
-    label: g.name,
-    percent: g.percent,
-    sub: `resets in ${formatCountdown(g.resetsAt)}`,
-  })));
+
+  const detailRows = [];
+  groups.forEach((g) => {
+    if (g.buckets && g.buckets.length > 0) {
+      g.buckets.forEach((b) => {
+        detailRows.push({
+          label: `${g.name} (${b.name})`,
+          percent: b.percent,
+          sub: `resets in ${formatCountdown(b.resetsAt)}`,
+        });
+      });
+    } else {
+      detailRows.push({
+        label: g.name,
+        percent: g.percent,
+        sub: g.resetsAt ? `resets in ${formatCountdown(g.resetsAt)}` : null,
+      });
+    }
+  });
+  setDetail('antigravity', detailRows);
 }
 
 async function updateAll() {

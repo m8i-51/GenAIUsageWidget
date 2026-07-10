@@ -29,6 +29,14 @@ class CREDENTIAL(ctypes.Structure):
 
 def read_credential(target):
     advapi32 = ctypes.windll.advapi32
+    advapi32.CredReadW.argtypes = [
+        wintypes.LPWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        ctypes.POINTER(ctypes.POINTER(CREDENTIAL))
+    ]
+    advapi32.CredReadW.restype = wintypes.BOOL
+
     cred_ptr = ctypes.POINTER(CREDENTIAL)()
     ok = advapi32.CredReadW(target, CRED_TYPE_GENERIC, 0, ctypes.byref(cred_ptr))
     if not ok:
