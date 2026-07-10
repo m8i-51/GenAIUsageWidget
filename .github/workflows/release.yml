@@ -15,8 +15,10 @@ jobs:
         include:
           - os: windows-latest
             build-args: --win
+            artifact-name: windows
           - os: ubuntu-latest
             build-args: --linux
+            artifact-name: linux
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -32,20 +34,29 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      # Every push to main gets its own release, tagged by date + short sha
-      # so it's unique without requiring a manual package.json version bump.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
       - name: Compute release tag
         id: tag
-        shell: bash
         run: echo "tag=v$(date -u +%Y.%m.%d)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
 
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: ${{ steps.tag.outputs.tag }}
-          files: |
-            dist/*.exe
-            dist/*.AppImage
-            dist/*.deb
-          fail_on_unmatched_files: false
+          files: dist/*
+          fail_on_unmatched_files: true
