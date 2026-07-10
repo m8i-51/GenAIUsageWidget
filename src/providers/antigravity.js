@@ -10,7 +10,7 @@ const LOAD_CODE_ASSIST_URL = 'https://cloudcode-pa.googleapis.com/v1internal:loa
 const QUOTA_SUMMARY_URL = 'https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary';
 
 function readAccessTokenWindows() {
-  const scriptPath = path.join(__dirname, 'win-cred-read.py');
+  const scriptPath = path.join(__dirname, 'win-cred-read.py').replace('app.asar', 'app.asar.unpacked');
   let output;
   try {
     output = execFileSync('python', [scriptPath, CRED_TARGET], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
@@ -76,11 +76,18 @@ async function fetchAntigravityUsage() {
   const summary = await callCloudCode(QUOTA_SUMMARY_URL, token, { project });
 
   const groups = (summary.groups ?? []).map((group) => {
-    const bucket = group.buckets?.[0];
+    const buckets = (group.buckets ?? []).map((bucket) => ({
+      name: bucket.displayName || bucket.bucketId,
+      percent: bucket ? Math.round((1 - bucket.remainingFraction) * 100) : null,
+      resetsAt: bucket.resetTime ?? null,
+    }));
+
+    const primaryBucket = group.buckets?.[0];
     return {
       name: group.displayName,
-      percent: bucket ? Math.round((1 - bucket.remainingFraction) * 100) : null,
-      resetsAt: bucket?.resetTime ?? null,
+      percent: primaryBucket ? Math.round((1 - primaryBucket.remainingFraction) * 100) : null,
+      resetsAt: primaryBucket?.resetTime ?? null,
+      buckets,
     };
   });
 
