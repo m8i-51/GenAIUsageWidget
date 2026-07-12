@@ -1,3 +1,19 @@
+const PROVIDERS = [
+  { id: 'claude', label: 'Claude' },
+  { id: 'codex', label: 'Codex' },
+  { id: 'cursor', label: 'Cursor' },
+  { id: 'antigravity', label: 'Antigravity' },
+];
+
+let appSettings = {
+  compactMode: false,
+  hiddenProviders: [],
+  widgetBounds: null,
+};
+
+/** @type {Record<string, boolean>} */
+const configuredProviders = Object.fromEntries(PROVIDERS.map((p) => [p.id, false]));
+
 function formatCountdown(isoString) {
   if (!isoString) return 'unknown';
   const diffMs = new Date(isoString).getTime() - Date.now();
@@ -25,7 +41,88 @@ function escapeHtml(value) {
   ));
 }
 
-// rows: [{ label, percent, sub }] — rendered as the tile's expanded detail.
+function isProviderHidden(prefix) {
+  return appSettings.hiddenProviders.includes(prefix);
+}
+
+function applySettings(settings) {
+  appSettings = {
+    compactMode: !!settings.compactMode,
+    hiddenProviders: Array.isArray(settings.hiddenProviders) ? [...settings.hiddenProviders] : [],
+    widgetBounds: settings.widgetBounds ?? null,
+  };
+  document.body.classList.toggle('compact-mode', appSettings.compactMode);
+  const compactToggle = document.getElementById('compact-mode-toggle');
+  if (compactToggle) compactToggle.checked = appSettings.compactMode;
+  renderProviderToggles();
+  applyHiddenProviders();
+}
+
+function applyHiddenProviders() {
+  for (const { id } of PROVIDERS) {
+    const tileEl = document.getElementById(`${id}-provider`);
+    if (!tileEl || tileEl.dataset.notConfigured === 'true') continue;
+    tileEl.hidden = isProviderHidden(id);
+  }
+  refreshEmptyState();
+}
+
+function refreshEmptyState() {
+  const anyVisible = document.querySelectorAll('.tile:not([hidden])').length > 0;
+  document.getElementById('empty-state').hidden = anyVisible;
+}
+
+function authHint(prefix, message) {
+  const lower = String(message ?? '').toLowerCase();
+  if (prefix === 'claude' && (lower.includes('401') || lower.includes('token'))) {
+    return 'Run claude login to re-authenticate';
+  }
+  if (prefix === 'codex' && (lower.includes('401') || lower.includes('auth'))) {
+    return 'Run codex login to re-authenticate';
+  }
+  if (prefix === 'cursor' && lower.includes('token')) {
+    return 'Sign in again in the Cursor app';
+  }
+  if (prefix === 'antigravity' && (lower.includes('401') || lower.includes('cred'))) {
+    return 'Run agy login to re-authenticate';
+  }
+  return null;
+}
+
+function setHint(prefix, text) {
+  const hintEl = document.getElementById(`${prefix}-hint`);
+  if (!hintEl) return;
+  if (text) {
+    hintEl.textContent = text;
+    hintEl.hidden = false;
+  } else {
+    hintEl.textContent = '';
+    hintEl.hidden = true;
+  }
+}
+
+function clearTileState(prefix) {
+  const tileEl = document.getElementById(`${prefix}-provider`);
+  tileEl.classList.remove('stale', 'error-state');
+  setHint(prefix, null);
+}
+
+function applyStaleState(prefix, result, resetEl, baseText) {
+  const tileEl = document.getElementById(`${prefix}-provider`);
+  tileEl.classList.toggle('stale', !!result.stale);
+  tileEl.classList.remove('error-state');
+  setHint(prefix, null);
+
+  if (result.stale) {
+    const asOf = new Date(result.staleAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    resetEl.textContent = `${baseText}\nas of ${asOf} · retrying`;
+    resetEl.title = result.staleError ?? '';
+  } else {
+    resetEl.textContent = baseText;
+    resetEl.removeAttribute('title');
+  }
+}
+
 function setDetail(prefix, rows) {
   const tileEl = document.getElementById(`${prefix}-provider`);
   const detailEl = document.getElementById(`${prefix}-detail`);
@@ -55,21 +152,29 @@ function setMeter(prefix, percent) {
   const clamped = Math.max(0, Math.min(100, percent ?? 0));
 
   barEl.style.width = `${clamped}%`;
-  // Severity colors both the fill and the faint track behind it.
   barEl.parentElement.className = `meter ${severityClass(clamped)}`.trim();
   if (valueEl) valueEl.textContent = `${Math.round(clamped)}%`;
 }
 
-// Returns true when the card should stay visible (configured provider),
-// false when the provider isn't set up on this machine and the card is hidden.
 function beginCard(prefix, result) {
   const tileEl = document.getElementById(`${prefix}-provider`);
-  const hidden = !result.ok && result.notConfigured;
-  tileEl.hidden = hidden;
-  if (hidden) return false;
-
   const resetEl = document.getElementById(`${prefix}-reset`);
+
+  if (!result.ok && result.notConfigured) {
+    configuredProviders[prefix] = false;
+    tileEl.dataset.notConfigured = 'true';
+    tileEl.hidden = true;
+    tileEl.classList.remove('stale', 'error-state');
+    setHint(prefix, null);
+    return false;
+  }
+
+  configuredProviders[prefix] = true;
+  tileEl.dataset.notConfigured = 'false';
+  tileEl.hidden = isProviderHidden(prefix);
   resetEl.classList.remove('error');
+  clearTileState(prefix);
+
   if (!result.ok) {
     setError(prefix, result.error);
     setDetail(prefix, []);
@@ -79,11 +184,14 @@ function beginCard(prefix, result) {
 }
 
 function setError(prefix, message) {
+  const tileEl = document.getElementById(`${prefix}-provider`);
   const resetEl = document.getElementById(`${prefix}-reset`);
   resetEl.textContent = `Error: ${message}`;
-  // The sub line is clamped to two lines; keep the full message reachable.
   resetEl.title = message;
   resetEl.classList.add('error');
+  tileEl.classList.add('error-state');
+  tileEl.classList.remove('stale');
+  setHint(prefix, authHint(prefix, message));
 }
 
 async function updateClaudeCard() {
@@ -93,21 +201,10 @@ async function updateClaudeCard() {
 
   const { session, week, weekScoped } = result.usage;
   setMeter('claude', session.percent);
-  resetEl.textContent =
+  const baseText =
     `Session ${session.percent}% (resets in ${formatCountdown(session.resetsAt)})\n` +
     `Week ${week.percent}% (resets in ${formatCountdown(week.resetsAt)})`;
-
-  // On a transient fetch failure the main process serves the last good
-  // snapshot; keep showing it, but say when it's from.
-  const tileEl = document.getElementById('claude-provider');
-  tileEl.classList.toggle('stale', !!result.stale);
-  if (result.stale) {
-    const asOf = new Date(result.staleAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    resetEl.textContent += `\nlast fetched ${asOf} (retrying)`;
-    resetEl.title = result.staleError ?? '';
-  } else {
-    resetEl.removeAttribute('title');
-  }
+  applyStaleState('claude', result, resetEl, baseText);
 
   const rows = [
     { label: 'Session', percent: session.percent, sub: `resets in ${formatCountdown(session.resetsAt)}` },
@@ -136,10 +233,8 @@ async function updateCodexCard() {
   }
 
   setMeter('codex', primary.percent);
-  resetEl.textContent = `resets in ${formatCountdown(primary.resetsAt)}`;
+  applyStaleState('codex', result, resetEl, `resets in ${formatCountdown(primary.resetsAt)}`);
 
-  // Only worth expanding when there's a second window; a lone primary
-  // window is already fully shown by the summary.
   setDetail('codex', secondary ? [
     { label: 'Session', percent: primary.percent, sub: `resets in ${formatCountdown(primary.resetsAt)}` },
     { label: 'Weekly', percent: secondary.percent, sub: `resets in ${formatCountdown(secondary.resetsAt)}` },
@@ -153,9 +248,8 @@ async function updateCursorCard() {
 
   const { percent, autoPercent, apiPercent, billingCycleEnd } = result.usage;
   setMeter('cursor', percent);
-  resetEl.textContent = `cycle ends in ${formatCountdown(billingCycleEnd)}`;
+  applyStaleState('cursor', result, resetEl, `cycle ends in ${formatCountdown(billingCycleEnd)}`);
 
-  // Total / Auto / API — only worth expanding when the breakdown exists.
   const rows = [];
   if (autoPercent != null || apiPercent != null) {
     rows.push({ label: 'Total', percent, sub: `cycle ends in ${formatCountdown(billingCycleEnd)}` });
@@ -185,7 +279,7 @@ async function updateAntigravityCard() {
     const groupMax = g.buckets && g.buckets.length > 0 ? Math.max(...g.buckets.map((b) => b.percent ?? 0)) : 0;
     return `${g.name} ${groupMax}%`;
   });
-  resetEl.textContent = groupSummaries.join('\n');
+  applyStaleState('antigravity', result, resetEl, groupSummaries.join('\n'));
   resetEl.style.webkitLineClamp = String(groups.length);
 
   const detailRows = [];
@@ -217,8 +311,8 @@ async function updateAll() {
     updateAntigravityCard(),
   ]);
 
-  const anyVisible = document.querySelectorAll('.tile:not([hidden])').length > 0;
-  document.getElementById('empty-state').hidden = anyVisible;
+  refreshEmptyState();
+  renderProviderToggles();
 
   const updatedEl = document.getElementById('last-updated');
   if (updatedEl) {
@@ -227,7 +321,59 @@ async function updateAll() {
   }
 }
 
-// Click a card to expand/collapse its detail rows.
+function renderProviderToggles() {
+  const container = document.getElementById('provider-toggles');
+  if (!container) return;
+
+  container.innerHTML = PROVIDERS.map(({ id, label }) => {
+    const configured = configuredProviders[id];
+    const visible = configured && !isProviderHidden(id);
+    const disabledAttr = configured ? '' : 'disabled';
+    const note = configured ? '' : '<span class="provider-toggle-note">Not set up</span>';
+    return (
+      `<label class="settings-row provider-toggle${configured ? '' : ' disabled'}">` +
+        `<span>${escapeHtml(label)}${note}</span>` +
+        `<input type="checkbox" data-provider="${id}" ${visible ? 'checked' : ''} ${disabledAttr} />` +
+      `</label>`
+    );
+  }).join('');
+}
+
+async function onProviderToggleChange(event) {
+  const input = event.target.closest('input[data-provider]');
+  if (!input || input.disabled) return;
+
+  const providerId = input.dataset.provider;
+  const hidden = new Set(appSettings.hiddenProviders);
+  if (input.checked) {
+    hidden.delete(providerId);
+  } else {
+    hidden.add(providerId);
+  }
+  const settings = await window.api.setSettings({ hiddenProviders: [...hidden] });
+  applySettings(settings);
+  await updateAll();
+}
+
+function showSettingsPanel(show) {
+  document.getElementById('settings-panel').hidden = !show;
+  document.getElementById('cards-view').hidden = show;
+}
+
+document.getElementById('settings-btn').addEventListener('click', () => {
+  showSettingsPanel(true);
+  renderProviderToggles();
+});
+
+document.getElementById('settings-back-btn').addEventListener('click', () => {
+  showSettingsPanel(false);
+});
+
+document.getElementById('compact-mode-toggle').addEventListener('change', async (event) => {
+  const settings = await window.api.setSettings({ compactMode: event.target.checked });
+  applySettings(settings);
+});
+
 document.querySelectorAll('.tile').forEach((tile) => {
   tile.addEventListener('click', () => {
     if (tile.classList.contains('has-detail')) {
@@ -236,10 +382,8 @@ document.querySelectorAll('.tile').forEach((tile) => {
   });
 });
 
-// --- Drag & drop reordering (persisted, shared by popup and widget) ---
-
 const TILE_ORDER_KEY = 'tileOrder';
-const containerEl = document.querySelector('.app');
+const containerEl = document.getElementById('cards-view');
 const emptyStateEl = document.getElementById('empty-state');
 
 function applyTileOrder(order) {
@@ -260,19 +404,16 @@ function loadTileOrder(raw) {
     const order = JSON.parse(raw);
     if (Array.isArray(order)) applyTileOrder(order);
   } catch {
-    // Ignore a malformed saved order; the default DOM order stands.
+    // Ignore malformed saved order.
   }
 }
 
 loadTileOrder(localStorage.getItem(TILE_ORDER_KEY));
 
-// Mirror reorders done in the other window (popup vs widget).
 window.addEventListener('storage', (event) => {
   if (event.key === TILE_ORDER_KEY) loadTileOrder(event.newValue);
 });
 
-// Among visible tiles not being dragged, find the first one whose middle
-// is below the pointer — the dragged tile is inserted before it.
 function tileAfterPoint(y) {
   const tiles = [...containerEl.querySelectorAll('.tile:not(.dragging):not([hidden])')];
   let closest = null;
@@ -309,10 +450,8 @@ containerEl.addEventListener('dragover', (event) => {
   event.preventDefault();
 
   const target = tileAfterPoint(event.clientY) ?? emptyStateEl;
-  if (target === dragging.nextElementSibling) return; // already in place
+  if (target === dragging.nextElementSibling) return;
 
-  // FLIP: measure the other tiles, reorder, then animate them from their
-  // old positions so they glide out of the way instead of jumping.
   const others = [...containerEl.querySelectorAll('.tile:not(.dragging):not([hidden])')];
   const beforeTops = new Map(others.map((tile) => [tile, tile.getBoundingClientRect().top]));
 
@@ -331,12 +470,19 @@ containerEl.addEventListener('dragover', (event) => {
   }
 });
 
-// Keep the window hugging the card, so the transparent leftover area
-// doesn't block mouse clicks on what's behind it.
 const appEl = document.querySelector('.app');
 new ResizeObserver(() => {
   window.api.resizeTo(Math.ceil(appEl.getBoundingClientRect().height) + 12);
 }).observe(appEl);
 
-updateAll();
-setInterval(updateAll, 60 * 1000);
+async function init() {
+  document.getElementById('provider-toggles').addEventListener('change', onProviderToggleChange);
+
+  const settings = await window.api.getSettings();
+  applySettings(settings);
+  window.api.onSettingsChanged((next) => applySettings(next));
+  await updateAll();
+  setInterval(updateAll, 60 * 1000);
+}
+
+init();
