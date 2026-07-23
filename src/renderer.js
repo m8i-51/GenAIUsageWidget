@@ -78,7 +78,7 @@ function applyEdgeHideUi(state) {
   if (edge && expanded && pinned) {
     hideBtn.title = 'Hide to top edge';
   } else if (edge && !expanded) {
-    hideBtn.title = 'Hidden on top — hover to preview, click to open';
+    hideBtn.title = 'Hidden on top — click to open';
   } else if (edge) {
     hideBtn.title = 'Hide to top edge';
   } else {
@@ -406,12 +406,6 @@ if (hideEdgeBtn) {
 }
 
 if (isWidgetMode) {
-  document.addEventListener('mouseenter', () => {
-    window.api.setWidgetEdgeHover(true);
-  });
-  document.addEventListener('mouseleave', () => {
-    window.api.setWidgetEdgeHover(false);
-  });
   const peekTab = document.getElementById('edge-peek-tab');
   if (peekTab) {
     peekTab.addEventListener('click', (event) => {

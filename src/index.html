@@ -252,6 +252,12 @@
     display: none !important;
   }
 
+  #cards-view {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
   #cards-view[hidden] {
     display: none !important;
   }
@@ -559,40 +565,35 @@
     display: none !important;
   }
 
-  body.compact-mode .app {
-    gap: 6px;
-    padding: 10px;
+  body.compact-mode #cards-view {
+    gap: 9px;
   }
 
-  body.compact-mode .app-updated {
-    font-size: 9px;
-  }
-
-  body.compact-mode .tile {
+  body.compact-mode #cards-view .tile {
     padding: 6px 10px;
   }
 
-  body.compact-mode .tile-header {
+  body.compact-mode #cards-view .tile-header {
     margin-bottom: 5px;
   }
 
-  body.compact-mode .tile-label {
+  body.compact-mode #cards-view .tile-label {
     font-size: 12px;
   }
 
-  body.compact-mode .tile-value {
+  body.compact-mode #cards-view .tile-value {
     font-size: 15px;
   }
 
-  body.compact-mode .meter {
+  body.compact-mode #cards-view .meter {
     height: 5px;
   }
 
-  body.compact-mode .tile-sub {
+  body.compact-mode #cards-view .tile-sub {
     display: none;
   }
 
-  body.compact-mode .tile.expanded.has-detail .tile-sub {
+  body.compact-mode #cards-view .tile.expanded.has-detail .tile-sub {
     display: -webkit-box;
   }
 
@@ -611,7 +612,7 @@
       <div class="blob blob-3"></div>
     </div>
 
-    <div class="edge-peek-tab" id="edge-peek-tab" title="Click to open · hover to preview"></div>
+    <div class="edge-peek-tab" id="edge-peek-tab" title="Click to open"></div>
 
     <div class="app-header">
       <span class="app-title">AI Usage</span>
