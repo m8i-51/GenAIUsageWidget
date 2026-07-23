@@ -53,7 +53,9 @@ function applySettings(settings) {
     compactMode: !!settings.compactMode,
     hiddenProviders: Array.isArray(settings.hiddenProviders) ? [...settings.hiddenProviders] : [],
     widgetBounds: settings.widgetBounds ?? null,
-    widgetEdgeHide: settings.widgetEdgeHide === 'top' ? 'top' : null,
+    widgetEdgeHide: ['left', 'right', 'top'].includes(settings.widgetEdgeHide)
+      ? settings.widgetEdgeHide
+      : null,
   };
   document.body.classList.toggle('compact-mode', appSettings.compactMode);
   const compactToggle = document.getElementById('compact-mode-toggle');
@@ -64,25 +66,33 @@ function applySettings(settings) {
 
 function applyEdgeHideUi(state) {
   if (!isWidgetMode) return;
-  const edge = state?.edge === 'top' ? 'top' : null;
+  const edge = ['left', 'right', 'top'].includes(state?.edge) ? state.edge : null;
   const expanded = state?.expanded !== false;
   const pinned = !!state?.pinned;
-  document.body.classList.toggle('edge-collapsed', !!(edge && !expanded));
+  const collapsed = !!(edge && !expanded);
+  document.body.classList.toggle('edge-collapsed', collapsed);
   document.body.classList.toggle('edge-top', edge === 'top');
+  document.body.classList.toggle('edge-left', edge === 'left');
+  document.body.classList.toggle('edge-right', edge === 'right');
   document.body.classList.toggle('edge-pinned', !!(edge && expanded && pinned));
-  document.body.classList.remove('edge-left', 'edge-right');
+  document.documentElement.classList.toggle(
+    'widget-edge-fill',
+    collapsed && (edge === 'left' || edge === 'right')
+  );
 
   const hideBtn = document.getElementById('hide-edge-btn');
   if (!hideBtn) return;
-  hideBtn.innerHTML = '&#9650;';
-  if (edge && expanded && pinned) {
-    hideBtn.title = 'Hide to top edge';
-  } else if (edge && !expanded) {
-    hideBtn.title = 'Hidden on top — click to open';
-  } else if (edge) {
-    hideBtn.title = 'Hide to top edge';
+  if (edge === 'left') {
+    hideBtn.innerHTML = '&#9664;';
+  } else if (edge === 'right') {
+    hideBtn.innerHTML = '&#9654;';
   } else {
-    hideBtn.title = 'Hide to top edge';
+    hideBtn.innerHTML = '&#9650;';
+  }
+  if (edge && !expanded) {
+    hideBtn.title = `Hidden on ${edge} — click to open`;
+  } else {
+    hideBtn.title = 'Hide to nearest edge';
   }
 }
 

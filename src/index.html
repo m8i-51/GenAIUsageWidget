@@ -75,6 +75,12 @@
     background: transparent;
   }
 
+  html.widget-edge-fill,
+  html.widget-edge-fill body {
+    width: 100%;
+    height: 100%;
+  }
+
   .app {
     position: relative;
     overflow: hidden;
@@ -203,11 +209,27 @@
     margin: 0;
     padding: 0;
     min-height: 0;
+    width: 100%;
+    height: 100%;
     border-radius: 0 0 14px 14px;
     box-shadow:
       inset 0 1px 0 var(--glass-highlight),
       0 1px 2px var(--glass-edge),
       0 8px 20px -8px rgba(0, 0, 0, 0.35);
+  }
+
+  body.widget-mode.edge-collapsed.edge-left,
+  body.widget-mode.edge-collapsed.edge-right {
+    width: 100%;
+    height: 100%;
+  }
+
+  body.widget-mode.edge-collapsed.edge-left .app {
+    border-radius: 0 14px 14px 0;
+  }
+
+  body.widget-mode.edge-collapsed.edge-right .app {
+    border-radius: 14px 0 0 14px;
   }
 
   body.widget-mode.edge-collapsed .app-bg,
@@ -236,10 +258,28 @@
     -webkit-app-region: no-drag;
     cursor: pointer;
     user-select: none;
+    /* Opaque enough that Electron hit-tests the peek (transparent pixels click through). */
+    background: var(--glass-card);
+  }
+
+  body.widget-mode.edge-collapsed.edge-left .edge-peek-tab,
+  body.widget-mode.edge-collapsed.edge-right .edge-peek-tab {
+    width: 100%;
+    min-width: 28px;
+    height: 100%;
+    min-height: 100%;
   }
 
   body.widget-mode.edge-collapsed.edge-top .edge-peek-tab::before {
     content: "▾";
+  }
+
+  body.widget-mode.edge-collapsed.edge-left .edge-peek-tab::before {
+    content: "▸";
+  }
+
+  body.widget-mode.edge-collapsed.edge-right .edge-peek-tab::before {
+    content: "◂";
   }
 
   #settings-panel {
@@ -618,7 +658,7 @@
       <span class="app-title">AI Usage</span>
       <div class="app-header-actions">
         <span class="app-updated" id="last-updated"></span>
-        <button type="button" id="hide-edge-btn" class="hide-edge-btn" aria-label="Hide to top edge" title="Hide to top edge">&#9650;</button>
+        <button type="button" id="hide-edge-btn" class="hide-edge-btn" aria-label="Hide to nearest edge" title="Hide to nearest edge">&#9650;</button>
         <button type="button" id="settings-btn" class="settings-btn" aria-label="Settings">&#9881;</button>
       </div>
     </div>
