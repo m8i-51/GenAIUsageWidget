@@ -82,6 +82,7 @@ successfully fetched data marked with when it was fetched).
 src/
   main.js              Electron main process: tray, popup window, widget window,
                        IPC, Claude response cache & 429 backoff
+  widget-edge-hide.js  Geometry helpers for PC Manager-style edge hide
   preload.js           Exposes the get-*-usage IPC calls and window resizing
   index.html / renderer.js   Shared UI for both the popup and the widget
   providers/           One module per provider, each exporting a fetchXUsage()
