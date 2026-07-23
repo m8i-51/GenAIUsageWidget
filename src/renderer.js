@@ -69,11 +69,16 @@ function applyEdgeHideUi(state) {
   const edge = ['left', 'right', 'top'].includes(state?.edge) ? state.edge : null;
   const expanded = state?.expanded !== false;
   const pinned = !!state?.pinned;
-  document.body.classList.toggle('edge-collapsed', !!(edge && !expanded));
+  const collapsed = !!(edge && !expanded);
+  document.body.classList.toggle('edge-collapsed', collapsed);
   document.body.classList.toggle('edge-top', edge === 'top');
   document.body.classList.toggle('edge-left', edge === 'left');
   document.body.classList.toggle('edge-right', edge === 'right');
   document.body.classList.toggle('edge-pinned', !!(edge && expanded && pinned));
+  document.documentElement.classList.toggle(
+    'widget-edge-fill',
+    collapsed && (edge === 'left' || edge === 'right')
+  );
 
   const hideBtn = document.getElementById('hide-edge-btn');
   if (!hideBtn) return;
