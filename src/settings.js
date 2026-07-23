@@ -6,6 +6,7 @@ const DEFAULTS = {
   compactMode: false,
   hiddenProviders: [],
   widgetBounds: null,
+  widgetEdgeHide: null,
 };
 
 let settingsPath = null;
@@ -28,6 +29,9 @@ function mergeWithDefaults(raw) {
   }
   if (merged.widgetBounds != null && typeof merged.widgetBounds !== 'object') {
     merged.widgetBounds = null;
+  }
+  if (merged.widgetEdgeHide !== 'left' && merged.widgetEdgeHide !== 'right') {
+    merged.widgetEdgeHide = null;
   }
   return merged;
 }

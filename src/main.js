@@ -7,12 +7,26 @@ const { fetchAntigravityUsage } = require('./providers/antigravity');
 const autostart = require('./autostart');
 const { loadSettings, saveSettings } = require('./settings');
 const { fetchWithCache, preloadLastGood } = require('./usage-cache');
+const {
+  detectSnapEdge,
+  nearestHorizontalEdge,
+  expandedPosition,
+  collapsedPosition,
+  normalizeEdge,
+} = require('./widget-edge-hide');
 
 let tray = null;
 let popup = null;
 let widget = null;
 let lastTrayBounds = null;
 let widgetBoundsSaveTimer = null;
+let widgetSnapTimer = null;
+let edgeHideCollapseTimer = null;
+let dockedEdge = null;
+let edgeHideExpanded = true;
+let edgeHideHovering = false;
+let ignoreHoverExpand = false;
+let suppressMoveHandling = false;
 
 function broadcastSettings(settings) {
   for (const win of [popup, widget]) {
@@ -60,17 +74,153 @@ function resolveWidgetPosition(savedBounds, win) {
   return clampToWorkArea(savedBounds.x, savedBounds.y, width, height, display);
 }
 
+function getWidgetWorkArea() {
+  if (!widget || widget.isDestroyed()) return screen.getPrimaryDisplay().workArea;
+  const [x, y] = widget.getPosition();
+  return screen.getDisplayNearestPoint({ x, y }).workArea;
+}
+
+function persistWidgetBoundsFromExpanded() {
+  if (!widget || widget.isDestroyed() || !dockedEdge) return;
+  const bounds = widget.getBounds();
+  const workArea = getWidgetWorkArea();
+  const expanded = expandedPosition(dockedEdge, bounds, workArea);
+  const display = screen.getDisplayNearestPoint(expanded);
+  saveSettings({
+    widgetBounds: { x: expanded.x, y: expanded.y, displayId: String(display.id) },
+    widgetEdgeHide: dockedEdge,
+  });
+}
+
 function scheduleWidgetBoundsSave() {
   if (!widget || widget.isDestroyed()) return;
+  if (dockedEdge) {
+    persistWidgetBoundsFromExpanded();
+    return;
+  }
   if (widgetBoundsSaveTimer) clearTimeout(widgetBoundsSaveTimer);
   widgetBoundsSaveTimer = setTimeout(() => {
     widgetBoundsSaveTimer = null;
+    if (!widget || widget.isDestroyed() || dockedEdge) return;
     const [x, y] = widget.getPosition();
     const display = screen.getDisplayNearestPoint({ x, y });
     saveSettings({
       widgetBounds: { x, y, displayId: String(display.id) },
+      widgetEdgeHide: null,
     });
   }, 500);
+}
+
+function setWidgetPosition(x, y) {
+  if (!widget || widget.isDestroyed()) return;
+  suppressMoveHandling = true;
+  widget.setPosition(Math.round(x), Math.round(y), false);
+  setTimeout(() => {
+    suppressMoveHandling = false;
+  }, 50);
+}
+
+function applyEdgeHidePosition(expanded) {
+  if (!widget || widget.isDestroyed() || !dockedEdge) return;
+  const bounds = widget.getBounds();
+  const workArea = getWidgetWorkArea();
+  const pos = expanded
+    ? expandedPosition(dockedEdge, bounds, workArea)
+    : collapsedPosition(dockedEdge, bounds, workArea);
+  edgeHideExpanded = expanded;
+  setWidgetPosition(pos.x, pos.y);
+  if (widget && !widget.isDestroyed()) {
+    widget.webContents.send('widget-edge-hide-changed', {
+      edge: dockedEdge,
+      expanded,
+    });
+  }
+}
+
+function clearEdgeHideCollapseTimer() {
+  if (edgeHideCollapseTimer) {
+    clearTimeout(edgeHideCollapseTimer);
+    edgeHideCollapseTimer = null;
+  }
+}
+
+function setDockedEdge(edge, { collapse = true, persist = true } = {}) {
+  dockedEdge = normalizeEdge(edge);
+  clearEdgeHideCollapseTimer();
+  if (!dockedEdge) {
+    edgeHideExpanded = true;
+    if (persist) {
+      saveSettings({ widgetEdgeHide: null });
+    }
+    if (widget && !widget.isDestroyed()) {
+      widget.webContents.send('widget-edge-hide-changed', { edge: null, expanded: true });
+    }
+    return;
+  }
+  applyEdgeHidePosition(!collapse);
+  if (persist) {
+    persistWidgetBoundsFromExpanded();
+  }
+}
+
+function expandEdgeHide() {
+  if (!dockedEdge || edgeHideExpanded || ignoreHoverExpand) return;
+  clearEdgeHideCollapseTimer();
+  applyEdgeHidePosition(true);
+}
+
+function collapseEdgeHide(delayMs = 0) {
+  if (!dockedEdge || !edgeHideExpanded) return;
+  clearEdgeHideCollapseTimer();
+  const run = () => {
+    edgeHideCollapseTimer = null;
+    if (!dockedEdge) return;
+    applyEdgeHidePosition(false);
+  };
+  if (delayMs > 0) {
+    edgeHideCollapseTimer = setTimeout(run, delayMs);
+  } else {
+    run();
+  }
+}
+
+function evaluateSnapAfterMove() {
+  if (!widget || widget.isDestroyed() || suppressMoveHandling) return;
+  const bounds = widget.getBounds();
+  const workArea = getWidgetWorkArea();
+  const edge = detectSnapEdge(bounds, workArea);
+  if (edge) {
+    // Stay expanded while the pointer is still over the widget (user just finished a drag).
+    setDockedEdge(edge, { collapse: !edgeHideHovering, persist: true });
+  } else if (dockedEdge) {
+    setDockedEdge(null, { persist: true });
+    scheduleWidgetBoundsSave();
+  } else {
+    scheduleWidgetBoundsSave();
+  }
+}
+
+function scheduleSnapEvaluation() {
+  if (suppressMoveHandling) return;
+  if (widgetSnapTimer) clearTimeout(widgetSnapTimer);
+  widgetSnapTimer = setTimeout(() => {
+    widgetSnapTimer = null;
+    evaluateSnapAfterMove();
+  }, 180);
+}
+
+function hideWidgetToNearestEdge() {
+  if (!widget || widget.isDestroyed()) return;
+  if (!widget.isVisible()) {
+    widget.show();
+  }
+  const bounds = widget.getBounds();
+  const workArea = getWidgetWorkArea();
+  const edge = nearestHorizontalEdge(bounds, workArea);
+  // Hide button / tray action: collapse immediately and wait for pointer leave
+  // before allowing hover-expand (avoids instant re-expand under the cursor).
+  ignoreHoverExpand = true;
+  setDockedEdge(edge, { collapse: true, persist: true });
 }
 
 function createPopup() {
@@ -151,7 +301,20 @@ function createWidget() {
   const { x, y } = resolveWidgetPosition(settings.widgetBounds, widget);
   widget.setPosition(x, y, false);
 
-  widget.on('move', scheduleWidgetBoundsSave);
+  const savedEdge = normalizeEdge(settings.widgetEdgeHide);
+  if (savedEdge) {
+    widget.webContents.once('did-finish-load', () => {
+      setDockedEdge(savedEdge, { collapse: true, persist: false });
+    });
+  }
+
+  widget.on('move', () => {
+    if (suppressMoveHandling) return;
+    if (dockedEdge && edgeHideExpanded) {
+      clearEdgeHideCollapseTimer();
+    }
+    scheduleSnapEvaluation();
+  });
 }
 
 function toggleWidget() {
@@ -160,6 +323,9 @@ function toggleWidget() {
     widget.hide();
   } else {
     widget.show();
+    if (dockedEdge && !edgeHideExpanded) {
+      applyEdgeHidePosition(false);
+    }
   }
 }
 
@@ -176,6 +342,21 @@ function createTray() {
       {
         label: widget?.isVisible() ? 'Hide Desktop Widget' : 'Show Desktop Widget',
         click: () => toggleWidget(),
+      },
+      {
+        label: dockedEdge ? 'Undock Widget' : 'Hide to Screen Edge',
+        click: () => {
+          if (dockedEdge) {
+            const bounds = widget.getBounds();
+            const workArea = getWidgetWorkArea();
+            const pos = expandedPosition(dockedEdge, bounds, workArea);
+            setDockedEdge(null, { persist: true });
+            setWidgetPosition(pos.x, pos.y);
+            scheduleWidgetBoundsSave();
+          } else {
+            hideWidgetToNearestEdge();
+          }
+        },
       },
       { type: 'separator' },
       {
@@ -210,6 +391,23 @@ ipcMain.on('save-widget-bounds', (_event, bounds) => {
   });
 });
 
+ipcMain.on('widget-edge-hide-hover', (_event, hovering) => {
+  edgeHideHovering = !!hovering;
+  if (!hovering) {
+    ignoreHoverExpand = false;
+  }
+  if (!dockedEdge) return;
+  if (edgeHideHovering) {
+    expandEdgeHide();
+  } else {
+    collapseEdgeHide(450);
+  }
+});
+
+ipcMain.on('widget-hide-to-edge', () => {
+  hideWidgetToNearestEdge();
+});
+
 ipcMain.handle('get-claude-usage', () => fetchWithCache('claude', fetchClaudeUsage));
 ipcMain.handle('get-codex-usage', () => fetchWithCache('codex', fetchCodexUsage));
 ipcMain.handle('get-cursor-usage', () => fetchWithCache('cursor', fetchCursorUsage));
@@ -224,6 +422,9 @@ ipcMain.on('resize-to', (event, height) => {
   if (win === popup && popup.isVisible() && lastTrayBounds) {
     const { x, y } = getPopupPosition(lastTrayBounds);
     popup.setPosition(x, y, false);
+  }
+  if (win === widget && dockedEdge) {
+    applyEdgeHidePosition(edgeHideExpanded);
   }
 });
 

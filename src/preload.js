@@ -14,4 +14,11 @@ contextBridge.exposeInMainWorld('api', {
   },
   saveWidgetBounds: (bounds) => ipcRenderer.send('save-widget-bounds', bounds),
   resizeTo: (height) => ipcRenderer.send('resize-to', height),
+  hideWidgetToEdge: () => ipcRenderer.send('widget-hide-to-edge'),
+  setWidgetEdgeHover: (hovering) => ipcRenderer.send('widget-edge-hide-hover', !!hovering),
+  onWidgetEdgeHideChanged: (cb) => {
+    const listener = (_event, state) => cb(state);
+    ipcRenderer.on('widget-edge-hide-changed', listener);
+    return () => ipcRenderer.removeListener('widget-edge-hide-changed', listener);
+  },
 });

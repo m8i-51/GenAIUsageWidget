@@ -9,7 +9,10 @@ let appSettings = {
   compactMode: false,
   hiddenProviders: [],
   widgetBounds: null,
+  widgetEdgeHide: null,
 };
+
+const isWidgetMode = document.body.classList.contains('widget-mode');
 
 /** @type {Record<string, boolean>} */
 const configuredProviders = Object.fromEntries(PROVIDERS.map((p) => [p.id, false]));
@@ -50,12 +53,37 @@ function applySettings(settings) {
     compactMode: !!settings.compactMode,
     hiddenProviders: Array.isArray(settings.hiddenProviders) ? [...settings.hiddenProviders] : [],
     widgetBounds: settings.widgetBounds ?? null,
+    widgetEdgeHide: settings.widgetEdgeHide === 'left' || settings.widgetEdgeHide === 'right'
+      ? settings.widgetEdgeHide
+      : null,
   };
   document.body.classList.toggle('compact-mode', appSettings.compactMode);
   const compactToggle = document.getElementById('compact-mode-toggle');
   if (compactToggle) compactToggle.checked = appSettings.compactMode;
   renderProviderToggles();
   applyHiddenProviders();
+}
+
+function applyEdgeHideUi(state) {
+  if (!isWidgetMode) return;
+  const edge = state?.edge === 'left' || state?.edge === 'right' ? state.edge : null;
+  const expanded = state?.expanded !== false;
+  document.body.classList.toggle('edge-collapsed', !!(edge && !expanded));
+  document.body.classList.toggle('edge-left', edge === 'left');
+  document.body.classList.toggle('edge-right', edge === 'right');
+
+  const hideBtn = document.getElementById('hide-edge-btn');
+  if (!hideBtn) return;
+  if (edge === 'left') {
+    hideBtn.innerHTML = '&#8249;';
+    hideBtn.title = 'Hidden on left — hover edge to show';
+  } else if (edge === 'right') {
+    hideBtn.innerHTML = '&#8250;';
+    hideBtn.title = 'Hidden on right — hover edge to show';
+  } else {
+    hideBtn.innerHTML = '&#8250;';
+    hideBtn.title = 'Hide to screen edge';
+  }
 }
 
 function applyHiddenProviders() {
@@ -369,6 +397,24 @@ document.getElementById('settings-back-btn').addEventListener('click', () => {
   showSettingsPanel(false);
 });
 
+const hideEdgeBtn = document.getElementById('hide-edge-btn');
+if (hideEdgeBtn) {
+  hideEdgeBtn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    window.api.hideWidgetToEdge();
+  });
+}
+
+if (isWidgetMode) {
+  document.addEventListener('mouseenter', () => {
+    window.api.setWidgetEdgeHover(true);
+  });
+  document.addEventListener('mouseleave', () => {
+    window.api.setWidgetEdgeHover(false);
+  });
+  window.api.onWidgetEdgeHideChanged((state) => applyEdgeHideUi(state));
+}
+
 document.getElementById('compact-mode-toggle').addEventListener('change', async (event) => {
   const settings = await window.api.setSettings({ compactMode: event.target.checked });
   applySettings(settings);
@@ -480,6 +526,9 @@ async function init() {
 
   const settings = await window.api.getSettings();
   applySettings(settings);
+  if (isWidgetMode && settings.widgetEdgeHide) {
+    applyEdgeHideUi({ edge: settings.widgetEdgeHide, expanded: false });
+  }
   window.api.onSettingsChanged((next) => applySettings(next));
   await updateAll();
   setInterval(updateAll, 60 * 1000);

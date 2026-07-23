@@ -21,7 +21,9 @@ you to log in again, and polls their usage APIs about once a minute.
 - **Two ways to view:**
   - **Tray icon** — click to open a popup near the tray; click elsewhere to dismiss.
   - **Desktop widget** — an always-on-top, draggable card pinned to the top-right
-    of the screen. Toggle it from the tray icon's right-click menu.
+    of the screen. Toggle it from the tray icon's right-click menu. Drag it to the
+    left/right screen edge (or click › in the header) to tuck it away like
+    Microsoft PC Manager; hover the peek to reveal it again.
 - **Expandable cards** — click a card to reveal detailed meters (e.g. Claude's
   Session / Weekly / model-scoped Weekly; Cursor's Total / Auto / API). Cards
   with nothing extra to show simply don't expand.
