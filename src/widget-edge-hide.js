@@ -2,11 +2,10 @@ const EDGE_SNAP_THRESHOLD = 28;
 const PEEK_SIZE = 28;
 const DEFAULT_FULL_WIDTH = 300;
 const DEFAULT_FULL_HEIGHT = 360;
-const VALID_EDGES = new Set(['top']);
+const VALID_EDGES = new Set(['left', 'right', 'top']);
 
 function normalizeEdge(edge) {
-  // Migrate older left/right dock settings to top.
-  if (edge === 'left' || edge === 'right' || edge === 'top') return 'top';
+  if (VALID_EDGES.has(edge)) return edge;
   return null;
 }
 
@@ -16,22 +15,45 @@ function normalizeEdge(edge) {
  */
 function edgeDistances(bounds, workArea) {
   return {
+    left: bounds.x - workArea.x,
+    right: (workArea.x + workArea.width) - (bounds.x + bounds.width),
     top: bounds.y - workArea.y,
   };
 }
 
 /**
- * Snap only to the top work-area edge.
+ * Snap to the nearest work-area edge within threshold.
+ * @returns {'left'|'right'|'top'|null}
  */
 function detectSnapEdge(bounds, workArea, threshold = EDGE_SNAP_THRESHOLD) {
-  const { top } = edgeDistances(bounds, workArea);
-  if (top <= threshold) return 'top';
-  return null;
+  const distances = edgeDistances(bounds, workArea);
+  let best = null;
+  let bestDist = Infinity;
+  for (const edge of ['left', 'right', 'top']) {
+    const d = distances[edge];
+    if (d <= threshold && d < bestDist) {
+      best = edge;
+      bestDist = d;
+    }
+  }
+  return best;
 }
 
-/** Hide / dock target is always the top edge. */
-function preferDockEdge() {
-  return 'top';
+/**
+ * Prefer the nearest edge for the Hide button (ties break: top, then left, then right).
+ */
+function preferDockEdge(bounds, workArea) {
+  if (!bounds || !workArea) return 'top';
+  const distances = edgeDistances(bounds, workArea);
+  let best = 'top';
+  let bestDist = distances.top;
+  for (const edge of ['left', 'right']) {
+    if (distances[edge] < bestDist) {
+      best = edge;
+      bestDist = distances[edge];
+    }
+  }
+  return best;
 }
 
 function clampX(x, width, workArea) {
@@ -45,44 +67,90 @@ function clampY(y, height, workArea) {
 }
 
 /**
- * Fully visible bounds flush against the top edge (same monitor).
+ * Fully visible bounds flush against the docked edge (same monitor).
  */
 function expandedBounds(edge, bounds, workArea, fullWidth = DEFAULT_FULL_WIDTH, fullHeight = DEFAULT_FULL_HEIGHT) {
   const width = fullWidth;
   const height = Math.max(fullHeight, 120);
-  const x = clampX(bounds.x, width, workArea);
-  if (edge === 'top') {
-    return { x, y: workArea.y, width, height };
+  if (edge === 'left') {
+    return { x: workArea.x, y: clampY(bounds.y, height, workArea), width, height };
   }
-  // Fallback (should not happen with top-only docks).
-  return { x, y: clampY(bounds.y, height, workArea), width, height };
+  if (edge === 'right') {
+    return {
+      x: workArea.x + workArea.width - width,
+      y: clampY(bounds.y, height, workArea),
+      width,
+      height,
+    };
+  }
+  // top
+  return {
+    x: clampX(bounds.x, width, workArea),
+    y: workArea.y,
+    width,
+    height,
+  };
 }
 
 /**
- * Horizontal peek strip along the top edge (same monitor).
+ * Peek strip along the docked edge (same monitor).
+ * left/right → vertical strip; top → horizontal strip.
  */
-function collapsedBounds(edge, bounds, workArea, peekSize = PEEK_SIZE, fullWidth = DEFAULT_FULL_WIDTH) {
-  const width = fullWidth;
-  const height = peekSize;
-  const x = clampX(bounds.x, width, workArea);
-  if (edge === 'top') {
-    return { x, y: workArea.y, width, height };
+function collapsedBounds(edge, bounds, workArea, peekSize = PEEK_SIZE, fullWidth = DEFAULT_FULL_WIDTH, fullHeight = DEFAULT_FULL_HEIGHT) {
+  if (edge === 'left') {
+    const height = Math.max(fullHeight, 120);
+    return {
+      x: workArea.x,
+      y: clampY(bounds.y, height, workArea),
+      width: peekSize,
+      height,
+    };
   }
-  return { x, y: workArea.y, width, height };
+  if (edge === 'right') {
+    const height = Math.max(fullHeight, 120);
+    return {
+      x: workArea.x + workArea.width - peekSize,
+      y: clampY(bounds.y, height, workArea),
+      width: peekSize,
+      height,
+    };
+  }
+  // top
+  return {
+    x: clampX(bounds.x, fullWidth, workArea),
+    y: workArea.y,
+    width: fullWidth,
+    height: peekSize,
+  };
 }
 
 /**
- * Whether the cursor is still near the top dock zone.
+ * Whether the cursor is still near the dock zone for the given edge.
  */
 function isCursorNearDock(edge, cursor, workArea, widgetBounds, fullWidth = DEFAULT_FULL_WIDTH, fullHeight = DEFAULT_FULL_HEIGHT) {
   if (!edge || !cursor || !workArea || !widgetBounds) return false;
   const pad = 24;
-  const left = Math.min(widgetBounds.x, clampX(widgetBounds.x, fullWidth, workArea)) - pad;
-  const right = Math.max(widgetBounds.x + widgetBounds.width, left + fullWidth) + pad;
-  if (cursor.x < left || cursor.x > right) return false;
 
-  const zoneHeight = Math.max(widgetBounds.height, fullHeight) + pad;
-  return cursor.y >= workArea.y - pad && cursor.y <= workArea.y + zoneHeight;
+  if (edge === 'top') {
+    const left = Math.min(widgetBounds.x, clampX(widgetBounds.x, fullWidth, workArea)) - pad;
+    const right = Math.max(widgetBounds.x + widgetBounds.width, left + fullWidth) + pad;
+    if (cursor.x < left || cursor.x > right) return false;
+    const zoneHeight = Math.max(widgetBounds.height, fullHeight) + pad;
+    return cursor.y >= workArea.y - pad && cursor.y <= workArea.y + zoneHeight;
+  }
+
+  const top = Math.min(widgetBounds.y, clampY(widgetBounds.y, fullHeight, workArea)) - pad;
+  const bottom = Math.max(widgetBounds.y + widgetBounds.height, top + Math.max(fullHeight, 120)) + pad;
+  if (cursor.y < top || cursor.y > bottom) return false;
+
+  if (edge === 'left') {
+    const zoneWidth = Math.max(widgetBounds.width, fullWidth) + pad;
+    return cursor.x >= workArea.x - pad && cursor.x <= workArea.x + zoneWidth;
+  }
+
+  // right
+  const zoneWidth = Math.max(widgetBounds.width, fullWidth) + pad;
+  return cursor.x >= workArea.x + workArea.width - zoneWidth && cursor.x <= workArea.x + workArea.width + pad;
 }
 
 module.exports = {

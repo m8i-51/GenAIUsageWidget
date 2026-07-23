@@ -25,9 +25,9 @@ you to log in again, and polls their usage APIs about once a minute.
     edge).
   - **Desktop widget** — an always-on-top, draggable card pinned to the top-right
     of the screen. Toggle it from the tray icon's right-click menu. Drag it to the
-    top edge (or click ▲ in the header) to tuck it away like Microsoft PC Manager;
-    click the peek to keep the widget open, or use **Restore Widget Position** in
-    the tray menu to undock from the edge.
+    left, right, or top edge (or click the Hide button for the nearest edge) to tuck
+    it away like Microsoft PC Manager; click the peek to keep the widget open, or
+    use **Restore Widget Position** in the tray menu to undock from the edge.
 - **Expandable cards** — click a card to reveal detailed meters (e.g. Claude's
   Session / Weekly / model-scoped Weekly; Cursor's Total / Auto / API). Cards
   with nothing extra to show simply don't expand.
