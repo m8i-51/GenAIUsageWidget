@@ -203,11 +203,19 @@
     margin: 0;
     padding: 0;
     min-height: 0;
+    width: 100%;
+    height: 100%;
     border-radius: 0 0 14px 14px;
     box-shadow:
       inset 0 1px 0 var(--glass-highlight),
       0 1px 2px var(--glass-edge),
       0 8px 20px -8px rgba(0, 0, 0, 0.35);
+  }
+
+  body.widget-mode.edge-collapsed.edge-left,
+  body.widget-mode.edge-collapsed.edge-right {
+    width: 100%;
+    height: 100%;
   }
 
   body.widget-mode.edge-collapsed.edge-left .app {
@@ -244,14 +252,16 @@
     -webkit-app-region: no-drag;
     cursor: pointer;
     user-select: none;
+    /* Opaque enough that Electron hit-tests the peek (transparent pixels click through). */
+    background: var(--glass-card);
   }
 
   body.widget-mode.edge-collapsed.edge-left .edge-peek-tab,
   body.widget-mode.edge-collapsed.edge-right .edge-peek-tab {
-    width: 28px;
+    width: 100%;
     min-width: 28px;
     height: 100%;
-    min-height: 120px;
+    min-height: 100%;
   }
 
   body.widget-mode.edge-collapsed.edge-top .edge-peek-tab::before {
