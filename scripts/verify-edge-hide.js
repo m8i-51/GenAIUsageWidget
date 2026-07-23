@@ -1,5 +1,5 @@
 /**
- * Local smoke verification for top-edge hide.
+ * Local smoke verification for left/right/top edge hide.
  * Run: npx electron scripts/verify-edge-hide.js
  */
 const { app, BrowserWindow, screen, ipcMain } = require('electron');
@@ -78,7 +78,22 @@ app.whenReady().then(async () => {
     const display = screen.getPrimaryDisplay();
     const workArea = display.workArea;
     assert(workArea.width > 0 && workArea.height > 0, `workArea available (${workArea.width}x${workArea.height})`);
-    assert(preferDockEdge() === 'top', 'preferred dock edge is top');
+
+    const mid = {
+      x: workArea.x + Math.floor(workArea.width / 2) - 150,
+      y: workArea.y + 120,
+      width: DEFAULT_FULL_WIDTH,
+      height: DEFAULT_FULL_HEIGHT,
+    };
+    assert(detectSnapEdge(mid, workArea) === null, 'center position does not snap');
+    assert(preferDockEdge(mid, workArea) === 'top', 'center prefers top (tie-break)');
+
+    assert(detectSnapEdge({ ...mid, y: workArea.y + 8 }, workArea) === 'top', 'near-top snaps to top');
+    assert(detectSnapEdge({ ...mid, x: workArea.x + 8 }, workArea) === 'left', 'near-left snaps to left');
+    assert(
+      detectSnapEdge({ ...mid, x: workArea.x + workArea.width - DEFAULT_FULL_WIDTH - 8 }, workArea) === 'right',
+      'near-right snaps to right'
+    );
 
     const win = new BrowserWindow({
       width: DEFAULT_FULL_WIDTH,
@@ -99,53 +114,51 @@ app.whenReady().then(async () => {
     await win.loadFile(path.join(__dirname, '..', 'src', 'index.html'), { query: { mode: 'widget' } });
     await sleep(1000);
 
-    const mid = {
-      x: workArea.x + Math.floor(workArea.width / 2) - 150,
-      y: workArea.y + 120,
-      width: DEFAULT_FULL_WIDTH,
-      height: DEFAULT_FULL_HEIGHT,
-    };
-    assert(detectSnapEdge(mid, workArea) === null, 'center position does not snap');
-
-    const nearTop = { ...mid, y: workArea.y + 8 };
-    assert(detectSnapEdge(nearTop, workArea) === 'top', 'near-top snaps to top');
-
     win.setBounds(mid, false);
     await sleep(300);
     await capture(win, '01-floating-center');
     assert(win.isVisible(), 'widget visible at center');
 
-    const expanded = expandedBounds('top', mid, workArea, DEFAULT_FULL_WIDTH, DEFAULT_FULL_HEIGHT);
-    const collapsed = collapsedBounds('top', mid, workArea, PEEK_SIZE, DEFAULT_FULL_WIDTH);
-    assert(fullyInside(collapsed, workArea), 'collapsed top stays inside same workArea');
-    assert(collapsed.height === PEEK_SIZE, `collapsed height is peek (${collapsed.height})`);
-    assert(collapsed.width === DEFAULT_FULL_WIDTH, 'collapsed keeps full width');
-    approx(collapsed.y, workArea.y, 1, 'collapsed y is workArea top');
+    for (const edge of ['top', 'left', 'right']) {
+      const expanded = expandedBounds(edge, mid, workArea, DEFAULT_FULL_WIDTH, DEFAULT_FULL_HEIGHT);
+      const collapsed = collapsedBounds(edge, mid, workArea, PEEK_SIZE, DEFAULT_FULL_WIDTH, DEFAULT_FULL_HEIGHT);
+      assert(fullyInside(collapsed, workArea), `collapsed ${edge} stays inside same workArea`);
+      if (edge === 'top') {
+        assert(collapsed.height === PEEK_SIZE, `collapsed top height is peek (${collapsed.height})`);
+        assert(collapsed.width === DEFAULT_FULL_WIDTH, 'collapsed top keeps full width');
+        approx(collapsed.y, workArea.y, 1, 'collapsed top y is workArea top');
+      } else {
+        assert(collapsed.width === PEEK_SIZE, `collapsed ${edge} width is peek (${collapsed.width})`);
+        assert(collapsed.height === DEFAULT_FULL_HEIGHT, `collapsed ${edge} keeps full height`);
+        if (edge === 'left') {
+          approx(collapsed.x, workArea.x, 1, 'collapsed left x is workArea left');
+        } else {
+          approx(collapsed.x, workArea.x + workArea.width - PEEK_SIZE, 1, 'collapsed right x is workArea right');
+        }
+      }
 
-    win.setBounds(expanded, false);
-    await sleep(300);
-    await capture(win, '02-docked-expanded-top');
+      win.setBounds(expanded, false);
+      await sleep(250);
+      await capture(win, `02-docked-expanded-${edge}`);
 
-    win.setBounds(collapsed, false);
-    await sleep(300);
-    const collapsedActual = win.getBounds();
-    assert(fullyInside(collapsedActual, workArea), 'actual collapsed top remains on same monitor');
-    approx(collapsedActual.height, PEEK_SIZE, 8, 'actual collapsed height');
-    await capture(win, '03-docked-collapsed-top');
+      win.setBounds(collapsed, false);
+      await sleep(250);
+      const collapsedActual = win.getBounds();
+      assert(fullyInside(collapsedActual, workArea), `actual collapsed ${edge} remains on same monitor`);
+      await capture(win, `03-docked-collapsed-${edge}`);
 
-    win.setBounds(expanded, false);
-    await sleep(300);
-    const expandedActual = win.getBounds();
-    approx(expandedActual.y, workArea.y, 8, 'expanded flush top');
-    await capture(win, '04-revealed-expanded-top');
+      win.setBounds(expanded, false);
+      await sleep(250);
+      await capture(win, `04-revealed-expanded-${edge}`);
+    }
 
     assert(
-      isCursorNearDock('top', { x: mid.x + 20, y: workArea.y + 10 }, workArea, collapsed, DEFAULT_FULL_WIDTH, DEFAULT_FULL_HEIGHT),
-      'cursor near top dock detected'
+      isCursorNearDock('left', { x: workArea.x + 10, y: mid.y + 20 }, workArea, { ...mid, x: workArea.x, width: PEEK_SIZE }, DEFAULT_FULL_WIDTH, DEFAULT_FULL_HEIGHT),
+      'cursor near left dock detected'
     );
     assert(
-      !isCursorNearDock('top', { x: mid.x + 20, y: workArea.y + 400 }, workArea, collapsed, DEFAULT_FULL_WIDTH, DEFAULT_FULL_HEIGHT),
-      'cursor far from top dock not detected'
+      !isCursorNearDock('right', { x: workArea.x + 10, y: mid.y + 20 }, workArea, { ...mid, x: workArea.x + workArea.width - PEEK_SIZE, width: PEEK_SIZE }, DEFAULT_FULL_WIDTH, DEFAULT_FULL_HEIGHT),
+      'cursor far from right dock not detected'
     );
 
     win.setBounds(mid, false);
@@ -184,7 +197,6 @@ app.whenReady().then(async () => {
       ok: true,
       workArea,
       peekSize: PEEK_SIZE,
-      collapsedTop: collapsed,
       checks: results,
       outDir: OUT_DIR,
     };

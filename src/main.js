@@ -181,7 +181,7 @@ function applyEdgeHidePosition(expanded) {
   const workArea = getWidgetWorkArea(current);
   const next = expanded
     ? expandedBounds(dockedEdge, current, workArea, widgetFullWidth, widgetFullHeight)
-    : collapsedBounds(dockedEdge, current, workArea, PEEK_SIZE, widgetFullWidth);
+    : collapsedBounds(dockedEdge, current, workArea, PEEK_SIZE, widgetFullWidth, widgetFullHeight);
   edgeHideExpanded = expanded;
   if (!expanded) {
     edgeHidePinned = false;
@@ -279,16 +279,17 @@ function scheduleSnapEvaluation() {
   }, 180);
 }
 
-function hideWidgetToTopEdge() {
+function hideWidgetToEdge() {
   if (!widget || widget.isDestroyed()) return;
   if (!widget.isVisible()) {
     widget.show();
   }
   const bounds = widget.getBounds();
   rememberExpandedSize(bounds);
+  const workArea = getWidgetWorkArea(bounds);
   dockDisplayId = String(resolveDockDisplay(bounds).id);
   edgeHidePinned = false;
-  setDockedEdge(preferDockEdge(), { collapse: true, persist: true });
+  setDockedEdge(preferDockEdge(bounds, workArea), { collapse: true, persist: true });
 }
 
 function createPopup() {
@@ -422,7 +423,7 @@ function createTray() {
         click: () => toggleWidget(),
       },
       {
-        label: dockedEdge ? 'Restore Widget Position' : 'Hide to Top Edge',
+        label: dockedEdge ? 'Restore Widget Position' : 'Hide to Edge',
         click: () => {
           if (dockedEdge) {
             const bounds = widget.getBounds();
@@ -438,7 +439,7 @@ function createTray() {
             setWidgetBounds(pos);
             scheduleWidgetBoundsSave();
           } else {
-            hideWidgetToTopEdge();
+            hideWidgetToEdge();
           }
         },
       },
@@ -476,7 +477,7 @@ ipcMain.on('save-widget-bounds', (_event, bounds) => {
 });
 
 ipcMain.on('widget-hide-to-edge', () => {
-  hideWidgetToTopEdge();
+  hideWidgetToEdge();
 });
 
 ipcMain.on('widget-show-from-edge', () => {
@@ -495,10 +496,10 @@ ipcMain.on('resize-to', (event, height) => {
   const clamped = Math.max(PEEK_SIZE, Math.min(900, Math.round(height)));
 
   if (win === widget && dockedEdge && !edgeHideExpanded) {
-    // Peek strip along the top: keep peek height, full width.
+    // Peek strip: keep collapsed geometry for the docked edge.
     const current = win.getBounds();
     const workArea = getWidgetWorkArea(current);
-    const next = collapsedBounds(dockedEdge, current, workArea, PEEK_SIZE, widgetFullWidth);
+    const next = collapsedBounds(dockedEdge, current, workArea, PEEK_SIZE, widgetFullWidth, widgetFullHeight);
     withSuppressedWindowEvents(() => {
       win.setBounds({
         x: Math.round(next.x),

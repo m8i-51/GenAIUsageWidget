@@ -210,6 +210,14 @@
       0 8px 20px -8px rgba(0, 0, 0, 0.35);
   }
 
+  body.widget-mode.edge-collapsed.edge-left .app {
+    border-radius: 0 14px 14px 0;
+  }
+
+  body.widget-mode.edge-collapsed.edge-right .app {
+    border-radius: 14px 0 0 14px;
+  }
+
   body.widget-mode.edge-collapsed .app-bg,
   body.widget-mode.edge-collapsed .app-header,
   body.widget-mode.edge-collapsed #settings-panel,
@@ -238,8 +246,24 @@
     user-select: none;
   }
 
+  body.widget-mode.edge-collapsed.edge-left .edge-peek-tab,
+  body.widget-mode.edge-collapsed.edge-right .edge-peek-tab {
+    width: 28px;
+    min-width: 28px;
+    height: 100%;
+    min-height: 120px;
+  }
+
   body.widget-mode.edge-collapsed.edge-top .edge-peek-tab::before {
     content: "▾";
+  }
+
+  body.widget-mode.edge-collapsed.edge-left .edge-peek-tab::before {
+    content: "▸";
+  }
+
+  body.widget-mode.edge-collapsed.edge-right .edge-peek-tab::before {
+    content: "◂";
   }
 
   #settings-panel {
@@ -618,7 +642,7 @@
       <span class="app-title">AI Usage</span>
       <div class="app-header-actions">
         <span class="app-updated" id="last-updated"></span>
-        <button type="button" id="hide-edge-btn" class="hide-edge-btn" aria-label="Hide to top edge" title="Hide to top edge">&#9650;</button>
+        <button type="button" id="hide-edge-btn" class="hide-edge-btn" aria-label="Hide to nearest edge" title="Hide to nearest edge">&#9650;</button>
         <button type="button" id="settings-btn" class="settings-btn" aria-label="Settings">&#9881;</button>
       </div>
     </div>
