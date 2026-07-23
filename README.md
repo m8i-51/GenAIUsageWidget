@@ -19,11 +19,15 @@ you to log in again, and polls their usage APIs about once a minute.
 - **Glassmorphism UI** — frosted-glass cards with per-provider glow, light & dark
   mode, and meters that shift to warning/critical colors as usage climbs.
 - **Two ways to view:**
-  - **Tray icon** — click to open a popup near the tray; click elsewhere to dismiss.
+  - **Tray icon** — when the desktop widget is hidden, click to open a popup near
+    the tray (click elsewhere to dismiss). When the widget is already visible,
+    click focuses the widget instead (and expands it if it was tucked to the top
+    edge).
   - **Desktop widget** — an always-on-top, draggable card pinned to the top-right
     of the screen. Toggle it from the tray icon's right-click menu. Drag it to the
     top edge (or click ▲ in the header) to tuck it away like Microsoft PC Manager;
-    hover the peek for a temporary preview, or click it to keep the widget open.
+    click the peek to keep the widget open, or use **Restore Widget Position** in
+    the tray menu to undock from the edge.
 - **Expandable cards** — click a card to reveal detailed meters (e.g. Claude's
   Session / Weekly / model-scoped Weekly; Cursor's Total / Auto / API). Cards
   with nothing extra to show simply don't expand.

@@ -13,7 +13,6 @@ const {
   expandedBounds,
   collapsedBounds,
   normalizeEdge,
-  isCursorNearDock,
   PEEK_SIZE,
   DEFAULT_FULL_WIDTH,
   DEFAULT_FULL_HEIGHT,
@@ -25,15 +24,11 @@ let widget = null;
 let lastTrayBounds = null;
 let widgetBoundsSaveTimer = null;
 let widgetSnapTimer = null;
-let edgeHideCollapseTimer = null;
 let dockedEdge = null;
 let dockDisplayId = null;
 let edgeHideExpanded = true;
 let edgeHidePinned = false;
-let edgeHideHovering = false;
-let ignoreHoverExpand = false;
 let suppressMoveHandling = false;
-let suppressHoverHandling = false;
 let widgetFullWidth = DEFAULT_FULL_WIDTH;
 let widgetFullHeight = DEFAULT_FULL_HEIGHT;
 
@@ -150,13 +145,11 @@ function scheduleWidgetBoundsSave() {
 function withSuppressedWindowEvents(fn) {
   if (!widget || widget.isDestroyed()) return;
   suppressMoveHandling = true;
-  suppressHoverHandling = true;
   try {
     fn();
   } finally {
     setTimeout(() => {
       suppressMoveHandling = false;
-      suppressHoverHandling = false;
     }, 350);
   }
 }
@@ -197,27 +190,6 @@ function applyEdgeHidePosition(expanded) {
   broadcastEdgeHideState();
 }
 
-function clearEdgeHideCollapseTimer() {
-  if (edgeHideCollapseTimer) {
-    clearTimeout(edgeHideCollapseTimer);
-    edgeHideCollapseTimer = null;
-  }
-}
-
-function cursorStillNearDock() {
-  if (!dockedEdge || !widget || widget.isDestroyed()) return false;
-  const bounds = widget.getBounds();
-  const workArea = getWidgetWorkArea(bounds);
-  return isCursorNearDock(
-    dockedEdge,
-    screen.getCursorScreenPoint(),
-    workArea,
-    bounds,
-    widgetFullWidth,
-    widgetFullHeight
-  );
-}
-
 function restoreFullSizeAt(bounds) {
   if (!widget || widget.isDestroyed()) return;
   withSuppressedWindowEvents(() => {
@@ -232,7 +204,6 @@ function restoreFullSizeAt(bounds) {
 
 function setDockedEdge(edge, { collapse = true, persist = true, pinned = false } = {}) {
   const normalized = normalizeEdge(edge);
-  clearEdgeHideCollapseTimer();
 
   if (!normalized) {
     dockedEdge = null;
@@ -266,42 +237,15 @@ function setDockedEdge(edge, { collapse = true, persist = true, pinned = false }
   }
 }
 
-function expandEdgeHide({ pinned = false } = {}) {
+function expandEdgeHide({ pinned = true } = {}) {
   if (!dockedEdge) return;
   if (pinned) {
-    ignoreHoverExpand = false;
     edgeHidePinned = true;
-  } else if (ignoreHoverExpand || edgeHidePinned) {
-    // Hover must not override an explicit hide, and is unnecessary when already pinned open.
-    if (edgeHidePinned && !edgeHideExpanded) {
-      applyEdgeHidePosition(true);
-    }
-    return;
   }
-  clearEdgeHideCollapseTimer();
   if (!edgeHideExpanded) {
     applyEdgeHidePosition(true);
   } else if (pinned) {
-    edgeHidePinned = true;
     broadcastEdgeHideState();
-  }
-}
-
-function collapseEdgeHide(delayMs = 0) {
-  if (!dockedEdge || !edgeHideExpanded) return;
-  // Explicit click-to-open stays open until the user hides again.
-  if (edgeHidePinned) return;
-  clearEdgeHideCollapseTimer();
-  const run = () => {
-    edgeHideCollapseTimer = null;
-    if (!dockedEdge || edgeHidePinned) return;
-    if (cursorStillNearDock() || edgeHideHovering) return;
-    applyEdgeHidePosition(false);
-  };
-  if (delayMs > 0) {
-    edgeHideCollapseTimer = setTimeout(run, delayMs);
-  } else {
-    run();
   }
 }
 
@@ -315,7 +259,7 @@ function evaluateSnapAfterMove() {
   if (edge) {
     edgeHidePinned = false;
     setDockedEdge(edge, {
-      collapse: !edgeHideHovering && !cursorStillNearDock(),
+      collapse: true,
       persist: true,
     });
   } else if (dockedEdge) {
@@ -344,8 +288,6 @@ function hideWidgetToTopEdge() {
   rememberExpandedSize(bounds);
   dockDisplayId = String(resolveDockDisplay(bounds).id);
   edgeHidePinned = false;
-  // Stay collapsed until the pointer leaves, then hover can temporarily preview.
-  ignoreHoverExpand = true;
   setDockedEdge(preferDockEdge(), { collapse: true, persist: true });
 }
 
@@ -441,9 +383,6 @@ function createWidget() {
 
   widget.on('move', () => {
     if (suppressMoveHandling) return;
-    if (dockedEdge && edgeHideExpanded) {
-      clearEdgeHideCollapseTimer();
-    }
     scheduleSnapEvaluation();
   });
 }
@@ -465,6 +404,14 @@ function createTray() {
   tray.setToolTip('GenAIUsageWidget');
 
   tray.on('click', (_event, bounds) => {
+    if (widget && !widget.isDestroyed() && widget.isVisible()) {
+      widget.show();
+      widget.focus();
+      if (dockedEdge && !edgeHideExpanded) {
+        expandEdgeHide({ pinned: true });
+      }
+      return;
+    }
     togglePopup(bounds);
   });
 
@@ -475,7 +422,7 @@ function createTray() {
         click: () => toggleWidget(),
       },
       {
-        label: dockedEdge ? 'Undock Widget' : 'Hide to Top Edge',
+        label: dockedEdge ? 'Restore Widget Position' : 'Hide to Top Edge',
         click: () => {
           if (dockedEdge) {
             const bounds = widget.getBounds();
@@ -526,21 +473,6 @@ ipcMain.on('save-widget-bounds', (_event, bounds) => {
       displayId: bounds.displayId != null ? String(bounds.displayId) : undefined,
     },
   });
-});
-
-ipcMain.on('widget-edge-hide-hover', (_event, hovering) => {
-  if (suppressHoverHandling) return;
-  edgeHideHovering = !!hovering;
-  if (!hovering) {
-    ignoreHoverExpand = false;
-  }
-  if (!dockedEdge) return;
-  if (edgeHideHovering) {
-    // Hover = temporary preview only (not pinned).
-    expandEdgeHide({ pinned: false });
-  } else {
-    collapseEdgeHide(500);
-  }
 });
 
 ipcMain.on('widget-hide-to-edge', () => {

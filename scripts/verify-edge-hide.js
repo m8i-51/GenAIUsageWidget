@@ -175,13 +175,10 @@ app.whenReady().then(async () => {
     await sleep(150);
     assert(showIpcReceived, 'showWidgetFromEdge IPC reaches main (click-to-open)');
 
-    let hoverIpc = null;
-    ipcMain.once('widget-edge-hide-hover', (_e, hovering) => {
-      hoverIpc = hovering;
-    });
-    await win.webContents.executeJavaScript(`window.api.setWidgetEdgeHover(true)`);
-    await sleep(150);
-    assert(hoverIpc === true, 'setWidgetEdgeHover(true) IPC reaches main (temporary preview)');
+    const hoverApiMissing = await win.webContents.executeJavaScript(
+      `typeof window.api.setWidgetEdgeHover === 'undefined'`
+    );
+    assert(hoverApiMissing === true, 'setWidgetEdgeHover is removed (no hover preview)');
 
     const summary = {
       ok: true,
