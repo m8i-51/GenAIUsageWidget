@@ -1,5 +1,5 @@
 /**
- * Local smoke verification for PC Manager-style edge hide.
+ * Local smoke verification for top-edge hide.
  * Run: npx electron scripts/verify-edge-hide.js
  */
 const { app, BrowserWindow, screen, ipcMain } = require('electron');
@@ -7,12 +7,13 @@ const path = require('path');
 const fs = require('fs');
 const {
   detectSnapEdge,
-  nearestHorizontalEdge,
+  preferDockEdge,
   expandedBounds,
   collapsedBounds,
   isCursorNearDock,
   PEEK_SIZE,
   DEFAULT_FULL_WIDTH,
+  DEFAULT_FULL_HEIGHT,
 } = require('../src/widget-edge-hide');
 
 const OUT_DIR = process.env.VERIFY_OUT_DIR || '/opt/cursor/artifacts/edge-hide-verify';
@@ -77,10 +78,11 @@ app.whenReady().then(async () => {
     const display = screen.getPrimaryDisplay();
     const workArea = display.workArea;
     assert(workArea.width > 0 && workArea.height > 0, `workArea available (${workArea.width}x${workArea.height})`);
+    assert(preferDockEdge() === 'top', 'preferred dock edge is top');
 
     const win = new BrowserWindow({
       width: DEFAULT_FULL_WIDTH,
-      height: 360,
+      height: DEFAULT_FULL_HEIGHT,
       show: true,
       frame: false,
       transparent: true,
@@ -99,59 +101,51 @@ app.whenReady().then(async () => {
 
     const mid = {
       x: workArea.x + Math.floor(workArea.width / 2) - 150,
-      y: workArea.y + 40,
+      y: workArea.y + 120,
       width: DEFAULT_FULL_WIDTH,
-      height: 360,
+      height: DEFAULT_FULL_HEIGHT,
     };
     assert(detectSnapEdge(mid, workArea) === null, 'center position does not snap');
 
-    const nearRight = { ...mid, x: workArea.x + workArea.width - DEFAULT_FULL_WIDTH - 10 };
-    assert(detectSnapEdge(nearRight, workArea) === 'right', 'near-right snaps to right');
-    assert(nearestHorizontalEdge(nearRight, workArea) === 'right', 'nearest edge is right');
-
-    const nearLeft = { ...mid, x: workArea.x + 8 };
-    assert(detectSnapEdge(nearLeft, workArea) === 'left', 'near-left snaps to left');
+    const nearTop = { ...mid, y: workArea.y + 8 };
+    assert(detectSnapEdge(nearTop, workArea) === 'top', 'near-top snaps to top');
 
     win.setBounds(mid, false);
     await sleep(300);
     await capture(win, '01-floating-center');
     assert(win.isVisible(), 'widget visible at center');
 
-    const expanded = expandedBounds('right', mid, workArea, DEFAULT_FULL_WIDTH);
-    const collapsed = collapsedBounds('right', mid, workArea, PEEK_SIZE);
-    assert(fullyInside(collapsed, workArea), 'collapsed right stays inside same workArea (no sub-monitor slide)');
-    assert(collapsed.width === PEEK_SIZE, `collapsed width is peek (${collapsed.width})`);
+    const expanded = expandedBounds('top', mid, workArea, DEFAULT_FULL_WIDTH, DEFAULT_FULL_HEIGHT);
+    const collapsed = collapsedBounds('top', mid, workArea, PEEK_SIZE, DEFAULT_FULL_WIDTH);
+    assert(fullyInside(collapsed, workArea), 'collapsed top stays inside same workArea');
+    assert(collapsed.height === PEEK_SIZE, `collapsed height is peek (${collapsed.height})`);
+    assert(collapsed.width === DEFAULT_FULL_WIDTH, 'collapsed keeps full width');
+    approx(collapsed.y, workArea.y, 1, 'collapsed y is workArea top');
 
     win.setBounds(expanded, false);
     await sleep(300);
-    await capture(win, '02-docked-expanded-right');
+    await capture(win, '02-docked-expanded-top');
 
     win.setBounds(collapsed, false);
     await sleep(300);
     const collapsedActual = win.getBounds();
-    assert(fullyInside(collapsedActual, workArea), 'actual collapsed right remains on same monitor');
-    approx(collapsedActual.width, PEEK_SIZE, 8, 'actual collapsed width');
-    await capture(win, '03-docked-collapsed-right');
+    assert(fullyInside(collapsedActual, workArea), 'actual collapsed top remains on same monitor');
+    approx(collapsedActual.height, PEEK_SIZE, 8, 'actual collapsed height');
+    await capture(win, '03-docked-collapsed-top');
 
     win.setBounds(expanded, false);
     await sleep(300);
     const expandedActual = win.getBounds();
-    approx(expandedActual.x, workArea.x + workArea.width - DEFAULT_FULL_WIDTH, 8, 'expanded flush right');
-    await capture(win, '04-revealed-expanded-right');
-
-    const leftCollapsed = collapsedBounds('left', mid, workArea, PEEK_SIZE);
-    assert(fullyInside(leftCollapsed, workArea), 'collapsed left stays inside same workArea');
-    win.setBounds(leftCollapsed, false);
-    await sleep(300);
-    await capture(win, '05-docked-collapsed-left');
+    approx(expandedActual.y, workArea.y, 8, 'expanded flush top');
+    await capture(win, '04-revealed-expanded-top');
 
     assert(
-      isCursorNearDock('right', { x: workArea.x + workArea.width - 10, y: mid.y + 20 }, workArea, collapsed, DEFAULT_FULL_WIDTH),
-      'cursor near right dock detected'
+      isCursorNearDock('top', { x: mid.x + 20, y: workArea.y + 10 }, workArea, collapsed, DEFAULT_FULL_WIDTH, DEFAULT_FULL_HEIGHT),
+      'cursor near top dock detected'
     );
     assert(
-      !isCursorNearDock('right', { x: workArea.x + 100, y: mid.y + 20 }, workArea, collapsed, DEFAULT_FULL_WIDTH),
-      'cursor far from right dock not detected'
+      !isCursorNearDock('top', { x: mid.x + 20, y: workArea.y + 400 }, workArea, collapsed, DEFAULT_FULL_WIDTH, DEFAULT_FULL_HEIGHT),
+      'cursor far from top dock not detected'
     );
 
     win.setBounds(mid, false);
@@ -173,19 +167,27 @@ app.whenReady().then(async () => {
     await sleep(150);
     assert(hideIpcReceived, 'hideWidgetToEdge IPC reaches main');
 
+    let showIpcReceived = false;
+    ipcMain.once('widget-show-from-edge', () => {
+      showIpcReceived = true;
+    });
+    await win.webContents.executeJavaScript(`window.api.showWidgetFromEdge()`);
+    await sleep(150);
+    assert(showIpcReceived, 'showWidgetFromEdge IPC reaches main (click-to-open)');
+
     let hoverIpc = null;
     ipcMain.once('widget-edge-hide-hover', (_e, hovering) => {
       hoverIpc = hovering;
     });
     await win.webContents.executeJavaScript(`window.api.setWidgetEdgeHover(true)`);
     await sleep(150);
-    assert(hoverIpc === true, 'setWidgetEdgeHover(true) IPC reaches main');
+    assert(hoverIpc === true, 'setWidgetEdgeHover(true) IPC reaches main (temporary preview)');
 
     const summary = {
       ok: true,
       workArea,
       peekSize: PEEK_SIZE,
-      collapsedRight: collapsed,
+      collapsedTop: collapsed,
       checks: results,
       outDir: OUT_DIR,
     };

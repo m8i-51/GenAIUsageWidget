@@ -30,7 +30,9 @@ function mergeWithDefaults(raw) {
   if (merged.widgetBounds != null && typeof merged.widgetBounds !== 'object') {
     merged.widgetBounds = null;
   }
-  if (merged.widgetEdgeHide !== 'left' && merged.widgetEdgeHide !== 'right') {
+  if (merged.widgetEdgeHide === 'left' || merged.widgetEdgeHide === 'right') {
+    merged.widgetEdgeHide = 'top';
+  } else if (merged.widgetEdgeHide !== 'top') {
     merged.widgetEdgeHide = null;
   }
   return merged;

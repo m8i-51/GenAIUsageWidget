@@ -53,9 +53,7 @@ function applySettings(settings) {
     compactMode: !!settings.compactMode,
     hiddenProviders: Array.isArray(settings.hiddenProviders) ? [...settings.hiddenProviders] : [],
     widgetBounds: settings.widgetBounds ?? null,
-    widgetEdgeHide: settings.widgetEdgeHide === 'left' || settings.widgetEdgeHide === 'right'
-      ? settings.widgetEdgeHide
-      : null,
+    widgetEdgeHide: settings.widgetEdgeHide === 'top' ? 'top' : null,
   };
   document.body.classList.toggle('compact-mode', appSettings.compactMode);
   const compactToggle = document.getElementById('compact-mode-toggle');
@@ -66,23 +64,25 @@ function applySettings(settings) {
 
 function applyEdgeHideUi(state) {
   if (!isWidgetMode) return;
-  const edge = state?.edge === 'left' || state?.edge === 'right' ? state.edge : null;
+  const edge = state?.edge === 'top' ? 'top' : null;
   const expanded = state?.expanded !== false;
+  const pinned = !!state?.pinned;
   document.body.classList.toggle('edge-collapsed', !!(edge && !expanded));
-  document.body.classList.toggle('edge-left', edge === 'left');
-  document.body.classList.toggle('edge-right', edge === 'right');
+  document.body.classList.toggle('edge-top', edge === 'top');
+  document.body.classList.toggle('edge-pinned', !!(edge && expanded && pinned));
+  document.body.classList.remove('edge-left', 'edge-right');
 
   const hideBtn = document.getElementById('hide-edge-btn');
   if (!hideBtn) return;
-  if (edge === 'left') {
-    hideBtn.innerHTML = '&#8249;';
-    hideBtn.title = 'Hidden on left — hover edge to show';
-  } else if (edge === 'right') {
-    hideBtn.innerHTML = '&#8250;';
-    hideBtn.title = 'Hidden on right — hover edge to show';
+  hideBtn.innerHTML = '&#9650;';
+  if (edge && expanded && pinned) {
+    hideBtn.title = 'Hide to top edge';
+  } else if (edge && !expanded) {
+    hideBtn.title = 'Hidden on top — hover to preview, click to open';
+  } else if (edge) {
+    hideBtn.title = 'Hide to top edge';
   } else {
-    hideBtn.innerHTML = '&#8250;';
-    hideBtn.title = 'Hide to screen edge';
+    hideBtn.title = 'Hide to top edge';
   }
 }
 

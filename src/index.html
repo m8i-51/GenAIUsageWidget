@@ -202,8 +202,8 @@
   body.widget-mode.edge-collapsed .app {
     margin: 0;
     padding: 0;
-    min-height: 120px;
-    border-radius: 14px;
+    min-height: 0;
+    border-radius: 0 0 14px 14px;
     box-shadow:
       inset 0 1px 0 var(--glass-highlight),
       0 1px 2px var(--glass-edge),
@@ -226,10 +226,11 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    min-height: 120px;
-    padding: 10px 0;
+    min-height: 28px;
+    height: 28px;
+    padding: 0;
     color: var(--text-secondary);
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.04em;
     -webkit-app-region: no-drag;
@@ -237,22 +238,8 @@
     user-select: none;
   }
 
-  body.widget-mode.edge-collapsed.edge-left .app {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-  }
-
-  body.widget-mode.edge-collapsed.edge-right .app {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-  }
-
-  body.widget-mode.edge-collapsed.edge-left .edge-peek-tab::before {
-    content: "›";
-  }
-
-  body.widget-mode.edge-collapsed.edge-right .edge-peek-tab::before {
-    content: "‹";
+  body.widget-mode.edge-collapsed.edge-top .edge-peek-tab::before {
+    content: "▾";
   }
 
   #settings-panel {
@@ -624,13 +611,13 @@
       <div class="blob blob-3"></div>
     </div>
 
-    <div class="edge-peek-tab" id="edge-peek-tab" title="Show widget"></div>
+    <div class="edge-peek-tab" id="edge-peek-tab" title="Click to open · hover to preview"></div>
 
     <div class="app-header">
       <span class="app-title">AI Usage</span>
       <div class="app-header-actions">
         <span class="app-updated" id="last-updated"></span>
-        <button type="button" id="hide-edge-btn" class="hide-edge-btn" aria-label="Hide to screen edge" title="Hide to screen edge">&#8250;</button>
+        <button type="button" id="hide-edge-btn" class="hide-edge-btn" aria-label="Hide to top edge" title="Hide to top edge">&#9650;</button>
         <button type="button" id="settings-btn" class="settings-btn" aria-label="Settings">&#9881;</button>
       </div>
     </div>
