@@ -412,6 +412,13 @@ if (isWidgetMode) {
   document.addEventListener('mouseleave', () => {
     window.api.setWidgetEdgeHover(false);
   });
+  const peekTab = document.getElementById('edge-peek-tab');
+  if (peekTab) {
+    peekTab.addEventListener('click', (event) => {
+      event.stopPropagation();
+      window.api.showWidgetFromEdge();
+    });
+  }
   window.api.onWidgetEdgeHideChanged((state) => applyEdgeHideUi(state));
 }
 

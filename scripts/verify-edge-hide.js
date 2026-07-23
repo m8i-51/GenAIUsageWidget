@@ -8,9 +8,11 @@ const fs = require('fs');
 const {
   detectSnapEdge,
   nearestHorizontalEdge,
-  expandedPosition,
-  collapsedPosition,
+  expandedBounds,
+  collapsedBounds,
+  isCursorNearDock,
   PEEK_SIZE,
+  DEFAULT_FULL_WIDTH,
 } = require('../src/widget-edge-hide');
 
 const OUT_DIR = process.env.VERIFY_OUT_DIR || '/opt/cursor/artifacts/edge-hide-verify';
@@ -41,17 +43,17 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function visiblePeekRight(bounds, workArea) {
-  return (workArea.x + workArea.width) - bounds.x;
-}
-
-function visiblePeekLeft(bounds, workArea) {
-  return (bounds.x + bounds.width) - workArea.x;
+function fullyInside(bounds, workArea) {
+  return (
+    bounds.x >= workArea.x - 1
+    && bounds.y >= workArea.y - 1
+    && bounds.x + bounds.width <= workArea.x + workArea.width + 1
+    && bounds.y + bounds.height <= workArea.y + workArea.height + 1
+  );
 }
 
 app.whenReady().then(async () => {
   try {
-    // Minimal stubs so the shared renderer can boot without the full main process.
     ipcMain.handle('get-settings', () => ({
       compactMode: false,
       hiddenProviders: [],
@@ -77,7 +79,7 @@ app.whenReady().then(async () => {
     assert(workArea.width > 0 && workArea.height > 0, `workArea available (${workArea.width}x${workArea.height})`);
 
     const win = new BrowserWindow({
-      width: 300,
+      width: DEFAULT_FULL_WIDTH,
       height: 360,
       show: true,
       frame: false,
@@ -98,63 +100,67 @@ app.whenReady().then(async () => {
     const mid = {
       x: workArea.x + Math.floor(workArea.width / 2) - 150,
       y: workArea.y + 40,
-      width: 300,
+      width: DEFAULT_FULL_WIDTH,
       height: 360,
     };
     assert(detectSnapEdge(mid, workArea) === null, 'center position does not snap');
 
-    const nearRight = { ...mid, x: workArea.x + workArea.width - 300 - 10 };
+    const nearRight = { ...mid, x: workArea.x + workArea.width - DEFAULT_FULL_WIDTH - 10 };
     assert(detectSnapEdge(nearRight, workArea) === 'right', 'near-right snaps to right');
     assert(nearestHorizontalEdge(nearRight, workArea) === 'right', 'nearest edge is right');
 
     const nearLeft = { ...mid, x: workArea.x + 8 };
     assert(detectSnapEdge(nearLeft, workArea) === 'left', 'near-left snaps to left');
 
-    win.setPosition(mid.x, mid.y, false);
+    win.setBounds(mid, false);
     await sleep(300);
     await capture(win, '01-floating-center');
     assert(win.isVisible(), 'widget visible at center');
 
-    const edge = 'right';
-    const bounds = win.getBounds();
-    const expanded = expandedPosition(edge, bounds, workArea);
-    const collapsed = collapsedPosition(edge, bounds, workArea);
-    win.setPosition(expanded.x, expanded.y, false);
+    const expanded = expandedBounds('right', mid, workArea, DEFAULT_FULL_WIDTH);
+    const collapsed = collapsedBounds('right', mid, workArea, PEEK_SIZE);
+    assert(fullyInside(collapsed, workArea), 'collapsed right stays inside same workArea (no sub-monitor slide)');
+    assert(collapsed.width === PEEK_SIZE, `collapsed width is peek (${collapsed.width})`);
+
+    win.setBounds(expanded, false);
     await sleep(300);
     await capture(win, '02-docked-expanded-right');
 
-    win.setPosition(collapsed.x, collapsed.y, false);
+    win.setBounds(collapsed, false);
     await sleep(300);
-    const collapsedBounds = win.getBounds();
-    // Some WMs clamp off-screen windows; accept a small peek range.
-    const rightPeek = visiblePeekRight(collapsedBounds, workArea);
-    assert(rightPeek > 0 && rightPeek <= 48, `collapsed right peek visible (${rightPeek}px)`);
-    assert(collapsedBounds.x + collapsedBounds.width > workArea.x + workArea.width, 'collapsed right extends past workArea');
+    const collapsedActual = win.getBounds();
+    assert(fullyInside(collapsedActual, workArea), 'actual collapsed right remains on same monitor');
+    approx(collapsedActual.width, PEEK_SIZE, 8, 'actual collapsed width');
     await capture(win, '03-docked-collapsed-right');
 
-    win.setPosition(expanded.x, expanded.y, false);
+    win.setBounds(expanded, false);
     await sleep(300);
-    const expandedBounds = win.getBounds();
-    approx(expandedBounds.x, workArea.x + workArea.width - expandedBounds.width, 8, 'expanded flush right');
+    const expandedActual = win.getBounds();
+    approx(expandedActual.x, workArea.x + workArea.width - DEFAULT_FULL_WIDTH, 8, 'expanded flush right');
     await capture(win, '04-revealed-expanded-right');
 
-    const leftCollapsed = collapsedPosition('left', bounds, workArea);
-    win.setPosition(leftCollapsed.x, leftCollapsed.y, false);
+    const leftCollapsed = collapsedBounds('left', mid, workArea, PEEK_SIZE);
+    assert(fullyInside(leftCollapsed, workArea), 'collapsed left stays inside same workArea');
+    win.setBounds(leftCollapsed, false);
     await sleep(300);
-    const leftBounds = win.getBounds();
-    const leftPeek = visiblePeekLeft(leftBounds, workArea);
-    assert(leftPeek > 0 && leftPeek <= 48, `collapsed left peek visible (${leftPeek}px)`);
-    assert(leftBounds.x < workArea.x, 'collapsed left extends past workArea');
     await capture(win, '05-docked-collapsed-left');
 
-    win.setPosition(mid.x, mid.y, false);
+    assert(
+      isCursorNearDock('right', { x: workArea.x + workArea.width - 10, y: mid.y + 20 }, workArea, collapsed, DEFAULT_FULL_WIDTH),
+      'cursor near right dock detected'
+    );
+    assert(
+      !isCursorNearDock('right', { x: workArea.x + 100, y: mid.y + 20 }, workArea, collapsed, DEFAULT_FULL_WIDTH),
+      'cursor far from right dock not detected'
+    );
+
+    win.setBounds(mid, false);
     await sleep(200);
     const hideVisible = await win.webContents.executeJavaScript(`
       (() => {
         const btn = document.getElementById('hide-edge-btn');
         if (!btn) return false;
-        const style = window.getComputedStyle(btn);
-        return style.display !== 'none';
+        return window.getComputedStyle(btn).display !== 'none';
       })()
     `);
     assert(hideVisible === true, 'hide-edge button visible in widget mode');
@@ -179,8 +185,7 @@ app.whenReady().then(async () => {
       ok: true,
       workArea,
       peekSize: PEEK_SIZE,
-      rightPeek,
-      leftPeek,
+      collapsedRight: collapsed,
       checks: results,
       outDir: OUT_DIR,
     };

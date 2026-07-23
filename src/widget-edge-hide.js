@@ -1,5 +1,6 @@
 const EDGE_SNAP_THRESHOLD = 28;
-const PEEK_SIZE = 22;
+const PEEK_SIZE = 28;
+const DEFAULT_FULL_WIDTH = 300;
 const VALID_EDGES = new Set(['left', 'right']);
 
 function normalizeEdge(edge) {
@@ -8,6 +9,7 @@ function normalizeEdge(edge) {
 
 /**
  * Distance from window bounds to each horizontal work-area edge.
+ * Uses the visible right edge (x+width) so collapsed peek strips still measure correctly.
  * @param {{ x: number, y: number, width: number, height: number }} bounds
  * @param {{ x: number, y: number, width: number, height: number }} workArea
  */
@@ -41,39 +43,74 @@ function nearestHorizontalEdge(bounds, workArea) {
 }
 
 function clampY(y, height, workArea) {
-  return Math.min(Math.max(y, workArea.y), workArea.y + workArea.height - height);
+  const maxY = Math.max(workArea.y, workArea.y + workArea.height - height);
+  return Math.min(Math.max(y, workArea.y), maxY);
 }
 
 /**
- * Fully visible position flush against the docked edge.
+ * Fully visible bounds flush against the docked edge (same monitor).
  */
-function expandedPosition(edge, bounds, workArea) {
-  const y = clampY(bounds.y, bounds.height, workArea);
+function expandedBounds(edge, bounds, workArea, fullWidth = DEFAULT_FULL_WIDTH) {
+  const width = fullWidth;
+  const height = bounds.height;
+  const y = clampY(bounds.y, height, workArea);
   if (edge === 'left') {
-    return { x: workArea.x, y };
+    return { x: workArea.x, y, width, height };
   }
-  return { x: workArea.x + workArea.width - bounds.width, y };
+  return { x: workArea.x + workArea.width - width, y, width, height };
 }
 
 /**
- * Mostly off-screen position with a thin peek remaining on-screen.
+ * Peek-strip bounds on the same monitor (resize, do not slide onto another display).
  */
-function collapsedPosition(edge, bounds, workArea) {
-  const y = clampY(bounds.y, bounds.height, workArea);
+function collapsedBounds(edge, bounds, workArea, peekSize = PEEK_SIZE) {
+  const width = peekSize;
+  const height = Math.max(bounds.height, peekSize * 3);
+  const y = clampY(bounds.y, height, workArea);
   if (edge === 'left') {
-    return { x: workArea.x - bounds.width + PEEK_SIZE, y };
+    return { x: workArea.x, y, width, height };
   }
-  return { x: workArea.x + workArea.width - PEEK_SIZE, y };
+  return { x: workArea.x + workArea.width - width, y, width, height };
+}
+
+/**
+ * Whether the cursor is still near the docked peek / expanded card.
+ * Used to avoid collapse↔expand "fleeing" loops.
+ */
+function isCursorNearDock(edge, cursor, workArea, widgetBounds, fullWidth = DEFAULT_FULL_WIDTH) {
+  if (!edge || !cursor || !workArea || !widgetBounds) return false;
+  const pad = 24;
+  const zoneWidth = Math.max(widgetBounds.width, fullWidth) + pad;
+  const top = widgetBounds.y - pad;
+  const bottom = widgetBounds.y + widgetBounds.height + pad;
+  if (cursor.y < top || cursor.y > bottom) return false;
+
+  if (edge === 'left') {
+    return cursor.x >= workArea.x - pad && cursor.x <= workArea.x + zoneWidth;
+  }
+  const right = workArea.x + workArea.width;
+  return cursor.x <= right + pad && cursor.x >= right - zoneWidth;
 }
 
 module.exports = {
   EDGE_SNAP_THRESHOLD,
   PEEK_SIZE,
+  DEFAULT_FULL_WIDTH,
   VALID_EDGES,
   normalizeEdge,
   edgeDistances,
   detectSnapEdge,
   nearestHorizontalEdge,
-  expandedPosition,
-  collapsedPosition,
+  expandedBounds,
+  collapsedBounds,
+  isCursorNearDock,
+  // Back-compat aliases used by older call sites / docs
+  expandedPosition: (edge, bounds, workArea) => {
+    const b = expandedBounds(edge, bounds, workArea);
+    return { x: b.x, y: b.y };
+  },
+  collapsedPosition: (edge, bounds, workArea) => {
+    const b = collapsedBounds(edge, bounds, workArea);
+    return { x: b.x, y: b.y };
+  },
 };

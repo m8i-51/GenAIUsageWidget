@@ -10,9 +10,12 @@ const { fetchWithCache, preloadLastGood } = require('./usage-cache');
 const {
   detectSnapEdge,
   nearestHorizontalEdge,
-  expandedPosition,
-  collapsedPosition,
+  expandedBounds,
+  collapsedBounds,
   normalizeEdge,
+  isCursorNearDock,
+  PEEK_SIZE,
+  DEFAULT_FULL_WIDTH,
 } = require('./widget-edge-hide');
 
 let tray = null;
@@ -23,10 +26,13 @@ let widgetBoundsSaveTimer = null;
 let widgetSnapTimer = null;
 let edgeHideCollapseTimer = null;
 let dockedEdge = null;
+let dockDisplayId = null;
 let edgeHideExpanded = true;
 let edgeHideHovering = false;
 let ignoreHoverExpand = false;
 let suppressMoveHandling = false;
+let suppressHoverHandling = false;
+let widgetFullWidth = DEFAULT_FULL_WIDTH;
 
 function broadcastSettings(settings) {
   for (const win of [popup, widget]) {
@@ -74,18 +80,29 @@ function resolveWidgetPosition(savedBounds, win) {
   return clampToWorkArea(savedBounds.x, savedBounds.y, width, height, display);
 }
 
-function getWidgetWorkArea() {
-  if (!widget || widget.isDestroyed()) return screen.getPrimaryDisplay().workArea;
-  const [x, y] = widget.getPosition();
-  return screen.getDisplayNearestPoint({ x, y }).workArea;
+function resolveDockDisplay(bounds = null) {
+  if (dockDisplayId != null) {
+    const pinned = screen.getAllDisplays().find((d) => String(d.id) === String(dockDisplayId));
+    if (pinned) return pinned;
+  }
+  if (bounds) {
+    return screen.getDisplayMatching(bounds) || screen.getDisplayNearestPoint({ x: bounds.x, y: bounds.y });
+  }
+  if (widget && !widget.isDestroyed()) {
+    return screen.getDisplayMatching(widget.getBounds());
+  }
+  return screen.getPrimaryDisplay();
+}
+
+function getWidgetWorkArea(bounds = null) {
+  return resolveDockDisplay(bounds).workArea;
 }
 
 function persistWidgetBoundsFromExpanded() {
   if (!widget || widget.isDestroyed() || !dockedEdge) return;
   const bounds = widget.getBounds();
-  const workArea = getWidgetWorkArea();
-  const expanded = expandedPosition(dockedEdge, bounds, workArea);
-  const display = screen.getDisplayNearestPoint(expanded);
+  const display = resolveDockDisplay(bounds);
+  const expanded = expandedBounds(dockedEdge, bounds, display.workArea, widgetFullWidth);
   saveSettings({
     widgetBounds: { x: expanded.x, y: expanded.y, displayId: String(display.id) },
     widgetEdgeHide: dockedEdge,
@@ -111,24 +128,41 @@ function scheduleWidgetBoundsSave() {
   }, 500);
 }
 
-function setWidgetPosition(x, y) {
+function withSuppressedWindowEvents(fn) {
   if (!widget || widget.isDestroyed()) return;
   suppressMoveHandling = true;
-  widget.setPosition(Math.round(x), Math.round(y), false);
-  setTimeout(() => {
-    suppressMoveHandling = false;
-  }, 50);
+  suppressHoverHandling = true;
+  try {
+    fn();
+  } finally {
+    setTimeout(() => {
+      suppressMoveHandling = false;
+      suppressHoverHandling = false;
+    }, 350);
+  }
+}
+
+function setWidgetBounds(bounds) {
+  if (!widget || widget.isDestroyed()) return;
+  withSuppressedWindowEvents(() => {
+    widget.setBounds({
+      x: Math.round(bounds.x),
+      y: Math.round(bounds.y),
+      width: Math.round(bounds.width),
+      height: Math.round(bounds.height),
+    }, false);
+  });
 }
 
 function applyEdgeHidePosition(expanded) {
   if (!widget || widget.isDestroyed() || !dockedEdge) return;
-  const bounds = widget.getBounds();
-  const workArea = getWidgetWorkArea();
-  const pos = expanded
-    ? expandedPosition(dockedEdge, bounds, workArea)
-    : collapsedPosition(dockedEdge, bounds, workArea);
+  const current = widget.getBounds();
+  const workArea = getWidgetWorkArea(current);
+  const next = expanded
+    ? expandedBounds(dockedEdge, current, workArea, widgetFullWidth)
+    : collapsedBounds(dockedEdge, current, workArea, PEEK_SIZE);
   edgeHideExpanded = expanded;
-  setWidgetPosition(pos.x, pos.y);
+  setWidgetBounds(next);
   if (widget && !widget.isDestroyed()) {
     widget.webContents.send('widget-edge-hide-changed', {
       edge: dockedEdge,
@@ -144,11 +178,38 @@ function clearEdgeHideCollapseTimer() {
   }
 }
 
+function cursorStillNearDock() {
+  if (!dockedEdge || !widget || widget.isDestroyed()) return false;
+  const bounds = widget.getBounds();
+  const workArea = getWidgetWorkArea(bounds);
+  return isCursorNearDock(
+    dockedEdge,
+    screen.getCursorScreenPoint(),
+    workArea,
+    bounds,
+    widgetFullWidth
+  );
+}
+
 function setDockedEdge(edge, { collapse = true, persist = true } = {}) {
-  dockedEdge = normalizeEdge(edge);
+  const normalized = normalizeEdge(edge);
   clearEdgeHideCollapseTimer();
-  if (!dockedEdge) {
+
+  if (!normalized) {
+    dockedEdge = null;
+    dockDisplayId = null;
     edgeHideExpanded = true;
+    if (widget && !widget.isDestroyed() && widget.getBounds().width < widgetFullWidth) {
+      const bounds = widget.getBounds();
+      withSuppressedWindowEvents(() => {
+        widget.setBounds({
+          x: bounds.x,
+          y: bounds.y,
+          width: widgetFullWidth,
+          height: Math.max(bounds.height, 120),
+        }, false);
+      });
+    }
     if (persist) {
       saveSettings({ widgetEdgeHide: null });
     }
@@ -157,6 +218,17 @@ function setDockedEdge(edge, { collapse = true, persist = true } = {}) {
     }
     return;
   }
+
+  if (widget && !widget.isDestroyed()) {
+    const bounds = widget.getBounds();
+    // Remember full width before collapsing to a peek strip.
+    if (bounds.width >= PEEK_SIZE * 2) {
+      widgetFullWidth = bounds.width;
+    }
+    dockDisplayId = String(resolveDockDisplay(bounds).id);
+  }
+
+  dockedEdge = normalized;
   applyEdgeHidePosition(!collapse);
   if (persist) {
     persistWidgetBoundsFromExpanded();
@@ -175,6 +247,8 @@ function collapseEdgeHide(delayMs = 0) {
   const run = () => {
     edgeHideCollapseTimer = null;
     if (!dockedEdge) return;
+    // Cursor still over the dock zone → keep expanded (prevents flee loop).
+    if (cursorStillNearDock() || edgeHideHovering) return;
     applyEdgeHidePosition(false);
   };
   if (delayMs > 0) {
@@ -186,12 +260,15 @@ function collapseEdgeHide(delayMs = 0) {
 
 function evaluateSnapAfterMove() {
   if (!widget || widget.isDestroyed() || suppressMoveHandling) return;
+  // Ignore snap while already collapsed to a peek strip — width is tiny and
+  // would constantly re-trigger dock logic.
+  if (dockedEdge && !edgeHideExpanded) return;
+
   const bounds = widget.getBounds();
-  const workArea = getWidgetWorkArea();
+  const workArea = getWidgetWorkArea(bounds);
   const edge = detectSnapEdge(bounds, workArea);
   if (edge) {
-    // Stay expanded while the pointer is still over the widget (user just finished a drag).
-    setDockedEdge(edge, { collapse: !edgeHideHovering, persist: true });
+    setDockedEdge(edge, { collapse: !edgeHideHovering && !cursorStillNearDock(), persist: true });
   } else if (dockedEdge) {
     setDockedEdge(null, { persist: true });
     scheduleWidgetBoundsSave();
@@ -215,10 +292,13 @@ function hideWidgetToNearestEdge() {
     widget.show();
   }
   const bounds = widget.getBounds();
-  const workArea = getWidgetWorkArea();
+  if (bounds.width >= PEEK_SIZE * 2) {
+    widgetFullWidth = bounds.width;
+  }
+  dockDisplayId = String(resolveDockDisplay(bounds).id);
+  const workArea = getWidgetWorkArea(bounds);
   const edge = nearestHorizontalEdge(bounds, workArea);
-  // Hide button / tray action: collapse immediately and wait for pointer leave
-  // before allowing hover-expand (avoids instant re-expand under the cursor).
+  // Hide button: collapse immediately and ignore hover-expand until pointer leaves.
   ignoreHoverExpand = true;
   setDockedEdge(edge, { collapse: true, persist: true });
 }
@@ -278,7 +358,7 @@ function togglePopup(bounds) {
 
 function createWidget() {
   widget = new BrowserWindow({
-    width: 300,
+    width: DEFAULT_FULL_WIDTH,
     height: 480,
     show: true,
     frame: false,
@@ -294,6 +374,7 @@ function createWidget() {
     },
   });
 
+  widgetFullWidth = DEFAULT_FULL_WIDTH;
   widget.setAlwaysOnTop(true, 'floating');
   widget.loadFile(path.join(__dirname, 'index.html'), { query: { mode: 'widget' } });
 
@@ -303,6 +384,9 @@ function createWidget() {
 
   const savedEdge = normalizeEdge(settings.widgetEdgeHide);
   if (savedEdge) {
+    if (settings.widgetBounds?.displayId != null) {
+      dockDisplayId = String(settings.widgetBounds.displayId);
+    }
     widget.webContents.once('did-finish-load', () => {
       setDockedEdge(savedEdge, { collapse: true, persist: false });
     });
@@ -348,10 +432,10 @@ function createTray() {
         click: () => {
           if (dockedEdge) {
             const bounds = widget.getBounds();
-            const workArea = getWidgetWorkArea();
-            const pos = expandedPosition(dockedEdge, bounds, workArea);
+            const workArea = getWidgetWorkArea(bounds);
+            const pos = expandedBounds(dockedEdge, bounds, workArea, widgetFullWidth);
             setDockedEdge(null, { persist: true });
-            setWidgetPosition(pos.x, pos.y);
+            setWidgetBounds(pos);
             scheduleWidgetBoundsSave();
           } else {
             hideWidgetToNearestEdge();
@@ -392,6 +476,7 @@ ipcMain.on('save-widget-bounds', (_event, bounds) => {
 });
 
 ipcMain.on('widget-edge-hide-hover', (_event, hovering) => {
+  if (suppressHoverHandling) return;
   edgeHideHovering = !!hovering;
   if (!hovering) {
     ignoreHoverExpand = false;
@@ -400,12 +485,19 @@ ipcMain.on('widget-edge-hide-hover', (_event, hovering) => {
   if (edgeHideHovering) {
     expandEdgeHide();
   } else {
-    collapseEdgeHide(450);
+    // Longer delay + cursor zone check avoids expand/collapse flee loops.
+    collapseEdgeHide(700);
   }
 });
 
 ipcMain.on('widget-hide-to-edge', () => {
   hideWidgetToNearestEdge();
+});
+
+ipcMain.on('widget-show-from-edge', () => {
+  ignoreHoverExpand = false;
+  edgeHideHovering = true;
+  expandEdgeHide();
 });
 
 ipcMain.handle('get-claude-usage', () => fetchWithCache('claude', fetchClaudeUsage));
@@ -416,15 +508,35 @@ ipcMain.handle('get-antigravity-usage', () => fetchWithCache('antigravity', fetc
 ipcMain.on('resize-to', (event, height) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   if (!win) return;
-  const [width] = win.getContentSize();
   const clamped = Math.max(120, Math.min(900, Math.round(height)));
+
+  if (win === widget && dockedEdge && !edgeHideExpanded) {
+    // Peek strip: keep narrow width on the docked display.
+    const current = win.getBounds();
+    const workArea = getWidgetWorkArea(current);
+    const next = collapsedBounds(dockedEdge, { ...current, height: clamped }, workArea, PEEK_SIZE);
+    withSuppressedWindowEvents(() => {
+      win.setBounds({
+        x: Math.round(next.x),
+        y: Math.round(next.y),
+        width: Math.round(next.width),
+        height: Math.round(next.height),
+      }, false);
+    });
+    return;
+  }
+
+  const width = (win === widget && dockedEdge)
+    ? widgetFullWidth
+    : win.getContentSize()[0];
   win.setContentSize(width, clamped);
+
   if (win === popup && popup.isVisible() && lastTrayBounds) {
     const { x, y } = getPopupPosition(lastTrayBounds);
     popup.setPosition(x, y, false);
   }
-  if (win === widget && dockedEdge) {
-    applyEdgeHidePosition(edgeHideExpanded);
+  if (win === widget && dockedEdge && edgeHideExpanded) {
+    applyEdgeHidePosition(true);
   }
 });
 
