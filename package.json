@@ -13,7 +13,7 @@
   "homepage": "https://github.com/m8i-51/GenAIUsageWidget",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^32.0.0",
+    "electron": "^39.8.10",
     "electron-builder": "^26.15.6"
   },
   "dependencies": {
