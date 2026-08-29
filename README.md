@@ -26,9 +26,9 @@ you to log in again, and polls their usage APIs about once a minute.
     edge).
   - **Desktop widget** — an always-on-top, draggable card pinned to the top-right
     of the screen. Toggle it from the tray icon's right-click menu. Drag it to the
-    left, right, or top edge (or click the Hide button for the nearest edge) to tuck
-    it away like Microsoft PC Manager; click the peek to keep the widget open, or
-    use **Restore Widget Position** in the tray menu to undock from the edge.
+    left, right, or top edge (or click the Hide button for the nearest edge) and
+    the ring pill sits flush on that edge. Click a ring to open the flyout, or use
+    **Restore Widget Position** in the tray menu to undock.
 - **Expandable flyout** — in the desktop widget, click a ring to open that
   provider's meters (e.g. Claude's Current session / All models; Cursor's Total /
   Auto / API). The tray popup always shows those details on each card.
@@ -93,7 +93,7 @@ successfully fetched data marked with when it was fetched).
 src/
   main.js              Electron main process: tray, popup window, widget window,
                        IPC, Claude response cache & 429 backoff
-  widget-edge-hide.js  Geometry helpers for PC Manager-style edge hide
+  widget-edge-hide.js  Geometry helpers for docking the ring pill to an edge
   preload.js           Exposes the get-*-usage IPC calls and window resizing
   index.html / renderer.js   Shared UI for both the popup and the widget
   providers/           One module per provider, each exporting a fetchXUsage()

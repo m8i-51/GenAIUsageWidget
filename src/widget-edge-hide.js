@@ -1,7 +1,10 @@
 const EDGE_SNAP_THRESHOLD = 28;
-const PEEK_SIZE = 28;
+/** Collapsed pill thickness; matches the 84px widget notch. */
+const PEEK_SIZE = 84;
 const DEFAULT_FULL_WIDTH = 108;
 const DEFAULT_FULL_HEIGHT = 360;
+/** Top-edge collapsed width: enough for four 56px rings plus padding. */
+const COLLAPSED_TOP_WIDTH = 288;
 const VALID_EDGES = new Set(['left', 'right', 'top']);
 
 function normalizeEdge(edge) {
@@ -93,8 +96,8 @@ function expandedBounds(edge, bounds, workArea, fullWidth = DEFAULT_FULL_WIDTH, 
 }
 
 /**
- * Peek strip along the docked edge (same monitor).
- * left/right → vertical strip; top → horizontal strip.
+ * Collapsed pill along the docked edge (same monitor).
+ * left/right → vertical pill; top → horizontal pill.
  */
 function collapsedBounds(edge, bounds, workArea, peekSize = PEEK_SIZE, fullWidth = DEFAULT_FULL_WIDTH, fullHeight = DEFAULT_FULL_HEIGHT) {
   if (edge === 'left') {
@@ -115,11 +118,12 @@ function collapsedBounds(edge, bounds, workArea, peekSize = PEEK_SIZE, fullWidth
       height,
     };
   }
-  // top
+  // top: a horizontal pill, not a thin strip
+  const width = Math.max(fullWidth, COLLAPSED_TOP_WIDTH);
   return {
-    x: clampX(bounds.x, fullWidth, workArea),
+    x: clampX(bounds.x, width, workArea),
     y: workArea.y,
-    width: fullWidth,
+    width,
     height: peekSize,
   };
 }
@@ -173,6 +177,7 @@ function decideMoveSnap({ dockedEdge, expanded, detectedEdge }) {
 module.exports = {
   EDGE_SNAP_THRESHOLD,
   PEEK_SIZE,
+  COLLAPSED_TOP_WIDTH,
   DEFAULT_FULL_WIDTH,
   DEFAULT_FULL_HEIGHT,
   VALID_EDGES,

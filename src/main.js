@@ -101,10 +101,12 @@ function getWidgetWorkArea(bounds = null) {
 
 function rememberExpandedSize(bounds) {
   if (!bounds) return;
-  if (bounds.width >= PEEK_SIZE * 2) {
+  // The collapsed pill is PEEK_SIZE thick; do not treat that as the open size.
+  if (dockedEdge && !edgeHideExpanded) return;
+  if (bounds.width >= DEFAULT_FULL_WIDTH - 4) {
     widgetFullWidth = bounds.width;
   }
-  if (bounds.height >= PEEK_SIZE * 2) {
+  if (bounds.height >= 120) {
     widgetFullHeight = bounds.height;
   }
 }

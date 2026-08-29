@@ -13,6 +13,7 @@ const {
   isCursorNearDock,
   decideMoveSnap,
   PEEK_SIZE,
+  COLLAPSED_TOP_WIDTH,
   DEFAULT_FULL_WIDTH,
   DEFAULT_FULL_HEIGHT,
 } = require('../src/widget-edge-hide');
@@ -142,11 +143,11 @@ app.whenReady().then(async () => {
       const collapsed = collapsedBounds(edge, mid, workArea, PEEK_SIZE, DEFAULT_FULL_WIDTH, DEFAULT_FULL_HEIGHT);
       assert(fullyInside(collapsed, workArea), `collapsed ${edge} stays inside same workArea`);
       if (edge === 'top') {
-        assert(collapsed.height === PEEK_SIZE, `collapsed top height is peek (${collapsed.height})`);
-        assert(collapsed.width === DEFAULT_FULL_WIDTH, 'collapsed top keeps full width');
+        assert(collapsed.height === PEEK_SIZE, `collapsed top height is pill (${collapsed.height})`);
+        assert(collapsed.width === COLLAPSED_TOP_WIDTH, `collapsed top is a horizontal pill (${collapsed.width})`);
         approx(collapsed.y, workArea.y, 1, 'collapsed top y is workArea top');
       } else {
-        assert(collapsed.width === PEEK_SIZE, `collapsed ${edge} width is peek (${collapsed.width})`);
+        assert(collapsed.width === PEEK_SIZE, `collapsed ${edge} width is pill (${collapsed.width})`);
         assert(collapsed.height === DEFAULT_FULL_HEIGHT, `collapsed ${edge} keeps full height`);
         if (edge === 'left') {
           approx(collapsed.x, workArea.x, 1, 'collapsed left x is workArea left');
@@ -155,16 +156,29 @@ app.whenReady().then(async () => {
         }
       }
 
+      await win.webContents.executeJavaScript(`
+        document.body.classList.remove('edge-collapsed', 'edge-top', 'edge-left', 'edge-right');
+        document.body.classList.add('edge-${edge}');
+        document.documentElement.classList.remove('widget-edge-fill');
+      `);
       win.setBounds(expanded, false);
       await sleep(250);
       await capture(win, `02-docked-expanded-${edge}`);
 
+      await win.webContents.executeJavaScript(`
+        document.body.classList.add('edge-collapsed', 'edge-${edge}');
+        document.documentElement.classList.add('widget-edge-fill');
+      `);
       win.setBounds(collapsed, false);
       await sleep(250);
       const collapsedActual = win.getBounds();
       assert(fullyInside(collapsedActual, workArea), `actual collapsed ${edge} remains on same monitor`);
       await capture(win, `03-docked-collapsed-${edge}`);
 
+      await win.webContents.executeJavaScript(`
+        document.body.classList.remove('edge-collapsed');
+        document.documentElement.classList.remove('widget-edge-fill');
+      `);
       win.setBounds(expanded, false);
       await sleep(250);
       await capture(win, `04-revealed-expanded-${edge}`);
@@ -213,22 +227,30 @@ app.whenReady().then(async () => {
 
     const peekHit = await win.webContents.executeJavaScript(`
       (() => {
-        document.body.classList.add('edge-collapsed', 'edge-right');
+        document.body.classList.add('widget-mode', 'edge-collapsed', 'edge-right');
         const peek = document.getElementById('edge-peek-tab');
         const shell = document.querySelector('.shell');
         const notch = document.querySelector('.notch');
+        const header = document.querySelector('.app-header');
+        const panel = document.querySelector('.panel');
         return {
           peekDisplay: peek ? getComputedStyle(peek).display : 'missing',
           shellDisplay: shell ? getComputedStyle(shell).display : 'missing',
-          notchAppRegion: notch ? getComputedStyle(notch).webkitAppRegion : 'missing',
+          notchDisplay: notch ? getComputedStyle(notch).display : 'missing',
+          headerDisplay: header ? getComputedStyle(header).display : 'missing',
+          panelDisplay: panel ? getComputedStyle(panel).display : 'missing',
+          notchRadius: notch ? getComputedStyle(notch).borderRadius : 'missing',
         };
       })()
     `);
-    assert(peekHit.peekDisplay === 'flex', `collapsed peek is visible (${peekHit.peekDisplay})`);
+    assert(peekHit.peekDisplay === 'none', `collapsed chevron tab is hidden (${peekHit.peekDisplay})`);
     assert(
-      peekHit.shellDisplay === 'none',
-      `collapsed shell is hidden so peek receives clicks (${peekHit.shellDisplay})`
+      peekHit.shellDisplay === 'flex',
+      `collapsed shell stays visible so rings show (${peekHit.shellDisplay})`
     );
+    assert(peekHit.notchDisplay !== 'none', `collapsed notch is visible (${peekHit.notchDisplay})`);
+    assert(peekHit.headerDisplay === 'none', `collapsed header is hidden (${peekHit.headerDisplay})`);
+    assert(peekHit.panelDisplay === 'none', `collapsed flyout is hidden (${peekHit.panelDisplay})`);
 
     const summary = {
       ok: true,

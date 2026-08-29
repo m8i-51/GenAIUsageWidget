@@ -99,10 +99,7 @@ function applyEdgeHideUi(state) {
   document.body.classList.toggle('edge-left', edge === 'left');
   document.body.classList.toggle('edge-right', edge === 'right');
   document.body.classList.toggle('edge-pinned', !!(edge && expanded && pinned));
-  document.documentElement.classList.toggle(
-    'widget-edge-fill',
-    collapsed && (edge === 'left' || edge === 'right')
-  );
+  document.documentElement.classList.toggle('widget-edge-fill', collapsed);
 
   const hideBtn = document.getElementById('hide-edge-btn');
   const hideIcon = document.getElementById('hide-edge-icon');
@@ -270,6 +267,24 @@ function setError(prefix, message) {
 function firstVisibleProvider() {
   const tile = containerEl.querySelector('.tile:not([hidden])');
   return tile ? tile.dataset.provider : null;
+}
+
+function isEdgeCollapsed() {
+  return document.body.classList.contains('edge-collapsed');
+}
+
+function revealFromEdgeIfCollapsed() {
+  if (isWidgetMode && isEdgeCollapsed()) {
+    window.api.showWidgetFromEdge();
+  }
+}
+
+function closeFlyout() {
+  selectedProvider = null;
+  settingsOpen = false;
+  const settings = document.getElementById('settings-panel');
+  if (settings) settings.hidden = true;
+  syncFlyout();
 }
 
 function selectProvider(id, { toggle = true } = {}) {
@@ -577,6 +592,7 @@ function showSettingsPanel(show) {
 
 document.getElementById('settings-btn').addEventListener('click', (event) => {
   event.stopPropagation();
+  revealFromEdgeIfCollapsed();
   showSettingsPanel(true);
   renderProviderToggles();
 });
@@ -589,7 +605,8 @@ const hideEdgeBtn = document.getElementById('hide-edge-btn');
 if (hideEdgeBtn) {
   hideEdgeBtn.addEventListener('click', (event) => {
     event.stopPropagation();
-    window.api.hideWidgetToEdge();
+    closeFlyout();
+    requestAnimationFrame(() => window.api.hideWidgetToEdge());
   });
 }
 
@@ -617,7 +634,9 @@ document.querySelectorAll('.tile').forEach((tile) => {
     }
     if (!isWidgetMode) return;
     if (tile.hidden || tile.dataset.notConfigured === 'true') return;
-    selectProvider(tile.dataset.provider);
+    const collapsed = isEdgeCollapsed();
+    revealFromEdgeIfCollapsed();
+    selectProvider(tile.dataset.provider, { toggle: !collapsed });
   });
 });
 
@@ -742,7 +761,7 @@ async function init() {
   }
   window.api.onSettingsChanged((next) => applySettings(next));
   await updateAll();
-  if (isWidgetMode && !selectedProvider) {
+  if (isWidgetMode && !selectedProvider && !isEdgeCollapsed()) {
     const first = firstVisibleProvider();
     if (first) selectProvider(first, { toggle: false });
   }
