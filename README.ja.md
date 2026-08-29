@@ -50,6 +50,12 @@ npm install
 npm start
 ```
 
+プロバイダにサインインせず見た目だけ確認するには:
+
+```
+GENAI_USAGE_DEMO=1 npm start
+```
+
 ### インストーラ
 
 タグ付きバージョンごとに、ビルド済みインストーラ(Windows `.exe`、Linux

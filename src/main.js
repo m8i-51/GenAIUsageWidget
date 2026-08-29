@@ -488,10 +488,22 @@ ipcMain.on('widget-show-from-edge', () => {
   expandEdgeHide({ pinned: true });
 });
 
-ipcMain.handle('get-claude-usage', () => fetchWithCache('claude', fetchClaudeUsage));
-ipcMain.handle('get-codex-usage', () => fetchWithCache('codex', fetchCodexUsage));
-ipcMain.handle('get-cursor-usage', () => fetchWithCache('cursor', fetchCursorUsage));
-ipcMain.handle('get-antigravity-usage', () => fetchWithCache('antigravity', fetchAntigravityUsage));
+ipcMain.handle('get-claude-usage', () => {
+  if (process.env.GENAI_USAGE_DEMO === '1') return require('./demo-usage').claude();
+  return fetchWithCache('claude', fetchClaudeUsage);
+});
+ipcMain.handle('get-codex-usage', () => {
+  if (process.env.GENAI_USAGE_DEMO === '1') return require('./demo-usage').codex();
+  return fetchWithCache('codex', fetchCodexUsage);
+});
+ipcMain.handle('get-cursor-usage', () => {
+  if (process.env.GENAI_USAGE_DEMO === '1') return require('./demo-usage').cursor();
+  return fetchWithCache('cursor', fetchCursorUsage);
+});
+ipcMain.handle('get-antigravity-usage', () => {
+  if (process.env.GENAI_USAGE_DEMO === '1') return require('./demo-usage').antigravity();
+  return fetchWithCache('antigravity', fetchAntigravityUsage);
+});
 
 ipcMain.on('resize-to', (event, size) => {
   const win = BrowserWindow.fromWebContents(event.sender);

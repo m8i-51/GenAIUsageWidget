@@ -50,6 +50,12 @@ npm install
 npm start
 ```
 
+To preview the widget UI without signing into any provider:
+
+```
+GENAI_USAGE_DEMO=1 npm start
+```
+
 ### Installers
 
 Prebuilt installers (Windows `.exe`, Linux `.AppImage` / `.deb`) are published
