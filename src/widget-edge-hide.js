@@ -1,6 +1,6 @@
 const EDGE_SNAP_THRESHOLD = 28;
 const PEEK_SIZE = 28;
-const DEFAULT_FULL_WIDTH = 300;
+const DEFAULT_FULL_WIDTH = 108;
 const DEFAULT_FULL_HEIGHT = 360;
 const VALID_EDGES = new Set(['left', 'right', 'top']);
 

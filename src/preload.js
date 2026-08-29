@@ -13,7 +13,7 @@ contextBridge.exposeInMainWorld('api', {
     return () => ipcRenderer.removeListener('settings-changed', listener);
   },
   saveWidgetBounds: (bounds) => ipcRenderer.send('save-widget-bounds', bounds),
-  resizeTo: (height) => ipcRenderer.send('resize-to', height),
+  resizeTo: (size) => ipcRenderer.send('resize-to', size),
   hideWidgetToEdge: () => ipcRenderer.send('widget-hide-to-edge'),
   showWidgetFromEdge: () => ipcRenderer.send('widget-show-from-edge'),
   onWidgetEdgeHideChanged: (cb) => {

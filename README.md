@@ -16,8 +16,9 @@ you to log in again, and polls their usage APIs about once a minute.
 
 ## Features
 
-- **Glassmorphism UI** — frosted-glass cards with per-provider glow, light & dark
-  mode, and meters that shift to warning/critical colors as usage climbs.
+- **Side-notch UI** — a dark pill with circular usage rings (green / yellow /
+  orange as usage climbs). Click a ring for a detail flyout with session and
+  weekly meters. The tray popup uses the same dark cards.
 - **Two ways to view:**
   - **Tray icon** — when the desktop widget is hidden, click to open a popup near
     the tray (click elsewhere to dismiss). When the widget is already visible,
@@ -28,9 +29,9 @@ you to log in again, and polls their usage APIs about once a minute.
     left, right, or top edge (or click the Hide button for the nearest edge) to tuck
     it away like Microsoft PC Manager; click the peek to keep the widget open, or
     use **Restore Widget Position** in the tray menu to undock from the edge.
-- **Expandable cards** — click a card to reveal detailed meters (e.g. Claude's
-  Session / Weekly / model-scoped Weekly; Cursor's Total / Auto / API). Cards
-  with nothing extra to show simply don't expand.
+- **Expandable flyout** — in the desktop widget, click a ring to open that
+  provider's meters (e.g. Claude's Current session / All models; Cursor's Total /
+  Auto / API). The tray popup always shows those details on each card.
 - **Drag & drop reordering** — grab a card and drag it up or down; the other
   cards glide out of the way. The order is saved and restored across restarts.
 - **Unconfigured providers are hidden** — no error spam for tools you don't use.

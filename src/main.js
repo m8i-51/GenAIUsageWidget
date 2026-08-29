@@ -298,6 +298,8 @@ function createPopup() {
     height: 480,
     show: false,
     frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
     resizable: false,
     fullscreenable: false,
     skipTaskbar: true,
@@ -352,6 +354,7 @@ function createWidget() {
     show: true,
     frame: false,
     transparent: true,
+    backgroundColor: '#00000000',
     hasShadow: true,
     alwaysOnTop: true,
     resizable: false,
@@ -490,14 +493,26 @@ ipcMain.handle('get-codex-usage', () => fetchWithCache('codex', fetchCodexUsage)
 ipcMain.handle('get-cursor-usage', () => fetchWithCache('cursor', fetchCursorUsage));
 ipcMain.handle('get-antigravity-usage', () => fetchWithCache('antigravity', fetchAntigravityUsage));
 
-ipcMain.on('resize-to', (event, height) => {
+ipcMain.on('resize-to', (event, size) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   if (!win) return;
-  const clamped = Math.max(PEEK_SIZE, Math.min(900, Math.round(height)));
+
+  const current = win.getBounds();
+  let nextWidth = current.width;
+  let nextHeight;
+  if (typeof size === 'number') {
+    nextHeight = size;
+  } else if (size && typeof size === 'object') {
+    nextHeight = size.height;
+    if (typeof size.width === 'number') nextWidth = size.width;
+  } else {
+    return;
+  }
+
+  const clampedH = Math.max(PEEK_SIZE, Math.min(900, Math.round(nextHeight)));
+  const clampedW = Math.max(PEEK_SIZE, Math.min(640, Math.round(nextWidth)));
 
   if (win === widget && dockedEdge && !edgeHideExpanded) {
-    // Peek strip: keep collapsed geometry for the docked edge.
-    const current = win.getBounds();
     const workArea = getWidgetWorkArea(current);
     const next = collapsedBounds(dockedEdge, current, workArea, PEEK_SIZE, widgetFullWidth, widgetFullHeight);
     withSuppressedWindowEvents(() => {
@@ -511,21 +526,35 @@ ipcMain.on('resize-to', (event, height) => {
     return;
   }
 
-  if (win === widget && edgeHideExpanded) {
-    widgetFullHeight = clamped;
+  if (win === widget) {
+    const workArea = getWidgetWorkArea(current);
+    widgetFullHeight = clampedH;
+    widgetFullWidth = clampedW;
+
+    let x = current.x;
+    let y = current.y;
+    if (dockedEdge === 'right') {
+      x = workArea.x + workArea.width - clampedW;
+    } else if (dockedEdge === 'left') {
+      x = workArea.x;
+    } else if (dockedEdge === 'top') {
+      y = workArea.y;
+    } else {
+      // Keep the notch (right edge of the window) still when the flyout opens.
+      x = current.x + current.width - clampedW;
+    }
+
+    x = Math.min(Math.max(x, workArea.x), workArea.x + workArea.width - clampedW);
+    y = Math.min(Math.max(y, workArea.y), workArea.y + workArea.height - clampedH);
+    setWidgetBounds({ x, y, width: clampedW, height: clampedH });
+    return;
   }
 
-  const width = (win === widget)
-    ? (dockedEdge ? widgetFullWidth : win.getContentSize()[0])
-    : win.getContentSize()[0];
-  win.setContentSize(width, clamped);
+  win.setContentSize(clampedW, clampedH);
 
   if (win === popup && popup.isVisible() && lastTrayBounds) {
     const { x, y } = getPopupPosition(lastTrayBounds);
     popup.setPosition(x, y, false);
-  }
-  if (win === widget && dockedEdge && edgeHideExpanded) {
-    applyEdgeHidePosition(true);
   }
 });
 
