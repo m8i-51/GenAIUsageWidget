@@ -11,6 +11,7 @@ const {
   expandedBounds,
   collapsedBounds,
   isCursorNearDock,
+  decideMoveSnap,
   PEEK_SIZE,
   DEFAULT_FULL_WIDTH,
   DEFAULT_FULL_HEIGHT,
@@ -87,6 +88,23 @@ app.whenReady().then(async () => {
     };
     assert(detectSnapEdge(mid, workArea) === null, 'center position does not snap');
     assert(preferDockEdge(mid, workArea) === 'top', 'center prefers top (tie-break)');
+
+    assert(
+      decideMoveSnap({ dockedEdge: 'right', expanded: true, detectedEdge: 'right' }) === 'keep-expanded',
+      'peek-open stays expanded while still flush on the docked edge'
+    );
+    assert(
+      decideMoveSnap({ dockedEdge: 'right', expanded: false, detectedEdge: 'right' }) === 'ignore',
+      'collapsed peek does not re-evaluate snap'
+    );
+    assert(
+      decideMoveSnap({ dockedEdge: null, expanded: true, detectedEdge: 'right' }) === 'dock-collapse',
+      'floating window near an edge still hides to peek'
+    );
+    assert(
+      decideMoveSnap({ dockedEdge: 'right', expanded: true, detectedEdge: null }) === 'undock',
+      'dragging an expanded dock away from the edge undocks'
+    );
 
     assert(detectSnapEdge({ ...mid, y: workArea.y + 8 }, workArea) === 'top', 'near-top snaps to top');
     assert(detectSnapEdge({ ...mid, x: workArea.x + 8 }, workArea) === 'left', 'near-left snaps to left');
@@ -192,6 +210,25 @@ app.whenReady().then(async () => {
       `typeof window.api.setWidgetEdgeHover === 'undefined'`
     );
     assert(hoverApiMissing === true, 'setWidgetEdgeHover is removed (no hover preview)');
+
+    const peekHit = await win.webContents.executeJavaScript(`
+      (() => {
+        document.body.classList.add('edge-collapsed', 'edge-right');
+        const peek = document.getElementById('edge-peek-tab');
+        const shell = document.querySelector('.shell');
+        const notch = document.querySelector('.notch');
+        return {
+          peekDisplay: peek ? getComputedStyle(peek).display : 'missing',
+          shellDisplay: shell ? getComputedStyle(shell).display : 'missing',
+          notchAppRegion: notch ? getComputedStyle(notch).webkitAppRegion : 'missing',
+        };
+      })()
+    `);
+    assert(peekHit.peekDisplay === 'flex', `collapsed peek is visible (${peekHit.peekDisplay})`);
+    assert(
+      peekHit.shellDisplay === 'none',
+      `collapsed shell is hidden so peek receives clicks (${peekHit.shellDisplay})`
+    );
 
     const summary = {
       ok: true,

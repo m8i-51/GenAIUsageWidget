@@ -287,32 +287,22 @@
     height: 100%;
   }
 
-  body.widget-mode.edge-collapsed .notch {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    border-radius: 0 0 14px 14px;
-  }
-
-  body.widget-mode.edge-collapsed.edge-left .notch {
-    border-radius: 0 14px 14px 0;
-  }
-
-  body.widget-mode.edge-collapsed.edge-right .notch {
-    border-radius: 14px 0 0 14px;
-  }
-
-  body.widget-mode.edge-collapsed .panel,
-  body.widget-mode.edge-collapsed .app-header,
-  body.widget-mode.edge-collapsed #settings-panel,
-  body.widget-mode.edge-collapsed #cards-view {
+  /* Peek is the only hit target while collapsed. The notch stays in the
+     DOM but is hidden: otherwise its drag region sits on top of the peek
+     and clicks never fire showWidgetFromEdge. */
+  body.widget-mode.edge-collapsed .shell {
     display: none !important;
   }
 
   body.widget-mode.edge-collapsed .edge-peek-tab {
     display: flex;
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    width: 100%;
+    height: 100%;
+    min-width: 28px;
+    min-height: 28px;
   }
 
   .edge-peek-tab {

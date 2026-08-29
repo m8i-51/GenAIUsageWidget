@@ -13,6 +13,7 @@ const {
   expandedBounds,
   collapsedBounds,
   normalizeEdge,
+  decideMoveSnap,
   PEEK_SIZE,
   DEFAULT_FULL_WIDTH,
   DEFAULT_FULL_HEIGHT,
@@ -249,23 +250,32 @@ function expandEdgeHide({ pinned = true } = {}) {
 function evaluateSnapAfterMove() {
   if (!widget || widget.isDestroyed() || suppressMoveHandling) return;
   if (Date.now() < snapArmedAt) return;
-  if (dockedEdge && !edgeHideExpanded) return;
 
   const bounds = widget.getBounds();
   const workArea = getWidgetWorkArea(bounds);
-  const edge = detectSnapEdge(bounds, workArea);
-  if (edge) {
+  const detectedEdge = detectSnapEdge(bounds, workArea);
+  const action = decideMoveSnap({
+    dockedEdge,
+    expanded: edgeHideExpanded,
+    detectedEdge,
+  });
+
+  if (action === 'ignore') return;
+  if (action === 'keep-expanded') {
+    persistWidgetBoundsFromExpanded();
+    return;
+  }
+  if (action === 'dock-collapse') {
     edgeHidePinned = false;
-    setDockedEdge(edge, {
-      collapse: true,
-      persist: true,
-    });
-  } else if (dockedEdge) {
+    setDockedEdge(detectedEdge, { collapse: true, persist: true });
+    return;
+  }
+  if (action === 'undock') {
     setDockedEdge(null, { persist: true });
     scheduleWidgetBoundsSave();
-  } else {
-    scheduleWidgetBoundsSave();
+    return;
   }
+  scheduleWidgetBoundsSave();
 }
 
 function scheduleSnapEvaluation() {

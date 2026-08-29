@@ -153,6 +153,23 @@ function isCursorNearDock(edge, cursor, workArea, widgetBounds, fullWidth = DEFA
   return cursor.x >= workArea.x + workArea.width - zoneWidth && cursor.x <= workArea.x + workArea.width + pad;
 }
 
+/**
+ * After the widget window moved, what should happen to edge-hide.
+ * An expanded docked widget sits flush on the edge (distance 0). That
+ * must not be treated as a new drag-to-edge hide, or peek-open immediately
+ * collapses again.
+ *
+ * @param {{ dockedEdge: 'left'|'right'|'top'|null, expanded: boolean, detectedEdge: 'left'|'right'|'top'|null }} state
+ * @returns {'ignore'|'keep-expanded'|'undock'|'dock-collapse'|'save-bounds'}
+ */
+function decideMoveSnap({ dockedEdge, expanded, detectedEdge }) {
+  if (dockedEdge && !expanded) return 'ignore';
+  if (dockedEdge && expanded && detectedEdge === dockedEdge) return 'keep-expanded';
+  if (dockedEdge && expanded && !detectedEdge) return 'undock';
+  if (detectedEdge) return 'dock-collapse';
+  return 'save-bounds';
+}
+
 module.exports = {
   EDGE_SNAP_THRESHOLD,
   PEEK_SIZE,
@@ -166,6 +183,7 @@ module.exports = {
   expandedBounds,
   collapsedBounds,
   isCursorNearDock,
+  decideMoveSnap,
   expandedPosition: (edge, bounds, workArea) => {
     const b = expandedBounds(edge, bounds, workArea);
     return { x: b.x, y: b.y };
