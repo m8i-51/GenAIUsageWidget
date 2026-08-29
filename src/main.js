@@ -104,10 +104,10 @@ function rememberExpandedSize(bounds) {
   // The collapsed pill is PEEK_SIZE thick; do not treat that as the open size.
   if (dockedEdge && !edgeHideExpanded) return;
   if (bounds.width >= DEFAULT_FULL_WIDTH - 4) {
-    widgetFullWidth = bounds.width;
+    widgetFullWidth = Math.min(640, bounds.width);
   }
   if (bounds.height >= 120) {
-    widgetFullHeight = bounds.height;
+    widgetFullHeight = Math.min(900, bounds.height);
   }
 }
 
@@ -161,14 +161,20 @@ function withSuppressedWindowEvents(fn) {
 
 function setWidgetBounds(bounds) {
   if (!widget || widget.isDestroyed()) return;
+  const current = widget.getBounds();
   const width = Math.max(PEEK_SIZE, Math.min(640, Math.round(bounds.width)));
   const height = Math.max(PEEK_SIZE, Math.min(900, Math.round(bounds.height)));
   withSuppressedWindowEvents(() => {
-    // Position first, then size. On Linux a combined setBounds() often keeps
-    // the top-left fixed, which grows the flyout off the right edge and
-    // the WM clamps us into an accidental dock.
-    widget.setPosition(Math.round(bounds.x), Math.round(bounds.y), false);
-    widget.setSize(width, height, false);
+    const shrinking = width < current.width - 4 || height < current.height - 4;
+    if (shrinking) {
+      // Shrink first so a docked-right flyout does not carry the notch off-screen.
+      widget.setSize(width, height, false);
+      widget.setPosition(Math.round(bounds.x), Math.round(bounds.y), false);
+    } else {
+      // Grow: move first so Linux does not expand off the right edge and clamp-dock.
+      widget.setPosition(Math.round(bounds.x), Math.round(bounds.y), false);
+      widget.setSize(width, height, false);
+    }
   });
 }
 
@@ -183,24 +189,45 @@ function broadcastEdgeHideState() {
 
 function applyEdgeHidePosition(expanded) {
   if (!widget || widget.isDestroyed() || !dockedEdge) return;
-  const current = widget.getBounds();
-  const workArea = getWidgetWorkArea(current);
-  const next = expanded
-    ? expandedBounds(dockedEdge, current, workArea, widgetFullWidth, widgetFullHeight)
-    : collapsedBounds(dockedEdge, current, workArea, PEEK_SIZE, widgetFullWidth, widgetFullHeight);
   edgeHideExpanded = expanded;
   if (!expanded) {
     edgeHidePinned = false;
   }
-  setWidgetBounds(next);
+
+  const place = () => {
+    if (!widget || widget.isDestroyed() || !dockedEdge) return;
+    const current = widget.getBounds();
+    const workArea = getWidgetWorkArea(current);
+    const next = expanded
+      ? expandedBounds(dockedEdge, current, workArea, widgetFullWidth, widgetFullHeight)
+      : collapsedBounds(dockedEdge, current, workArea, PEEK_SIZE, widgetFullWidth, widgetFullHeight);
+    setWidgetBounds(next);
+  };
+
   broadcastEdgeHideState();
+  if (!expanded && widget.webContents && !widget.webContents.isDestroyed()) {
+    // Hide the flyout in the page before shrinking, or Linux keeps the old
+    // width and the rings slide off the right edge.
+    widget.webContents
+      .executeJavaScript(`
+        document.body.classList.add('edge-collapsed');
+        document.documentElement.classList.add('widget-edge-fill');
+        new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve(true))));
+      `)
+      .then(place)
+      .catch(place);
+    return;
+  }
+  place();
 }
 
 function restoreFullSizeAt(bounds) {
   if (!widget || widget.isDestroyed()) return;
+  const width = Math.max(PEEK_SIZE, Math.min(640, Math.round(widgetFullWidth)));
+  const height = Math.max(120, Math.min(900, Math.round(widgetFullHeight)));
   withSuppressedWindowEvents(() => {
     widget.setPosition(bounds.x, bounds.y, false);
-    widget.setSize(widgetFullWidth, Math.max(widgetFullHeight, 120), false);
+    widget.setSize(width, height, false);
   });
 }
 
