@@ -161,12 +161,14 @@ function withSuppressedWindowEvents(fn) {
 
 function setWidgetBounds(bounds) {
   if (!widget || widget.isDestroyed()) return;
+  const width = Math.max(PEEK_SIZE, Math.min(640, Math.round(bounds.width)));
+  const height = Math.max(PEEK_SIZE, Math.min(900, Math.round(bounds.height)));
   withSuppressedWindowEvents(() => {
     // Position first, then size. On Linux a combined setBounds() often keeps
     // the top-left fixed, which grows the flyout off the right edge and
     // the WM clamps us into an accidental dock.
     widget.setPosition(Math.round(bounds.x), Math.round(bounds.y), false);
-    widget.setSize(Math.round(bounds.width), Math.round(bounds.height), false);
+    widget.setSize(width, height, false);
   });
 }
 
@@ -542,7 +544,11 @@ ipcMain.on('resize-to', (event, size) => {
     const next = collapsedBounds(dockedEdge, current, workArea, PEEK_SIZE, widgetFullWidth, widgetFullHeight);
     withSuppressedWindowEvents(() => {
       win.setPosition(Math.round(next.x), Math.round(next.y), false);
-      win.setSize(Math.round(next.width), Math.round(next.height), false);
+      win.setSize(
+        Math.max(PEEK_SIZE, Math.min(640, Math.round(next.width))),
+        Math.max(PEEK_SIZE, Math.min(900, Math.round(next.height))),
+        false
+      );
     });
     return;
   }

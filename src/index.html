@@ -28,9 +28,6 @@
     color: var(--text-primary);
     font-family: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
-  }
-
-  body {
     overflow: hidden;
   }
 
@@ -41,8 +38,6 @@
 
   html.widget-edge-fill,
   html.widget-edge-fill body {
-    width: 100%;
-    height: 100%;
     overflow: hidden;
   }
 
@@ -169,6 +164,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    overflow: hidden;
     -webkit-app-region: drag;
   }
 
@@ -316,9 +312,6 @@
   body.widget-mode.edge-collapsed .app {
     margin: 0;
     padding: 0;
-    min-height: 0;
-    width: 100%;
-    height: 100%;
   }
 
   /* Collapsed = the ring pill flush to the edge, not a chevron strip. */
@@ -328,19 +321,9 @@
     display: none !important;
   }
 
-  body.widget-mode.edge-collapsed .shell {
-    display: flex;
-    width: 100%;
-    height: 100%;
-  }
-
   body.widget-mode.edge-collapsed .notch {
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    padding: 16px 10px;
-    justify-content: center;
     overflow: hidden;
+    justify-content: center;
   }
 
   body.widget-mode.edge-collapsed.edge-top .notch {
@@ -504,8 +487,8 @@
   .ring-svg {
     width: 56px;
     height: 56px;
+    overflow: hidden;
     display: block;
-    overflow: visible;
   }
 
   .ring-track,

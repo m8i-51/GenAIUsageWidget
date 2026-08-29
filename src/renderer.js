@@ -741,10 +741,11 @@ containerEl.addEventListener('dragover', (event) => {
 const appEl = document.querySelector('.app');
 
 function reportSize() {
+  if (isEdgeCollapsed()) return;
   const rect = appEl.getBoundingClientRect();
   window.api.resizeTo({
-    width: Math.ceil(rect.width) + 20,
-    height: Math.ceil(rect.height) + 20,
+    width: Math.min(640, Math.ceil(rect.width) + 20),
+    height: Math.min(900, Math.ceil(rect.height) + 20),
   });
 }
 
