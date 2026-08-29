@@ -175,6 +175,8 @@ function setWidgetBounds(bounds) {
       widget.setPosition(Math.round(bounds.x), Math.round(bounds.y), false);
       widget.setSize(width, height, false);
     }
+    widget.setMinimumSize(PEEK_SIZE, PEEK_SIZE);
+    widget.setMaximumSize(640, 900);
   });
 }
 
@@ -408,6 +410,8 @@ function createWidget() {
   widgetFullWidth = DEFAULT_FULL_WIDTH;
   widgetFullHeight = DEFAULT_FULL_HEIGHT;
   widget.setAlwaysOnTop(true, 'floating');
+  widget.setMinimumSize(PEEK_SIZE, PEEK_SIZE);
+  widget.setMaximumSize(640, 900);
   widget.loadFile(path.join(__dirname, 'index.html'), { query: { mode: 'widget' } });
 
   const settings = loadSettings();

@@ -34,6 +34,9 @@
   .app {
     position: relative;
     margin: 10px;
+    overflow: hidden;
+    contain: layout paint;
+    max-width: 640px;
   }
 
   html.widget-edge-fill,
@@ -510,18 +513,10 @@
     stroke-linecap: round;
     stroke-dasharray: 0 100;
     transition: stroke-dasharray 0.55s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.3s ease;
-    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--ok) 55%, transparent));
   }
 
-  .ring.warning .ring-fill {
-    stroke: var(--warning);
-    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--warning) 50%, transparent));
-  }
-
-  .ring.critical .ring-fill {
-    stroke: var(--critical);
-    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--critical) 55%, transparent));
-  }
+  .ring.warning .ring-fill { stroke: var(--warning); }
+  .ring.critical .ring-fill { stroke: var(--critical); }
 
   .ring-icon {
     position: absolute;
