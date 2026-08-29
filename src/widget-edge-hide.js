@@ -3,8 +3,9 @@ const EDGE_SNAP_THRESHOLD = 28;
 const PEEK_SIZE = 84;
 const DEFAULT_FULL_WIDTH = 108;
 const DEFAULT_FULL_HEIGHT = 360;
-/** Top-edge collapsed width: enough for four 56px rings plus padding. */
+/** Top-edge collapsed size: four 56px rings plus labels. */
 const COLLAPSED_TOP_WIDTH = 288;
+const COLLAPSED_TOP_HEIGHT = 100;
 const VALID_EDGES = new Set(['left', 'right', 'top']);
 
 function normalizeEdge(edge) {
@@ -124,7 +125,7 @@ function collapsedBounds(edge, bounds, workArea, peekSize = PEEK_SIZE, fullWidth
     x: clampX(bounds.x, width, workArea),
     y: workArea.y,
     width,
-    height: peekSize,
+    height: Math.max(peekSize, COLLAPSED_TOP_HEIGHT),
   };
 }
 
@@ -178,6 +179,7 @@ module.exports = {
   EDGE_SNAP_THRESHOLD,
   PEEK_SIZE,
   COLLAPSED_TOP_WIDTH,
+  COLLAPSED_TOP_HEIGHT,
   DEFAULT_FULL_WIDTH,
   DEFAULT_FULL_HEIGHT,
   VALID_EDGES,

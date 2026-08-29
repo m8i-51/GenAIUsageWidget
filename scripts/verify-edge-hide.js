@@ -14,6 +14,7 @@ const {
   decideMoveSnap,
   PEEK_SIZE,
   COLLAPSED_TOP_WIDTH,
+  COLLAPSED_TOP_HEIGHT,
   DEFAULT_FULL_WIDTH,
   DEFAULT_FULL_HEIGHT,
 } = require('../src/widget-edge-hide');
@@ -143,7 +144,7 @@ app.whenReady().then(async () => {
       const collapsed = collapsedBounds(edge, mid, workArea, PEEK_SIZE, DEFAULT_FULL_WIDTH, DEFAULT_FULL_HEIGHT);
       assert(fullyInside(collapsed, workArea), `collapsed ${edge} stays inside same workArea`);
       if (edge === 'top') {
-        assert(collapsed.height === PEEK_SIZE, `collapsed top height is pill (${collapsed.height})`);
+        assert(collapsed.height === COLLAPSED_TOP_HEIGHT, `collapsed top height is pill (${collapsed.height})`);
         assert(collapsed.width === COLLAPSED_TOP_WIDTH, `collapsed top is a horizontal pill (${collapsed.width})`);
         approx(collapsed.y, workArea.y, 1, 'collapsed top y is workArea top');
       } else {
