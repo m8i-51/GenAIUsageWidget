@@ -42,7 +42,8 @@ function broadcastSettings(settings) {
 
 function getDefaultWidgetPosition(win) {
   const display = screen.getPrimaryDisplay();
-  const margin = 16;
+  // Stay outside EDGE_SNAP_THRESHOLD (28) so first launch does not auto-dock.
+  const margin = 40;
   const { width, height } = win.getBounds();
   return {
     x: display.workArea.x + display.workArea.width - width - margin,
@@ -373,7 +374,9 @@ function createWidget() {
 
   const settings = loadSettings();
   const { x, y } = resolveWidgetPosition(settings.widgetBounds, widget);
-  widget.setPosition(x, y, false);
+  withSuppressedWindowEvents(() => {
+    widget.setPosition(x, y, false);
+  });
 
   const savedEdge = normalizeEdge(settings.widgetEdgeHide);
   if (savedEdge) {
