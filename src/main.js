@@ -29,6 +29,7 @@ let dockDisplayId = null;
 let edgeHideExpanded = true;
 let edgeHidePinned = false;
 let suppressMoveHandling = false;
+let snapArmedAt = 0;
 let widgetFullWidth = DEFAULT_FULL_WIDTH;
 let widgetFullHeight = DEFAULT_FULL_HEIGHT;
 
@@ -158,12 +159,11 @@ function withSuppressedWindowEvents(fn) {
 function setWidgetBounds(bounds) {
   if (!widget || widget.isDestroyed()) return;
   withSuppressedWindowEvents(() => {
-    widget.setBounds({
-      x: Math.round(bounds.x),
-      y: Math.round(bounds.y),
-      width: Math.round(bounds.width),
-      height: Math.round(bounds.height),
-    }, false);
+    // Position first, then size. On Linux a combined setBounds() often keeps
+    // the top-left fixed, which grows the flyout off the right edge and
+    // the WM clamps us into an accidental dock.
+    widget.setPosition(Math.round(bounds.x), Math.round(bounds.y), false);
+    widget.setSize(Math.round(bounds.width), Math.round(bounds.height), false);
   });
 }
 
@@ -194,12 +194,8 @@ function applyEdgeHidePosition(expanded) {
 function restoreFullSizeAt(bounds) {
   if (!widget || widget.isDestroyed()) return;
   withSuppressedWindowEvents(() => {
-    widget.setBounds({
-      x: bounds.x,
-      y: bounds.y,
-      width: widgetFullWidth,
-      height: Math.max(widgetFullHeight, 120),
-    }, false);
+    widget.setPosition(bounds.x, bounds.y, false);
+    widget.setSize(widgetFullWidth, Math.max(widgetFullHeight, 120), false);
   });
 }
 
@@ -252,6 +248,7 @@ function expandEdgeHide({ pinned = true } = {}) {
 
 function evaluateSnapAfterMove() {
   if (!widget || widget.isDestroyed() || suppressMoveHandling) return;
+  if (Date.now() < snapArmedAt) return;
   if (dockedEdge && !edgeHideExpanded) return;
 
   const bounds = widget.getBounds();
@@ -392,6 +389,7 @@ function createWidget() {
     if (suppressMoveHandling) return;
     scheduleSnapEvaluation();
   });
+  snapArmedAt = Date.now() + 2500;
 }
 
 function toggleWidget() {
@@ -531,12 +529,8 @@ ipcMain.on('resize-to', (event, size) => {
     const workArea = getWidgetWorkArea(current);
     const next = collapsedBounds(dockedEdge, current, workArea, PEEK_SIZE, widgetFullWidth, widgetFullHeight);
     withSuppressedWindowEvents(() => {
-      win.setBounds({
-        x: Math.round(next.x),
-        y: Math.round(next.y),
-        width: Math.round(next.width),
-        height: Math.round(next.height),
-      }, false);
+      win.setPosition(Math.round(next.x), Math.round(next.y), false);
+      win.setSize(Math.round(next.width), Math.round(next.height), false);
     });
     return;
   }
