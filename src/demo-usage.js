@@ -35,6 +35,7 @@ function cursor() {
     autoPercent: 48,
     apiPercent: 12,
     billingCycleEnd: nextWeekdayMidnight(1),
+    grokBot: { percent: 18, resetsAt: nextWeekdayMidnight(1) },
   });
 }
 
