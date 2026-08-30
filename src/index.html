@@ -5,135 +5,337 @@
 <title>GenAIUsageWidget</title>
 <style>
   :root {
-    color-scheme: light dark;
-
-    --page: #f9f9f7;
-    --text-primary: #0b0b0b;
-    --text-secondary: #52514e;
-    --text-muted: #898781;
-
-    --glass-card: rgba(255, 255, 255, 0.62);
-    --glass-tile: rgba(255, 255, 255, 0.5);
-    --glass-tile-hover: rgba(255, 255, 255, 0.68);
-    --glass-border: rgba(255, 255, 255, 0.65);
-    --glass-edge: rgba(11, 11, 11, 0.08);
-    --glass-highlight: rgba(255, 255, 255, 0.8);
-
-    --accent: #2a78d6;
-    --warning: #fab219;
-    --critical: #d03b3b;
-
-    --id-claude: #4a3aa7;
-    --id-codex: #1baf7a;
-    --id-cursor: #e87ba4;
-    --id-antigravity: #eb6834;
-
-    --glow-opacity: 0.55;
+    color-scheme: dark;
+    --notch: #0a0a0a;
+    --flyout: #141414;
+    --text-primary: #f5f5f5;
+    --text-secondary: #a3a3a3;
+    --text-muted: #737373;
+    --track: #2a2a2a;
+    --hairline: rgba(255, 255, 255, 0.08);
+    --ok: #3dff8a;
+    --warning: #f0d44a;
+    --critical: #ff5c33;
+    --accent: #3dff8a;
+    --pointer-offset: 40px;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --page: #0d0d0d;
-      --text-primary: #ffffff;
-      --text-secondary: #c3c2b7;
-      --text-muted: #898781;
+  * { box-sizing: border-box; }
 
-      --glass-card: rgba(26, 26, 25, 0.62);
-      --glass-tile: rgba(255, 255, 255, 0.055);
-      --glass-tile-hover: rgba(255, 255, 255, 0.09);
-      --glass-border: rgba(255, 255, 255, 0.14);
-      --glass-edge: rgba(0, 0, 0, 0.4);
-      --glass-highlight: rgba(255, 255, 255, 0.12);
-
-      --accent: #3987e5;
-      --warning: #fab219;
-      --critical: #d03b3b;
-
-      --id-claude: #9085e9;
-      --id-codex: #199e70;
-      --id-cursor: #d55181;
-      --id-antigravity: #d95926;
-
-      --glow-opacity: 0.4;
-    }
-  }
-
-  * {
-    box-sizing: border-box;
-  }
-
-  body {
+  html, body {
     margin: 0;
-    overflow: hidden;
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    background: var(--page);
-    color: var(--text-primary);
-    -webkit-font-smoothing: antialiased;
-  }
-
-  body.widget-mode {
     background: transparent;
+    color: var(--text-primary);
+    font-family: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
   }
 
-  html.widget-edge-fill,
-  html.widget-edge-fill body {
-    width: 100%;
-    height: 100%;
+  /* Transparent parts of the widget window must not steal clicks from apps behind. */
+  body.widget-mode,
+  body.widget-mode .app,
+  body.widget-mode .shell,
+  body.widget-mode .panel {
+    pointer-events: none;
+  }
+
+  body.widget-mode .notch,
+  body.widget-mode .flyout,
+  body.widget-mode .edge-peek-tab {
+    pointer-events: auto;
   }
 
   .app {
     position: relative;
+    margin: 10px;
+    overflow: visible;
+    max-width: 640px;
+    background: transparent;
+  }
+
+  /* Shrink-wrap so docked flex shells do not leave a transparent strip on
+     the docked edge (row-reverse packs to the opposite side when stretched). */
+  body.widget-mode .app {
+    width: max-content;
+    box-sizing: border-box;
+  }
+
+  html.widget-edge-fill,
+  html.widget-edge-fill body {
     overflow: hidden;
-    margin: 6px;
-    padding: 12px;
+    width: 100%;
+    height: 100%;
+  }
+
+  html.widget-edge-fill body.edge-right {
+    display: flex;
+    justify-content: flex-end;
+    align-items: stretch;
+  }
+
+  html.widget-edge-fill body.edge-left {
+    display: flex;
+    justify-content: flex-start;
+    align-items: stretch;
+  }
+
+  .shell {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 10px;
+    width: max-content;
+  }
+
+  body.widget-mode.edge-left .shell {
+    flex-direction: row-reverse;
+  }
+
+  body.widget-mode.edge-right .shell {
+    /* Keep the notch on the docked (right) side if the shell ever stretches. */
+    justify-content: flex-end;
+  }
+
+  body.widget-mode.edge-top .shell {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  body.widget-mode.edge-bottom .shell {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  body:not(.widget-mode) .shell {
+    display: block;
+  }
+
+  .panel {
+    display: none;
+    flex-shrink: 0;
+  }
+
+  .panel.open {
+    display: block;
+  }
+
+  body:not(.widget-mode) .panel {
+    display: none !important;
+  }
+
+  .flyout {
+    position: relative;
+    width: 268px;
+    padding: 16px 18px 14px;
+    border-radius: 22px;
+    background: var(--flyout);
+    border: 1px solid var(--hairline);
+    box-shadow:
+      0 18px 40px rgba(0, 0, 0, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .flyout .pointer {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: var(--flyout);
+    border: 1px solid var(--hairline);
+    border-left: none;
+    border-bottom: none;
+    transform: rotate(45deg);
+    right: -6px;
+    top: var(--pointer-offset);
+    margin-top: -6px;
+    box-shadow: 4px -4px 12px rgba(0, 0, 0, 0.12);
+  }
+
+  body.widget-mode.edge-left .flyout .pointer {
+    right: auto;
+    left: -6px;
+    transform: rotate(225deg);
+  }
+
+  body.widget-mode.edge-top .flyout .pointer {
+    right: auto;
+    left: var(--pointer-offset);
+    top: -6px;
+    margin-top: 0;
+    margin-left: -6px;
+    transform: rotate(-45deg);
+  }
+
+  body.widget-mode.edge-bottom .flyout .pointer {
+    right: auto;
+    left: var(--pointer-offset);
+    bottom: -6px;
+    top: auto;
+    margin-top: 0;
+    margin-left: -6px;
+    transform: rotate(135deg);
+  }
+
+  .flyout-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .flyout-head svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  .flyout-error,
+  .flyout-empty {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--text-secondary);
+  }
+
+  .flyout-error { color: var(--critical); }
+
+  .flyout-updated {
+    margin-top: 12px;
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  .notch {
+    position: relative;
+    background: var(--notch);
+    border: 1px solid var(--hairline);
+    box-shadow:
+      0 16px 40px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  /* Transparent Electron windows cannot use outer box-shadow / filter /
+     borders on rounded shapes — Chromium leaves grey square corners. */
+  body.widget-mode .notch {
+    width: 84px;
+    padding: 14px 10px;
+    border-radius: 42px;
+    border: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+    outline: none;
     display: flex;
     flex-direction: column;
-    gap: 9px;
-    border-radius: 20px;
-    background: var(--glass-card);
-    border: 1px solid var(--glass-border);
-    box-shadow:
-      inset 0 1px 0 var(--glass-highlight),
-      0 1px 2px var(--glass-edge),
-      0 16px 40px -12px rgba(0, 0, 0, 0.3);
+    align-items: center;
+    overflow: hidden;
+    /* clip-path follows the radius in the alpha channel more reliably
+       than border-radius alone under DWM transparency. */
+    clip-path: inset(0 round 42px);
+    -webkit-app-region: no-drag;
+    cursor: grab;
+    background: #0a0a0a;
   }
 
-  /* Colored glow blobs behind the frosted tiles — this is what the
-     tiles' backdrop-filter actually blurs, since a transparent Electron
-     window can't blur the desktop behind it. */
-  .app-bg {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    opacity: var(--glow-opacity);
+  body.widget-mode .notch:active {
+    cursor: grabbing;
   }
 
-  .app-bg .blob {
-    position: absolute;
-    width: 220px;
-    height: 220px;
-    border-radius: 50%;
-    filter: blur(56px);
+  body.widget-mode.edge-top .notch {
+    width: auto;
+    min-height: 84px;
+    padding: 10px 14px;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
   }
 
-  .app-bg .blob-1 { background: var(--id-claude);      top: -70px;  left: -60px; }
-  .app-bg .blob-2 { background: var(--id-codex);       top: 120px;  right: -90px; }
-  .app-bg .blob-3 { background: var(--id-antigravity); bottom: -80px; left: -30px; }
+  body.widget-mode.edge-bottom .notch {
+    width: auto;
+    min-height: 84px;
+    padding: 10px 14px;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
 
-  .app > :not(.app-bg) {
-    position: relative;
+  body:not(.widget-mode) .notch {
+    width: 300px;
+    padding: 12px;
+    border-radius: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  body:not(.widget-mode) #settings-panel.flyout {
+    width: auto;
+    padding: 4px 2px 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+
+  body:not(.widget-mode) .tile:not(.error-state) .tile-sub {
+    display: none;
   }
 
   body.widget-mode .app-header {
-    -webkit-app-region: drag;
-    cursor: move;
+    order: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding-top: 8px;
+    -webkit-app-region: no-drag;
+    opacity: 0;
+    transition: opacity 0.18s ease;
   }
 
-  .app-header {
+  body.widget-mode.edge-left .app-header,
+  body.widget-mode.edge-right .app-header {
+    flex-shrink: 0;
+    width: 100%;
+    justify-content: center;
+  }
+
+  body.widget-mode.edge-left .app-header .app-header-actions,
+  body.widget-mode.edge-right .app-header .app-header-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  body.widget-mode .notch:hover .app-header,
+  body.widget-mode .notch:focus-within .app-header {
+    opacity: 1;
+  }
+
+  body.widget-mode .app-title,
+  body.widget-mode .app-updated {
+    display: none;
+  }
+
+  body.widget-mode.edge-top .app-header {
+    order: 0;
+    padding-top: 0;
+    padding-right: 4px;
+  }
+
+  body.widget-mode.edge-bottom .app-header {
+    order: 2;
+    padding-top: 0;
+    padding-right: 4px;
+  }
+
+  body:not(.widget-mode) .app-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 2px 4px 2px;
+    padding: 2px 4px 6px;
     gap: 8px;
   }
 
@@ -148,7 +350,7 @@
   .app-header-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     -webkit-app-region: no-drag;
   }
 
@@ -157,7 +359,7 @@
     color: var(--text-muted);
   }
 
-  .settings-btn {
+  .icon-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -168,146 +370,130 @@
     border-radius: 8px;
     background: transparent;
     color: var(--text-muted);
-    font-size: 14px;
-    line-height: 1;
     cursor: pointer;
     -webkit-app-region: no-drag;
   }
 
-  .settings-btn:hover {
-    background: var(--glass-tile-hover);
-    color: var(--text-secondary);
+  .icon-btn svg {
+    width: 14px;
+    height: 14px;
   }
 
-  .hide-edge-btn {
-    display: none;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border: none;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 14px;
-    line-height: 1;
-    cursor: pointer;
-    -webkit-app-region: no-drag;
+  .icon-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
   }
 
-  body.widget-mode .hide-edge-btn {
-    display: flex;
-  }
+  .hide-edge-btn { display: none; }
 
-  .hide-edge-btn:hover {
-    background: var(--glass-tile-hover);
-    color: var(--text-secondary);
+  body.widget-mode .hide-edge-btn { display: flex; }
+
+  body.widget-mode.edge-right .app {
+    /* No vertical margin — collapsed uses 0, so a top margin here shifts the pill down. */
+    margin: 0 0 0 10px !important;
+  }
+  body.widget-mode.edge-left .app {
+    margin: 0 10px 0 0 !important;
+  }
+  body.widget-mode.edge-top .app {
+    margin: 0 10px 10px 10px !important;
+  }
+  body.widget-mode.edge-bottom .app {
+    margin: 10px 10px 0 10px !important;
   }
 
   body.widget-mode.edge-collapsed .app {
-    margin: 0;
+    margin: 0 !important;
     padding: 0;
-    min-height: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 0 0 14px 14px;
-    box-shadow:
-      inset 0 1px 0 var(--glass-highlight),
-      0 1px 2px var(--glass-edge),
-      0 8px 20px -8px rgba(0, 0, 0, 0.35);
+    width: max-content;
+    max-width: none;
+    overflow: visible;
+    background: transparent;
   }
 
-  body.widget-mode.edge-collapsed.edge-left,
-  body.widget-mode.edge-collapsed.edge-right {
-    width: 100%;
-    height: 100%;
+  /* Side pill: ring 56 + open-side pad 12 (border-box). */
+  body.widget-mode.edge-right .notch {
+    border-radius: 36px 0 0 36px;
+    clip-path: inset(0 round 36px 0 0 36px);
+    box-sizing: border-box;
+    width: 69px !important;
+    min-width: 69px !important;
+    max-width: 69px !important;
+    padding: 14px 0 14px 12px;
+    align-items: stretch !important;
+  }
+  body.widget-mode.edge-left .notch {
+    border-radius: 0 36px 36px 0;
+    clip-path: inset(0 round 0 36px 36px 0);
+    box-sizing: border-box;
+    width: 69px !important;
+    min-width: 69px !important;
+    max-width: 69px !important;
+    padding: 14px 12px 14px 0;
+    align-items: stretch !important;
+  }
+  body.widget-mode.edge-top .notch {
+    border-radius: 0 0 36px 36px;
+    clip-path: inset(0 round 0 0 36px 36px);
   }
 
-  body.widget-mode.edge-collapsed.edge-left .app {
-    border-radius: 0 14px 14px 0;
+  body.widget-mode.edge-bottom .notch {
+    border-radius: 36px 36px 0 0;
+    clip-path: inset(0 round 36px 36px 0 0);
   }
 
-  body.widget-mode.edge-collapsed.edge-right .app {
-    border-radius: 14px 0 0 14px;
+  body.widget-mode.edge-collapsed.edge-top .app,
+  body.widget-mode.edge-collapsed.edge-bottom .app {
+    max-width: 320px;
   }
 
-  body.widget-mode.edge-collapsed .app-bg,
-  body.widget-mode.edge-collapsed .app-header,
-  body.widget-mode.edge-collapsed #settings-panel,
-  body.widget-mode.edge-collapsed #cards-view {
+  /* Collapsed = the ring pill flush to the edge, not a chevron strip. */
+  body.widget-mode.edge-collapsed .panel,
+  body.widget-mode.edge-collapsed .edge-peek-tab,
+  body.widget-mode.edge-collapsed .app-header {
     display: none !important;
   }
 
-  body.widget-mode.edge-collapsed .edge-peek-tab {
-    display: flex;
+  body.widget-mode.edge-collapsed .notch {
+    overflow: hidden;
+    justify-content: flex-start;
+    border: none !important;
+    box-shadow: none !important;
+    filter: none !important;
   }
+
+  body.widget-mode.edge-collapsed.edge-right .notch {
+    padding: 14px 0 14px 12px;
+    border-radius: 36px 0 0 36px;
+  }
+
+  body.widget-mode.edge-collapsed.edge-left .notch {
+    padding: 14px 12px 14px 0;
+    border-radius: 0 36px 36px 0;
+  }
+
+  body.widget-mode.edge-collapsed.edge-top .notch,
+  body.widget-mode.edge-collapsed.edge-bottom .notch {
+    padding: 10px 16px;
+  }
+
+  /* Keep the same ring spacing as expanded — a tighter gap makes lower
+     rings look like they drift downward when hiding. */
 
   .edge-peek-tab {
     display: none;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    min-height: 28px;
-    height: 28px;
-    padding: 0;
-    color: var(--text-secondary);
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    -webkit-app-region: no-drag;
-    cursor: pointer;
-    user-select: none;
-    /* Opaque enough that Electron hit-tests the peek (transparent pixels click through). */
-    background: var(--glass-card);
   }
 
-  body.widget-mode.edge-collapsed.edge-left .edge-peek-tab,
-  body.widget-mode.edge-collapsed.edge-right .edge-peek-tab {
-    width: 100%;
-    min-width: 28px;
-    height: 100%;
-    min-height: 100%;
-  }
-
-  body.widget-mode.edge-collapsed.edge-top .edge-peek-tab::before {
-    content: "▾";
-  }
-
-  body.widget-mode.edge-collapsed.edge-left .edge-peek-tab::before {
-    content: "▸";
-  }
-
-  body.widget-mode.edge-collapsed.edge-right .edge-peek-tab::before {
-    content: "◂";
-  }
-
-  #settings-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  #settings-panel[hidden] {
-    display: none !important;
-  }
-
-  #cards-view {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-  }
-
+  #settings-panel[hidden],
+  #flyout[hidden],
   #cards-view[hidden] {
     display: none !important;
   }
 
-  .settings-section {
-    padding: 10px 12px;
-    border-radius: 14px;
-    background: var(--glass-tile);
-    border: 1px solid var(--glass-border);
-    box-shadow: inset 0 1px 0 var(--glass-highlight);
+  .settings-section + .settings-section {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--hairline);
   }
 
   .settings-heading {
@@ -332,13 +518,91 @@
   .settings-row input[type="checkbox"] {
     width: 16px;
     height: 16px;
-    accent-color: var(--accent);
+    accent-color: var(--ok);
     flex-shrink: 0;
   }
 
-  .provider-toggle + .provider-toggle {
-    margin-top: 8px;
+  .dock-edge-picker {
+    position: relative;
+    margin-top: 4px;
   }
+
+  .dock-edge-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--hairline);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary);
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .dock-edge-trigger:hover {
+    background: rgba(255, 255, 255, 0.07);
+  }
+
+  .dock-edge-trigger:focus {
+    outline: none;
+    border-color: rgba(61, 255, 138, 0.35);
+  }
+
+  .dock-edge-trigger svg {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    color: var(--text-muted);
+  }
+
+  .dock-edge-menu {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 20;
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    border-radius: 12px;
+    border: 1px solid var(--hairline);
+    background: #1a1a1a;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  }
+
+  .dock-edge-menu[hidden] {
+    display: none !important;
+  }
+
+  .dock-edge-option {
+    display: block;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .dock-edge-option:hover,
+  .dock-edge-option:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .dock-edge-option[aria-selected="true"] {
+    background: rgba(61, 255, 138, 0.14);
+    color: #fff;
+  }
+
+  .provider-toggle + .provider-toggle { margin-top: 8px; }
 
   .provider-toggle.disabled {
     opacity: 0.55;
@@ -353,11 +617,12 @@
   }
 
   .settings-back {
+    margin-top: 14px;
     align-self: flex-start;
     padding: 6px 12px;
-    border: 1px solid var(--glass-border);
+    border: 1px solid var(--hairline);
     border-radius: 10px;
-    background: var(--glass-tile);
+    background: rgba(255, 255, 255, 0.04);
     color: var(--text-secondary);
     font-size: 12px;
     cursor: pointer;
@@ -365,116 +630,179 @@
   }
 
   .settings-back:hover {
-    background: var(--glass-tile-hover);
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
   }
 
-  .tile {
-    padding: 10px 12px;
-    border-radius: 14px;
-    background: var(--glass-tile);
-    border: 1px solid var(--glass-border);
-    backdrop-filter: blur(24px) saturate(1.5);
-    -webkit-backdrop-filter: blur(24px) saturate(1.5);
-    box-shadow: inset 0 1px 0 var(--glass-highlight);
-    transition: background 0.2s ease;
+  #cards-view {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
   }
 
-  .tile.has-detail {
-    cursor: pointer;
+  body.widget-mode #cards-view {
+    width: 100%;
+    align-items: center;
+    gap: 12px;
+  }
+
+  body.widget-mode.edge-right #cards-view,
+  body.widget-mode.edge-left #cards-view {
+    align-items: center;
+  }
+
+  body.widget-mode.edge-right .tile,
+  body.widget-mode.edge-left .tile {
+    width: 100%;
+    align-items: center !important;
+  }
+
+  body.widget-mode.edge-top #cards-view,
+  body.widget-mode.edge-bottom #cards-view {
+    flex-direction: row;
+    width: auto;
+    gap: 14px;
   }
 
   .tile {
     user-select: none;
   }
 
-  .tile.dragging {
-    opacity: 0.45;
-  }
-
-  .tile:hover {
-    background: var(--glass-tile-hover);
-  }
-
-  .tile-header {
+  body.widget-mode .tile {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    margin-bottom: 8px;
+    gap: 4px;
+    background: none;
+    border: none;
+    padding: 0;
+    -webkit-app-region: no-drag;
+    cursor: grab;
   }
 
-  .tile-identity {
+  body.widget-mode .tile .ring,
+  body.widget-mode .tile .ring-value {
+    cursor: pointer;
+  }
+
+  body.widget-mode .tile.selected .ring-icon {
+    color: #fff;
+  }
+
+  body.widget-mode .tile.dragging { opacity: 0.4; }
+
+  body:not(.widget-mode) .tile {
+    padding: 14px 14px 12px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--hairline);
+  }
+
+  body:not(.widget-mode) .tile + .tile {
+    margin-top: 0;
+  }
+
+  body:not(.widget-mode) #cards-view {
+    gap: 10px;
+  }
+
+  body:not(.widget-mode) .tile.dragging { opacity: 0.45; }
+
+  .tile-body { display: none; }
+
+  body:not(.widget-mode) .tile-body { display: block; }
+
+  body:not(.widget-mode) .ring-item { display: none; }
+
+  .ring-item {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 8px;
-    min-width: 0;
-    flex: 1;
+    gap: 4px;
   }
 
-  .dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    flex-shrink: 0;
+  .ring {
+    position: relative;
+    width: 56px;
+    height: 56px;
   }
 
-  #claude-provider      .dot { box-shadow: 0 0 0 3px color-mix(in srgb, var(--id-claude) 20%, transparent); }
-  #codex-provider       .dot { box-shadow: 0 0 0 3px color-mix(in srgb, var(--id-codex) 20%, transparent); }
-  #antigravity-provider .dot { box-shadow: 0 0 0 3px color-mix(in srgb, var(--id-antigravity) 20%, transparent); }
-  #cursor-provider      .dot { box-shadow: 0 0 0 3px color-mix(in srgb, var(--id-cursor) 20%, transparent); }
-
-  .tile-label {
-    font-size: 12.5px;
-    font-weight: 500;
-    color: var(--text-primary);
-    white-space: nowrap;
+  .ring-svg {
+    width: 56px;
+    height: 56px;
     overflow: hidden;
-    text-overflow: ellipsis;
+    display: block;
   }
 
-  .tile-value {
-    font-size: 17px;
+  .ring-track,
+  .ring-fill {
+    fill: none;
+    stroke-width: 3.4;
+  }
+
+  .ring-track { stroke: var(--track); }
+
+  .ring-fill {
+    stroke: var(--ok);
+    stroke-linecap: round;
+    stroke-dasharray: 0 100;
+    transition: stroke-dasharray 0.55s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.3s ease;
+  }
+
+  .ring.warning .ring-fill { stroke: var(--warning); }
+  .ring.critical .ring-fill { stroke: var(--critical); }
+
+  .ring-icon {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    pointer-events: none;
+  }
+
+  .ring-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .ring-value {
+    font-size: 11px;
     font-weight: 600;
-    font-variant-numeric: proportional-nums;
-    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+    letter-spacing: 0.01em;
   }
 
-  .chevron {
-    width: 7px;
-    height: 7px;
-    margin-left: 10px;
-    border-right: 1.5px solid var(--text-muted);
-    border-bottom: 1.5px solid var(--text-muted);
-    transform: rotate(45deg) translate(-2px, -2px);
-    transition: transform 0.2s ease;
-    flex-shrink: 0;
+  .tile-status {
     display: none;
+    font-size: 10px;
+    line-height: 1;
   }
 
-  .tile.has-detail .chevron {
-    display: inline-block;
+  .tile.stale .tile-status.stale-icon,
+  .tile.error-state .tile-status.error-icon {
+    display: inline;
   }
 
-  .tile.expanded .chevron {
-    transform: rotate(225deg);
-  }
-
-  /* Meter: fill carries severity; the unfilled track is a faint step of
-     the same hue so state reads across the whole bar. */
   .meter {
-    height: 8px;
-    border-radius: 4px;
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    height: 7px;
+    border-radius: 99px;
+    background: var(--track);
     overflow: hidden;
   }
 
-  .meter.warning  { background: color-mix(in srgb, var(--warning) 18%, transparent); }
-  .meter.critical { background: color-mix(in srgb, var(--critical) 18%, transparent); }
+  .meter.ok { background: color-mix(in srgb, var(--ok) 18%, #1a1a1a); }
+  .meter.warning { background: color-mix(in srgb, var(--warning) 18%, #1a1a1a); }
+  .meter.critical { background: color-mix(in srgb, var(--critical) 18%, #1a1a1a); }
 
   .meter-fill {
     display: block;
     height: 100%;
-    border-radius: 4px;
-    background: var(--accent);
-    box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 45%, transparent);
+    border-radius: 99px;
+    background: var(--ok);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--ok) 45%, transparent);
     transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.3s ease;
   }
 
@@ -488,111 +816,49 @@
     box-shadow: 0 0 10px color-mix(in srgb, var(--critical) 45%, transparent);
   }
 
-  .tile-sub {
-    margin-top: 7px;
-    font-size: 12px;
-    color: var(--text-secondary);
-    line-height: 1.45;
-    white-space: pre-line;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  /* Expanded (accordion) detail view: replaces the summary meter/sub line. */
-  .tile-detail {
-    display: none;
-  }
-
-  .tile.expanded.has-detail .tile-detail {
-    display: block;
-    margin-top: 10px;
-  }
-
-  .tile.expanded.has-detail > .meter,
-  .tile.expanded.has-detail .tile-sub {
-    display: none;
-  }
-
   .detail-row + .detail-row {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid var(--glass-border);
+    margin-top: 14px;
   }
 
   .detail-head {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    margin-bottom: 6px;
+    gap: 10px;
+    margin-bottom: 8px;
   }
 
   .detail-label {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
     color: var(--text-primary);
-    overflow-wrap: anywhere;
-    margin-right: 10px;
   }
 
-  .detail-value {
-    font-size: 12.5px;
-    font-weight: 600;
+  .detail-reset {
+    font-size: 11px;
+    color: var(--text-muted);
     flex-shrink: 0;
+    text-align: right;
   }
 
-  .meter.meter-sm {
-    height: 6px;
-    border-radius: 3px;
-  }
-
-  .detail-sub {
-    margin-top: 5px;
-    font-size: 11.5px;
+  .detail-used {
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 500;
     color: var(--text-secondary);
   }
 
-  /* Stale data (served from cache during a fetch failure) gets a third
-     sub line saying when it was fetched. */
-  .tile.stale .tile-sub {
-    -webkit-line-clamp: 3;
-  }
-
-  .tile-empty {
-    padding: 20px 12px;
-    text-align: center;
+  .tile-sub {
+    margin-top: 8px;
     font-size: 12px;
     color: var(--text-secondary);
-    line-height: 1.5;
+    line-height: 1.45;
+    white-space: pre-line;
   }
 
-  .tile-sub.error {
-    color: var(--critical);
-  }
+  body.widget-mode .tile-sub { display: none; }
 
-  .tile.stale {
-    border-left: 3px solid var(--warning);
-  }
-
-  .tile.error-state {
-    border-left: 3px solid var(--critical);
-  }
-
-  .tile-status {
-    margin-left: 6px;
-    font-size: 11px;
-    flex-shrink: 0;
-    display: none;
-  }
-
-  .tile.stale .tile-status.stale-icon {
-    display: inline;
-  }
-
-  .tile.error-state .tile-status.error-icon {
-    display: inline;
-  }
+  .tile-sub.error { color: var(--critical); }
 
   .tile-hint {
     margin-top: 6px;
@@ -601,154 +867,207 @@
     line-height: 1.4;
   }
 
-  .tile-hint[hidden] {
-    display: none !important;
+  .tile-hint[hidden] { display: none !important; }
+
+  .tile-empty {
+    padding: 8px 4px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.4;
   }
 
-  body.compact-mode #cards-view {
-    gap: 9px;
-  }
-
-  body.compact-mode #cards-view .tile {
-    padding: 6px 10px;
-  }
-
-  body.compact-mode #cards-view .tile-header {
-    margin-bottom: 5px;
-  }
-
-  body.compact-mode #cards-view .tile-label {
+  body:not(.widget-mode) .tile-empty {
+    padding: 20px 12px;
     font-size: 12px;
   }
 
-  body.compact-mode #cards-view .tile-value {
-    font-size: 15px;
-  }
+  body.widget-mode .empty-long { display: none; }
+  body:not(.widget-mode) .empty-short { display: none; }
 
-  body.compact-mode #cards-view .meter {
-    height: 5px;
-  }
-
-  body.compact-mode #cards-view .tile-sub {
-    display: none;
-  }
-
-  body.compact-mode #cards-view .tile.expanded.has-detail .tile-sub {
-    display: -webkit-box;
+  body.compact-mode:not(.widget-mode) #cards-view { gap: 8px; }
+  body.compact-mode:not(.widget-mode) .tile { padding: 10px 12px; }
+  body.compact-mode:not(.widget-mode) .detail-reset { display: none; }
+  body.compact-mode:not(.widget-mode) .flyout-head { margin-bottom: 10px; }
+  body.compact-mode.widget-mode .ring-value { display: none; }
+  body.compact-mode.widget-mode .ring,
+  body.compact-mode.widget-mode .ring-svg {
+    width: 48px;
+    height: 48px;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .tile, .meter-fill {
-      transition: none;
-    }
+    .ring-fill, .meter-fill { transition: none; }
   }
 </style>
 </head>
 <body>
   <div class="app">
-    <div class="app-bg">
-      <div class="blob blob-1"></div>
-      <div class="blob blob-2"></div>
-      <div class="blob blob-3"></div>
-    </div>
-
     <div class="edge-peek-tab" id="edge-peek-tab" title="Click to open"></div>
 
-    <div class="app-header">
-      <span class="app-title">AI Usage</span>
-      <div class="app-header-actions">
-        <span class="app-updated" id="last-updated"></span>
-        <button type="button" id="hide-edge-btn" class="hide-edge-btn" aria-label="Hide to nearest edge" title="Hide to nearest edge">&#9650;</button>
-        <button type="button" id="settings-btn" class="settings-btn" aria-label="Settings">&#9881;</button>
+    <div class="shell">
+      <div class="panel" id="panel">
+        <div class="flyout" id="flyout" hidden>
+          <span class="pointer" aria-hidden="true"></span>
+          <div id="flyout-content"></div>
+        </div>
+        <div class="flyout settings-flyout" id="settings-panel" hidden>
+          <div class="flyout-head">Settings</div>
+          <div class="settings-section">
+            <label class="settings-row">
+              <span>Compact mode</span>
+              <input type="checkbox" id="compact-mode-toggle" />
+            </label>
+          </div>
+          <div class="settings-section">
+            <div class="settings-heading">Widget dock side</div>
+            <div class="dock-edge-picker" id="dock-edge-picker">
+              <button type="button" class="dock-edge-trigger" id="dock-edge-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Widget dock side">
+                <span id="dock-edge-label">Auto (nearest edge)</span>
+                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 4.5 6 8 9.5 4.5"/></svg>
+              </button>
+              <ul class="dock-edge-menu" id="dock-edge-menu" role="listbox" hidden>
+                <li><button type="button" class="dock-edge-option" role="option" data-value="auto" aria-selected="true">Auto (nearest edge)</button></li>
+                <li><button type="button" class="dock-edge-option" role="option" data-value="top" aria-selected="false">Top</button></li>
+                <li><button type="button" class="dock-edge-option" role="option" data-value="bottom" aria-selected="false">Bottom</button></li>
+                <li><button type="button" class="dock-edge-option" role="option" data-value="left" aria-selected="false">Left</button></li>
+                <li><button type="button" class="dock-edge-option" role="option" data-value="right" aria-selected="false">Right</button></li>
+              </ul>
+            </div>
+          </div>
+          <div class="settings-section">
+            <div class="settings-heading">Providers</div>
+            <div id="provider-toggles"></div>
+          </div>
+          <button type="button" id="settings-back-btn" class="settings-back">Back</button>
+        </div>
       </div>
-    </div>
 
-    <div id="settings-panel" hidden>
-      <div class="settings-section">
-        <label class="settings-row">
-          <span>Compact mode</span>
-          <input type="checkbox" id="compact-mode-toggle" />
-        </label>
-      </div>
-      <div class="settings-section">
-        <div class="settings-heading">Providers</div>
-        <div id="provider-toggles"></div>
-      </div>
-      <button type="button" id="settings-back-btn" class="settings-back">Back</button>
-    </div>
+      <div class="notch" id="notch">
+        <div class="app-header">
+          <span class="app-title">AI Usage</span>
+          <div class="app-header-actions">
+            <span class="app-updated" id="last-updated"></span>
+            <button type="button" id="hide-edge-btn" class="icon-btn hide-edge-btn" aria-label="Hide to nearest edge" title="Hide to nearest edge">
+              <svg id="hide-edge-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 10.5 8 5.5 13 10.5"/></svg>
+            </button>
+            <button type="button" id="settings-btn" class="icon-btn settings-btn" aria-label="Settings">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 5.4A2.6 2.6 0 1 0 8 10.6 2.6 2.6 0 0 0 8 5.4Zm6.2 2.1-.9-.2a5 5 0 0 0-.4-1l.6-.7a.6.6 0 0 0 0-.8l-.8-.8a.6.6 0 0 0-.8 0l-.7.6a5 5 0 0 0-1-.4l-.2-.9A.6.6 0 0 0 9.4 2H6.6a.6.6 0 0 0-.6.5l-.2.9a5 5 0 0 0-1 .4l-.7-.6a.6.6 0 0 0-.8 0l-.8.8a.6.6 0 0 0 0 .8l.6.7a5 5 0 0 0-.4 1l-.9.2A.6.6 0 0 0 2 6.6v2.8a.6.6 0 0 0 .5.6l.9.2a5 5 0 0 0 .4 1l-.6.7a.6.6 0 0 0 0 .8l.8.8a.6.6 0 0 0 .8 0l.7-.6a5 5 0 0 0 1 .4l.2.9a.6.6 0 0 0 .6.5h2.8a.6.6 0 0 0 .6-.5l.2-.9a5 5 0 0 0 1-.4l.7.6a.6.6 0 0 0 .8 0l.8-.8a.6.6 0 0 0 0-.8l-.6-.7a5 5 0 0 0 .4-1l.9-.2a.6.6 0 0 0 .5-.6V6.6a.6.6 0 0 0-.5-.6Z"/></svg>
+            </button>
+          </div>
+        </div>
 
-    <div id="cards-view">
-    <div class="tile" id="claude-provider">
-      <div class="tile-header">
-        <span class="tile-identity">
-          <span class="dot" style="background: var(--id-claude)"></span>
-          <span class="tile-label">Claude</span>
-          <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
-          <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
-        </span>
-        <span class="tile-value" id="claude-value">–</span>
-        <span class="chevron"></span>
-      </div>
-      <div class="meter"><span class="meter-fill" id="claude-bar" style="width: 0%"></span></div>
-      <div class="tile-sub" id="claude-reset">Loading…</div>
-      <div class="tile-hint" id="claude-hint" hidden></div>
-      <div class="tile-detail" id="claude-detail"></div>
-    </div>
+        <div id="cards-view">
+          <div class="tile" id="claude-provider" data-provider="claude">
+            <div class="ring-item">
+              <div class="ring">
+                <svg class="ring-svg" viewBox="0 0 64 64" aria-hidden="true">
+                  <circle class="ring-track" cx="32" cy="32" r="26" pathLength="100" />
+                  <circle class="ring-fill" id="claude-bar" cx="32" cy="32" r="26" pathLength="100" transform="rotate(-90 32 32)" />
+                </svg>
+                <span class="ring-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.6c.36 0 .67.23.79.57l2.02 5.7c.05.16.18.29.34.34l5.7 2.02a.83.83 0 0 1 0 1.58l-5.7 2.02a.83.83 0 0 0-.34.34L12.79 22a.83.83 0 0 1-1.58 0l-2.02-5.7a.83.83 0 0 0-.34-.34L3.15 11.8a.83.83 0 0 1 0-1.58l5.7-2.02a.83.83 0 0 0 .34-.34L11.21 2.17A.83.83 0 0 1 12 1.6Z"/></svg>
+                </span>
+              </div>
+              <span class="ring-value" id="claude-value">–</span>
+              <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
+              <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+            </div>
+            <div class="tile-body">
+              <div class="flyout-head">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.6c.36 0 .67.23.79.57l2.02 5.7c.05.16.18.29.34.34l5.7 2.02a.83.83 0 0 1 0 1.58l-5.7 2.02a.83.83 0 0 0-.34.34L12.79 22a.83.83 0 0 1-1.58 0l-2.02-5.7a.83.83 0 0 0-.34-.34L3.15 11.8a.83.83 0 0 1 0-1.58l5.7-2.02a.83.83 0 0 0 .34-.34L11.21 2.17A.83.83 0 0 1 12 1.6Z"/></svg>
+                <span>Claude Usage</span>
+              </div>
+              <div class="tile-detail" id="claude-detail"></div>
+              <div class="tile-sub" id="claude-reset">Loading…</div>
+              <div class="tile-hint" id="claude-hint" hidden></div>
+            </div>
+          </div>
 
-    <div class="tile" id="codex-provider">
-      <div class="tile-header">
-        <span class="tile-identity">
-          <span class="dot" style="background: var(--id-codex)"></span>
-          <span class="tile-label">Codex</span>
-          <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
-          <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
-        </span>
-        <span class="tile-value" id="codex-value">–</span>
-        <span class="chevron"></span>
-      </div>
-      <div class="meter"><span class="meter-fill" id="codex-bar" style="width: 0%"></span></div>
-      <div class="tile-sub" id="codex-reset">Loading…</div>
-      <div class="tile-hint" id="codex-hint" hidden></div>
-      <div class="tile-detail" id="codex-detail"></div>
-    </div>
+          <div class="tile" id="codex-provider" data-provider="codex">
+            <div class="ring-item">
+              <div class="ring">
+                <svg class="ring-svg" viewBox="0 0 64 64" aria-hidden="true">
+                  <circle class="ring-track" cx="32" cy="32" r="26" pathLength="100" />
+                  <circle class="ring-fill" id="codex-bar" cx="32" cy="32" r="26" pathLength="100" transform="rotate(-90 32 32)" />
+                </svg>
+                <span class="ring-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.2 20.2 6.8v10.4L12 21.8 3.8 17.2V6.8Z"/></svg>
+                </span>
+              </div>
+              <span class="ring-value" id="codex-value">–</span>
+              <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
+              <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+            </div>
+            <div class="tile-body">
+              <div class="flyout-head">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.2 20.2 6.8v10.4L12 21.8 3.8 17.2V6.8Z"/></svg>
+                <span>Codex Usage</span>
+              </div>
+              <div class="tile-detail" id="codex-detail"></div>
+              <div class="tile-sub" id="codex-reset">Loading…</div>
+              <div class="tile-hint" id="codex-hint" hidden></div>
+            </div>
+          </div>
 
-    <div class="tile" id="antigravity-provider">
-      <div class="tile-header">
-        <span class="tile-identity">
-          <span class="dot" style="background: var(--id-antigravity)"></span>
-          <span class="tile-label">Antigravity</span>
-          <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
-          <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
-        </span>
-        <span class="tile-value" id="antigravity-value">–</span>
-        <span class="chevron"></span>
-      </div>
-      <div class="meter"><span class="meter-fill" id="antigravity-bar" style="width: 0%"></span></div>
-      <div class="tile-sub" id="antigravity-reset">Loading…</div>
-      <div class="tile-hint" id="antigravity-hint" hidden></div>
-      <div class="tile-detail" id="antigravity-detail"></div>
-    </div>
+          <div class="tile" id="antigravity-provider" data-provider="antigravity">
+            <div class="ring-item">
+              <div class="ring">
+                <svg class="ring-svg" viewBox="0 0 64 64" aria-hidden="true">
+                  <circle class="ring-track" cx="32" cy="32" r="26" pathLength="100" />
+                  <circle class="ring-fill" id="antigravity-bar" cx="32" cy="32" r="26" pathLength="100" transform="rotate(-90 32 32)" />
+                </svg>
+                <span class="ring-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><ellipse cx="12" cy="12" rx="9.2" ry="3.4" fill="none" stroke="currentColor" stroke-width="1.8" transform="rotate(-28 12 12)"/></svg>
+                </span>
+              </div>
+              <span class="ring-value" id="antigravity-value">–</span>
+              <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
+              <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+            </div>
+            <div class="tile-body">
+              <div class="flyout-head">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><ellipse cx="12" cy="12" rx="9.2" ry="3.4" fill="none" stroke="currentColor" stroke-width="1.8" transform="rotate(-28 12 12)"/></svg>
+                <span>Antigravity Usage</span>
+              </div>
+              <div class="tile-detail" id="antigravity-detail"></div>
+              <div class="tile-sub" id="antigravity-reset">Loading…</div>
+              <div class="tile-hint" id="antigravity-hint" hidden></div>
+            </div>
+          </div>
 
-    <div class="tile" id="cursor-provider">
-      <div class="tile-header">
-        <span class="tile-identity">
-          <span class="dot" style="background: var(--id-cursor)"></span>
-          <span class="tile-label">Cursor</span>
-          <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
-          <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
-        </span>
-        <span class="tile-value" id="cursor-value">–</span>
-        <span class="chevron"></span>
-      </div>
-      <div class="meter"><span class="meter-fill" id="cursor-bar" style="width: 0%"></span></div>
-      <div class="tile-sub" id="cursor-reset">Loading…</div>
-      <div class="tile-hint" id="cursor-hint" hidden></div>
-      <div class="tile-detail" id="cursor-detail"></div>
-    </div>
+          <div class="tile" id="cursor-provider" data-provider="cursor">
+            <div class="ring-item">
+              <div class="ring">
+                <svg class="ring-svg" viewBox="0 0 64 64" aria-hidden="true">
+                  <circle class="ring-track" cx="32" cy="32" r="26" pathLength="100" />
+                  <circle class="ring-fill" id="cursor-bar" cx="32" cy="32" r="26" pathLength="100" transform="rotate(-90 32 32)" />
+                </svg>
+                <span class="ring-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.2 2.4 20.6 12.2l-8.4 2.2 1.8 8.2Z"/></svg>
+                </span>
+              </div>
+              <span class="ring-value" id="cursor-value">–</span>
+              <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
+              <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+            </div>
+            <div class="tile-body">
+              <div class="flyout-head">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.2 2.4 20.6 12.2l-8.4 2.2 1.8 8.2Z"/></svg>
+                <span>Cursor Usage</span>
+              </div>
+              <div class="tile-detail" id="cursor-detail"></div>
+              <div class="tile-sub" id="cursor-reset">Loading…</div>
+              <div class="tile-hint" id="cursor-hint" hidden></div>
+            </div>
+          </div>
 
-    <div class="tile-empty" id="empty-state" hidden>
-      No AI providers detected on this machine
-    </div>
+          <div class="tile-empty" id="empty-state" hidden>
+            <span class="empty-short">No AI</span>
+            <span class="empty-long">No AI providers detected on this machine</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
