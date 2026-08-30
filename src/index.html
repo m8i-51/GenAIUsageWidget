@@ -310,7 +310,8 @@
   }
 
   body.widget-mode .notch:hover .app-header,
-  body.widget-mode .notch:focus-within .app-header {
+  body.widget-mode .notch:focus-within .app-header,
+  body.widget-mode.edge-collapsed .app-header {
     opacity: 1;
   }
 
@@ -447,10 +448,9 @@
     max-width: 320px;
   }
 
-  /* Collapsed = the ring pill flush to the edge, not a chevron strip. */
+  /* Collapsed = ring pill + edge/settings controls; hide flyout chrome only. */
   body.widget-mode.edge-collapsed .panel,
-  body.widget-mode.edge-collapsed .edge-peek-tab,
-  body.widget-mode.edge-collapsed .app-header {
+  body.widget-mode.edge-collapsed .edge-peek-tab {
     display: none !important;
   }
 

@@ -145,21 +145,30 @@ function applyEdgeHideUi(state) {
   const hideBtn = document.getElementById('hide-edge-btn');
   const hideIcon = document.getElementById('hide-edge-icon');
   if (hideBtn && hideIcon) {
+    // Expanded: chevron points toward the dock (hide). Collapsed: reverse (open).
     if (edge === 'left') {
-      hideIcon.innerHTML = '<path d="M10.5 3 5.5 8 10.5 13"/>';
+      hideIcon.innerHTML = expanded
+        ? '<path d="M10.5 3 5.5 8 10.5 13"/>'
+        : '<path d="M5.5 3 10.5 8 5.5 13"/>';
     } else if (edge === 'right') {
-      hideIcon.innerHTML = '<path d="M5.5 3 10.5 8 5.5 13"/>';
+      hideIcon.innerHTML = expanded
+        ? '<path d="M5.5 3 10.5 8 5.5 13"/>'
+        : '<path d="M10.5 3 5.5 8 10.5 13"/>';
     } else if (edge === 'bottom') {
-      hideIcon.innerHTML = '<path d="M3 5.5 8 10.5 13 5.5"/>';
+      hideIcon.innerHTML = expanded
+        ? '<path d="M3 5.5 8 10.5 13 5.5"/>'
+        : '<path d="M3 10.5 8 5.5 13 10.5"/>';
     } else {
-      hideIcon.innerHTML = '<path d="M3 10.5 8 5.5 13 10.5"/>';
+      hideIcon.innerHTML = (edge === 'top' && !expanded)
+        ? '<path d="M3 5.5 8 10.5 13 5.5"/>'
+        : '<path d="M3 10.5 8 5.5 13 10.5"/>';
     }
     const dockLabel = appSettings.widgetDockEdge
       ? appSettings.widgetDockEdge
       : 'nearest edge';
-    hideBtn.title = (edge && !expanded)
-      ? `Hidden on ${edge} — click to open`
-      : `Hide to ${dockLabel}`;
+    const collapsedHint = `Hidden on ${edge} — click to open`;
+    hideBtn.title = (edge && !expanded) ? collapsedHint : `Hide to ${dockLabel}`;
+    hideBtn.setAttribute('aria-label', (edge && !expanded) ? collapsedHint : `Hide to ${dockLabel}`);
   }
 
   positionFlyout();
@@ -665,6 +674,10 @@ if (hideEdgeBtn) {
   hideEdgeBtn.addEventListener('click', (event) => {
     event.stopPropagation();
     closeFlyout();
+    if (isEdgeCollapsed()) {
+      window.api.showWidgetFromEdge();
+      return;
+    }
     requestAnimationFrame(() => window.api.hideWidgetToEdge());
   });
 }

@@ -10,8 +10,8 @@ const DEFAULT_FULL_HEIGHT = 360;
 /** Top/bottom collapsed size: four 56px rings plus labels. */
 const COLLAPSED_TOP_WIDTH = 288;
 const COLLAPSED_TOP_HEIGHT = 100;
-/** Left/right collapsed height: 4 rings (56+label) + gaps + padding. */
-const COLLAPSED_SIDE_HEIGHT = 340;
+/** Left/right collapsed height: 4 rings (56+label) + gaps + padding + controls. */
+const COLLAPSED_SIDE_HEIGHT = 372;
 const VALID_EDGES = new Set(['left', 'right', 'top', 'bottom']);
 
 function normalizeEdge(edge) {
