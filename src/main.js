@@ -389,7 +389,7 @@ function applyEdgeHidePosition(expanded) {
     const pillSpan = (dockedEdge === 'left' || dockedEdge === 'right')
       ? collapsedPeekHeight
       : COLLAPSED_SIDE_HEIGHT;
-    // Keep the top edge stable so rings do not jump when the header unmounts.
+    // Keep the top edge stable so rings do not jump when the window resizes.
     const next = collapsedBounds(
       dockedEdge,
       { ...current, y: current.y },

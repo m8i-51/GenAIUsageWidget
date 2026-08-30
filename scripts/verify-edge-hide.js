@@ -262,7 +262,7 @@ app.whenReady().then(async () => {
       `collapsed shell stays visible so rings show (${peekHit.shellDisplay})`
     );
     assert(peekHit.notchDisplay !== 'none', `collapsed notch is visible (${peekHit.notchDisplay})`);
-    assert(peekHit.headerDisplay === 'none', `collapsed header is hidden (${peekHit.headerDisplay})`);
+    assert(peekHit.headerDisplay !== 'none', `collapsed header stays visible (${peekHit.headerDisplay})`);
     assert(peekHit.panelDisplay === 'none', `collapsed flyout is hidden (${peekHit.panelDisplay})`);
 
     const summary = {
