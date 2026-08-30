@@ -15,6 +15,7 @@ const {
   PEEK_SIZE,
   COLLAPSED_TOP_WIDTH,
   COLLAPSED_TOP_HEIGHT,
+  COLLAPSED_SIDE_HEIGHT,
   DEFAULT_FULL_WIDTH,
   DEFAULT_FULL_HEIGHT,
 } = require('../src/widget-edge-hide');
@@ -109,6 +110,10 @@ app.whenReady().then(async () => {
     );
 
     assert(detectSnapEdge({ ...mid, y: workArea.y + 8 }, workArea) === 'top', 'near-top snaps to top');
+    assert(
+      detectSnapEdge({ ...mid, y: workArea.y + workArea.height - DEFAULT_FULL_HEIGHT - 8 }, workArea) === 'bottom',
+      'near-bottom snaps to bottom'
+    );
     assert(detectSnapEdge({ ...mid, x: workArea.x + 8 }, workArea) === 'left', 'near-left snaps to left');
     assert(
       detectSnapEdge({ ...mid, x: workArea.x + workArea.width - DEFAULT_FULL_WIDTH - 8 }, workArea) === 'right',
@@ -139,17 +144,24 @@ app.whenReady().then(async () => {
     await capture(win, '01-floating-center');
     assert(win.isVisible(), 'widget visible at center');
 
-    for (const edge of ['top', 'left', 'right']) {
+    for (const edge of ['top', 'left', 'right', 'bottom']) {
       const expanded = expandedBounds(edge, mid, workArea, DEFAULT_FULL_WIDTH, DEFAULT_FULL_HEIGHT);
-      const collapsed = collapsedBounds(edge, mid, workArea, PEEK_SIZE, DEFAULT_FULL_WIDTH, DEFAULT_FULL_HEIGHT);
+      const collapsed = collapsedBounds(edge, mid, workArea, PEEK_SIZE, DEFAULT_FULL_WIDTH, COLLAPSED_SIDE_HEIGHT);
       assert(fullyInside(collapsed, workArea), `collapsed ${edge} stays inside same workArea`);
       if (edge === 'top') {
         assert(collapsed.height === COLLAPSED_TOP_HEIGHT, `collapsed top height is pill (${collapsed.height})`);
         assert(collapsed.width === COLLAPSED_TOP_WIDTH, `collapsed top is a horizontal pill (${collapsed.width})`);
         approx(collapsed.y, workArea.y, 1, 'collapsed top y is workArea top');
+      } else if (edge === 'bottom') {
+        assert(collapsed.height === COLLAPSED_TOP_HEIGHT, `collapsed bottom height is pill (${collapsed.height})`);
+        assert(collapsed.width === COLLAPSED_TOP_WIDTH, `collapsed bottom is a horizontal pill (${collapsed.width})`);
+        approx(collapsed.y, workArea.y + workArea.height - COLLAPSED_TOP_HEIGHT, 1, 'collapsed bottom y is workArea bottom');
       } else {
         assert(collapsed.width === PEEK_SIZE, `collapsed ${edge} width is pill (${collapsed.width})`);
-        assert(collapsed.height === DEFAULT_FULL_HEIGHT, `collapsed ${edge} keeps full height`);
+        assert(
+          collapsed.height === COLLAPSED_SIDE_HEIGHT,
+          `collapsed ${edge} is a tight vertical pill (${collapsed.height})`
+        );
         if (edge === 'left') {
           approx(collapsed.x, workArea.x, 1, 'collapsed left x is workArea left');
         } else {

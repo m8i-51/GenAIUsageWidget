@@ -16,6 +16,10 @@ contextBridge.exposeInMainWorld('api', {
   resizeTo: (size) => ipcRenderer.send('resize-to', size),
   hideWidgetToEdge: () => ipcRenderer.send('widget-hide-to-edge'),
   showWidgetFromEdge: () => ipcRenderer.send('widget-show-from-edge'),
+  setIgnoreMouseEvents: (ignore) => ipcRenderer.send('widget-set-ignore-mouse', !!ignore),
+  startWidgetDrag: (point) => ipcRenderer.send('widget-drag-start', point),
+  moveWidgetDrag: (point) => ipcRenderer.send('widget-drag-move', point),
+  endWidgetDrag: () => ipcRenderer.send('widget-drag-end'),
   onWidgetEdgeHideChanged: (cb) => {
     const listener = (_event, state) => cb(state);
     ipcRenderer.on('widget-edge-hide-changed', listener);

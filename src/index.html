@@ -31,17 +31,52 @@
     overflow: hidden;
   }
 
+  /* Transparent parts of the widget window must not steal clicks from apps behind. */
+  body.widget-mode,
+  body.widget-mode .app,
+  body.widget-mode .shell,
+  body.widget-mode .panel {
+    pointer-events: none;
+  }
+
+  body.widget-mode .notch,
+  body.widget-mode .flyout,
+  body.widget-mode .edge-peek-tab {
+    pointer-events: auto;
+  }
+
   .app {
     position: relative;
     margin: 10px;
-    overflow: hidden;
-    contain: layout paint;
+    overflow: visible;
     max-width: 640px;
+    background: transparent;
+  }
+
+  /* Shrink-wrap so docked flex shells do not leave a transparent strip on
+     the docked edge (row-reverse packs to the opposite side when stretched). */
+  body.widget-mode .app {
+    width: max-content;
+    box-sizing: border-box;
   }
 
   html.widget-edge-fill,
   html.widget-edge-fill body {
     overflow: hidden;
+    width: 100%;
+    height: 100%;
+  }
+
+  html.widget-edge-fill body.edge-right {
+    display: flex;
+    justify-content: flex-end;
+    align-items: stretch;
+  }
+
+  html.widget-edge-fill body.edge-left {
+    display: flex;
+    justify-content: flex-start;
+    align-items: stretch;
   }
 
   .shell {
@@ -49,14 +84,25 @@
     flex-direction: row;
     align-items: flex-start;
     gap: 10px;
+    width: max-content;
   }
 
   body.widget-mode.edge-left .shell {
     flex-direction: row-reverse;
   }
 
+  body.widget-mode.edge-right .shell {
+    /* Keep the notch on the docked (right) side if the shell ever stretches. */
+    justify-content: flex-end;
+  }
+
   body.widget-mode.edge-top .shell {
     flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  body.widget-mode.edge-bottom .shell {
+    flex-direction: column;
     align-items: stretch;
   }
 
@@ -119,6 +165,16 @@
     transform: rotate(-45deg);
   }
 
+  body.widget-mode.edge-bottom .flyout .pointer {
+    right: auto;
+    left: var(--pointer-offset);
+    bottom: -6px;
+    top: auto;
+    margin-top: 0;
+    margin-left: -6px;
+    transform: rotate(135deg);
+  }
+
   .flyout-head {
     display: flex;
     align-items: center;
@@ -160,18 +216,42 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 
+  /* Transparent Electron windows cannot use outer box-shadow / filter /
+     borders on rounded shapes — Chromium leaves grey square corners. */
   body.widget-mode .notch {
     width: 84px;
-    padding: 16px 10px 10px;
+    padding: 14px 10px;
     border-radius: 42px;
+    border: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+    outline: none;
     display: flex;
     flex-direction: column;
     align-items: center;
     overflow: hidden;
-    -webkit-app-region: drag;
+    /* clip-path follows the radius in the alpha channel more reliably
+       than border-radius alone under DWM transparency. */
+    clip-path: inset(0 round 42px);
+    -webkit-app-region: no-drag;
+    cursor: grab;
+    background: #0a0a0a;
+  }
+
+  body.widget-mode .notch:active {
+    cursor: grabbing;
   }
 
   body.widget-mode.edge-top .notch {
+    width: auto;
+    min-height: 84px;
+    padding: 10px 14px;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  body.widget-mode.edge-bottom .notch {
     width: auto;
     min-height: 84px;
     padding: 10px 14px;
@@ -213,6 +293,22 @@
     transition: opacity 0.18s ease;
   }
 
+  body.widget-mode.edge-left .app-header,
+  body.widget-mode.edge-right .app-header {
+    flex-shrink: 0;
+    width: 100%;
+    justify-content: center;
+  }
+
+  body.widget-mode.edge-left .app-header .app-header-actions,
+  body.widget-mode.edge-right .app-header .app-header-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
   body.widget-mode .notch:hover .app-header,
   body.widget-mode .notch:focus-within .app-header {
     opacity: 1;
@@ -225,6 +321,12 @@
 
   body.widget-mode.edge-top .app-header {
     order: 0;
+    padding-top: 0;
+    padding-right: 4px;
+  }
+
+  body.widget-mode.edge-bottom .app-header {
+    order: 2;
     padding-top: 0;
     padding-right: 4px;
   }
@@ -286,40 +388,62 @@
 
   body.widget-mode .hide-edge-btn { display: flex; }
 
-  body.widget-mode.edge-right .app { margin-right: 0; }
-  body.widget-mode.edge-left .app { margin-left: 0; }
-  body.widget-mode.edge-top .app { margin-top: 0; }
-
-  body.widget-mode.edge-right .notch {
-    border-radius: 36px 0 0 36px;
-    border-right-color: transparent;
-    box-shadow:
-      -16px 8px 36px rgba(0, 0, 0, 0.42),
-      inset 1px 0 0 rgba(255, 255, 255, 0.07);
+  body.widget-mode.edge-right .app {
+    /* No vertical margin — collapsed uses 0, so a top margin here shifts the pill down. */
+    margin: 0 0 0 10px !important;
   }
-  body.widget-mode.edge-left .notch {
-    border-radius: 0 36px 36px 0;
-    border-left-color: transparent;
-    box-shadow:
-      16px 8px 36px rgba(0, 0, 0, 0.42),
-      inset -1px 0 0 rgba(255, 255, 255, 0.07);
+  body.widget-mode.edge-left .app {
+    margin: 0 10px 0 0 !important;
   }
-  body.widget-mode.edge-top .notch {
-    border-radius: 0 0 36px 36px;
-    border-top-color: transparent;
-    box-shadow:
-      0 16px 36px rgba(0, 0, 0, 0.42),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.07);
+  body.widget-mode.edge-top .app {
+    margin: 0 10px 10px 10px !important;
+  }
+  body.widget-mode.edge-bottom .app {
+    margin: 10px 10px 0 10px !important;
   }
 
   body.widget-mode.edge-collapsed .app {
-    margin: 0;
+    margin: 0 !important;
     padding: 0;
-    max-width: 84px;
-    overflow: hidden;
+    width: max-content;
+    max-width: none;
+    overflow: visible;
+    background: transparent;
   }
 
-  body.widget-mode.edge-collapsed.edge-top .app {
+  /* Side pill: ring 56 + open-side pad 12 (border-box). */
+  body.widget-mode.edge-right .notch {
+    border-radius: 36px 0 0 36px;
+    clip-path: inset(0 round 36px 0 0 36px);
+    box-sizing: border-box;
+    width: 69px !important;
+    min-width: 69px !important;
+    max-width: 69px !important;
+    padding: 14px 0 14px 12px;
+    align-items: stretch !important;
+  }
+  body.widget-mode.edge-left .notch {
+    border-radius: 0 36px 36px 0;
+    clip-path: inset(0 round 0 36px 36px 0);
+    box-sizing: border-box;
+    width: 69px !important;
+    min-width: 69px !important;
+    max-width: 69px !important;
+    padding: 14px 12px 14px 0;
+    align-items: stretch !important;
+  }
+  body.widget-mode.edge-top .notch {
+    border-radius: 0 0 36px 36px;
+    clip-path: inset(0 round 0 0 36px 36px);
+  }
+
+  body.widget-mode.edge-bottom .notch {
+    border-radius: 36px 36px 0 0;
+    clip-path: inset(0 round 36px 36px 0 0);
+  }
+
+  body.widget-mode.edge-collapsed.edge-top .app,
+  body.widget-mode.edge-collapsed.edge-bottom .app {
     max-width: 320px;
   }
 
@@ -332,16 +456,29 @@
 
   body.widget-mode.edge-collapsed .notch {
     overflow: hidden;
-    justify-content: center;
+    justify-content: flex-start;
+    border: none !important;
+    box-shadow: none !important;
+    filter: none !important;
   }
 
-  body.widget-mode.edge-collapsed.edge-top .notch {
+  body.widget-mode.edge-collapsed.edge-right .notch {
+    padding: 14px 0 14px 12px;
+    border-radius: 36px 0 0 36px;
+  }
+
+  body.widget-mode.edge-collapsed.edge-left .notch {
+    padding: 14px 12px 14px 0;
+    border-radius: 0 36px 36px 0;
+  }
+
+  body.widget-mode.edge-collapsed.edge-top .notch,
+  body.widget-mode.edge-collapsed.edge-bottom .notch {
     padding: 10px 16px;
   }
 
-  body.widget-mode.edge-collapsed #cards-view {
-    gap: 10px;
-  }
+  /* Keep the same ring spacing as expanded — a tighter gap makes lower
+     rings look like they drift downward when hiding. */
 
   .edge-peek-tab {
     display: none;
@@ -383,6 +520,86 @@
     height: 16px;
     accent-color: var(--ok);
     flex-shrink: 0;
+  }
+
+  .dock-edge-picker {
+    position: relative;
+    margin-top: 4px;
+  }
+
+  .dock-edge-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--hairline);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary);
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .dock-edge-trigger:hover {
+    background: rgba(255, 255, 255, 0.07);
+  }
+
+  .dock-edge-trigger:focus {
+    outline: none;
+    border-color: rgba(61, 255, 138, 0.35);
+  }
+
+  .dock-edge-trigger svg {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    color: var(--text-muted);
+  }
+
+  .dock-edge-menu {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 20;
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    border-radius: 12px;
+    border: 1px solid var(--hairline);
+    background: #1a1a1a;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  }
+
+  .dock-edge-menu[hidden] {
+    display: none !important;
+  }
+
+  .dock-edge-option {
+    display: block;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .dock-edge-option:hover,
+  .dock-edge-option:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .dock-edge-option[aria-selected="true"] {
+    background: rgba(61, 255, 138, 0.14);
+    color: #fff;
   }
 
   .provider-toggle + .provider-toggle { margin-top: 8px; }
@@ -429,7 +646,19 @@
     gap: 12px;
   }
 
-  body.widget-mode.edge-top #cards-view {
+  body.widget-mode.edge-right #cards-view,
+  body.widget-mode.edge-left #cards-view {
+    align-items: center;
+  }
+
+  body.widget-mode.edge-right .tile,
+  body.widget-mode.edge-left .tile {
+    width: 100%;
+    align-items: center !important;
+  }
+
+  body.widget-mode.edge-top #cards-view,
+  body.widget-mode.edge-bottom #cards-view {
     flex-direction: row;
     width: auto;
     gap: 14px;
@@ -448,6 +677,11 @@
     border: none;
     padding: 0;
     -webkit-app-region: no-drag;
+    cursor: grab;
+  }
+
+  body.widget-mode .tile .ring,
+  body.widget-mode .tile .ring-value {
     cursor: pointer;
   }
 
@@ -684,6 +918,22 @@
               <span>Compact mode</span>
               <input type="checkbox" id="compact-mode-toggle" />
             </label>
+          </div>
+          <div class="settings-section">
+            <div class="settings-heading">Widget dock side</div>
+            <div class="dock-edge-picker" id="dock-edge-picker">
+              <button type="button" class="dock-edge-trigger" id="dock-edge-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Widget dock side">
+                <span id="dock-edge-label">Auto (nearest edge)</span>
+                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 4.5 6 8 9.5 4.5"/></svg>
+              </button>
+              <ul class="dock-edge-menu" id="dock-edge-menu" role="listbox" hidden>
+                <li><button type="button" class="dock-edge-option" role="option" data-value="auto" aria-selected="true">Auto (nearest edge)</button></li>
+                <li><button type="button" class="dock-edge-option" role="option" data-value="top" aria-selected="false">Top</button></li>
+                <li><button type="button" class="dock-edge-option" role="option" data-value="bottom" aria-selected="false">Bottom</button></li>
+                <li><button type="button" class="dock-edge-option" role="option" data-value="left" aria-selected="false">Left</button></li>
+                <li><button type="button" class="dock-edge-option" role="option" data-value="right" aria-selected="false">Right</button></li>
+              </ul>
+            </div>
           </div>
           <div class="settings-section">
             <div class="settings-heading">Providers</div>

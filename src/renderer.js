@@ -10,7 +10,10 @@ let appSettings = {
   hiddenProviders: [],
   widgetBounds: null,
   widgetEdgeHide: null,
+  widgetDockEdge: null,
 };
+
+const VALID_DOCK_EDGES = new Set(['left', 'right', 'top', 'bottom']);
 
 const isWidgetMode = document.body.classList.contains('widget-mode');
 
@@ -76,30 +79,68 @@ function applySettings(settings) {
     compactMode: !!settings.compactMode,
     hiddenProviders: Array.isArray(settings.hiddenProviders) ? [...settings.hiddenProviders] : [],
     widgetBounds: settings.widgetBounds ?? null,
-    widgetEdgeHide: ['left', 'right', 'top'].includes(settings.widgetEdgeHide)
+    widgetEdgeHide: VALID_DOCK_EDGES.has(settings.widgetEdgeHide)
       ? settings.widgetEdgeHide
+      : null,
+    widgetDockEdge: VALID_DOCK_EDGES.has(settings.widgetDockEdge)
+      ? settings.widgetDockEdge
       : null,
   };
   document.body.classList.toggle('compact-mode', appSettings.compactMode);
   const compactToggle = document.getElementById('compact-mode-toggle');
   if (compactToggle) compactToggle.checked = appSettings.compactMode;
+  syncDockEdgePicker(appSettings.widgetDockEdge || 'auto');
   renderProviderToggles();
   applyHiddenProviders();
   syncFlyout();
 }
 
+const DOCK_EDGE_LABELS = {
+  auto: 'Auto (nearest edge)',
+  top: 'Top',
+  bottom: 'Bottom',
+  left: 'Left',
+  right: 'Right',
+};
+
+function syncDockEdgePicker(value) {
+  const next = DOCK_EDGE_LABELS[value] ? value : 'auto';
+  const label = document.getElementById('dock-edge-label');
+  if (label) label.textContent = DOCK_EDGE_LABELS[next];
+  document.querySelectorAll('.dock-edge-option').forEach((btn) => {
+    btn.setAttribute('aria-selected', btn.dataset.value === next ? 'true' : 'false');
+  });
+}
+
+function setDockEdgeMenuOpen(open) {
+  const menu = document.getElementById('dock-edge-menu');
+  const trigger = document.getElementById('dock-edge-trigger');
+  if (!menu || !trigger) return;
+  menu.hidden = !open;
+  trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
 function applyEdgeHideUi(state) {
   if (!isWidgetMode) return;
-  const edge = ['left', 'right', 'top'].includes(state?.edge) ? state.edge : null;
+  const edge = VALID_DOCK_EDGES.has(state?.edge) ? state.edge : null;
   const expanded = state?.expanded !== false;
   const pinned = !!state?.pinned;
+  const transitioning = !!state?.transitioning;
   const collapsed = !!(edge && !expanded);
+  const wasTransitioning = document.body.classList.contains('edge-transitioning');
   document.body.classList.toggle('edge-collapsed', collapsed);
+  document.body.classList.toggle('edge-transitioning', transitioning);
   document.body.classList.toggle('edge-top', edge === 'top');
+  document.body.classList.toggle('edge-bottom', edge === 'bottom');
   document.body.classList.toggle('edge-left', edge === 'left');
   document.body.classList.toggle('edge-right', edge === 'right');
   document.body.classList.toggle('edge-pinned', !!(edge && expanded && pinned));
   document.documentElement.classList.toggle('widget-edge-fill', collapsed);
+
+  // Collapsed pill is fully interactive; expanded uses click-through on chrome.
+  if (collapsed) {
+    setIgnoreMouse(false);
+  }
 
   const hideBtn = document.getElementById('hide-edge-btn');
   const hideIcon = document.getElementById('hide-edge-icon');
@@ -108,15 +149,23 @@ function applyEdgeHideUi(state) {
       hideIcon.innerHTML = '<path d="M10.5 3 5.5 8 10.5 13"/>';
     } else if (edge === 'right') {
       hideIcon.innerHTML = '<path d="M5.5 3 10.5 8 5.5 13"/>';
+    } else if (edge === 'bottom') {
+      hideIcon.innerHTML = '<path d="M3 5.5 8 10.5 13 5.5"/>';
     } else {
       hideIcon.innerHTML = '<path d="M3 10.5 8 5.5 13 10.5"/>';
     }
+    const dockLabel = appSettings.widgetDockEdge
+      ? appSettings.widgetDockEdge
+      : 'nearest edge';
     hideBtn.title = (edge && !expanded)
       ? `Hidden on ${edge} — click to open`
-      : 'Hide to nearest edge';
+      : `Hide to ${dockLabel}`;
   }
 
   positionFlyout();
+  if (wasTransitioning && !transitioning) {
+    requestAnimationFrame(reportSize);
+  }
 }
 
 function applyHiddenProviders() {
@@ -375,12 +424,13 @@ function positionFlyout() {
 
   const ringBox = ring.getBoundingClientRect();
   const notchBox = notch.getBoundingClientRect();
-  const topDock = document.body.classList.contains('edge-top');
+  const horizontalDock = document.body.classList.contains('edge-top')
+    || document.body.classList.contains('edge-bottom');
 
   flyout.style.marginTop = '0px';
   flyout.style.marginLeft = '0px';
 
-  if (topDock) {
+  if (horizontalDock) {
     const desired = (ringBox.left + ringBox.width / 2) - notchBox.left - (flyout.offsetWidth / 2);
     const clamped = Math.max(0, desired);
     flyout.style.marginLeft = `${Math.round(clamped)}px`;
@@ -581,9 +631,11 @@ function showSettingsPanel(show) {
     cards.hidden = false;
     if (show) {
       document.getElementById('flyout').hidden = true;
+      setIgnoreMouse(false);
     }
     syncPanelOpen();
     if (!show) syncFlyout();
+    refreshIgnoreMouse();
   } else {
     cards.hidden = show;
     document.getElementById('panel').classList.remove('open');
@@ -625,6 +677,28 @@ document.getElementById('compact-mode-toggle').addEventListener('change', async 
   const settings = await window.api.setSettings({ compactMode: event.target.checked });
   applySettings(settings);
 });
+
+const dockEdgeTrigger = document.getElementById('dock-edge-trigger');
+const dockEdgeMenu = document.getElementById('dock-edge-menu');
+if (dockEdgeTrigger && dockEdgeMenu) {
+  dockEdgeTrigger.addEventListener('click', (event) => {
+    event.stopPropagation();
+    setDockEdgeMenuOpen(dockEdgeMenu.hidden);
+  });
+  dockEdgeMenu.addEventListener('click', async (event) => {
+    const option = event.target.closest('.dock-edge-option');
+    if (!option) return;
+    event.stopPropagation();
+    const value = option.dataset.value || 'auto';
+    setDockEdgeMenuOpen(false);
+    syncDockEdgePicker(value);
+    const settings = await window.api.setSettings({
+      widgetDockEdge: value === 'auto' ? null : value,
+    });
+    applySettings(settings);
+  });
+  document.addEventListener('click', () => setDockEdgeMenuOpen(false));
+}
 
 document.querySelectorAll('.tile').forEach((tile) => {
   tile.addEventListener('click', () => {
@@ -674,13 +748,14 @@ window.addEventListener('storage', (event) => {
 
 function tileAfterPoint(clientX, clientY) {
   const tiles = [...containerEl.querySelectorAll('.tile:not(.dragging):not([hidden])')];
-  const topDock = document.body.classList.contains('edge-top');
+  const horizontalDock = document.body.classList.contains('edge-top')
+    || document.body.classList.contains('edge-bottom');
   let closest = null;
   let closestOffset = -Infinity;
   for (const tile of tiles) {
     const rect = tile.getBoundingClientRect();
-    const mid = topDock ? rect.left + rect.width / 2 : rect.top + rect.height / 2;
-    const offset = (topDock ? clientX : clientY) - mid;
+    const mid = horizontalDock ? rect.left + rect.width / 2 : rect.top + rect.height / 2;
+    const offset = (horizontalDock ? clientX : clientY) - mid;
     if (offset < 0 && offset > closestOffset) {
       closestOffset = offset;
       closest = tile;
@@ -715,10 +790,11 @@ containerEl.addEventListener('dragover', (event) => {
   if (target === dragging.nextElementSibling) return;
 
   const others = [...containerEl.querySelectorAll('.tile:not(.dragging):not([hidden])')];
-  const topDock = document.body.classList.contains('edge-top');
+  const horizontalDock = document.body.classList.contains('edge-top')
+    || document.body.classList.contains('edge-bottom');
   const before = new Map(others.map((tile) => {
     const rect = tile.getBoundingClientRect();
-    return [tile, topDock ? rect.left : rect.top];
+    return [tile, horizontalDock ? rect.left : rect.top];
   }));
 
   containerEl.insertBefore(dragging, target);
@@ -726,11 +802,11 @@ containerEl.addEventListener('dragover', (event) => {
 
   for (const tile of others) {
     const rect = tile.getBoundingClientRect();
-    const now = topDock ? rect.left : rect.top;
+    const now = horizontalDock ? rect.left : rect.top;
     const delta = before.get(tile) - now;
     if (!delta) continue;
     tile.style.transition = 'none';
-    tile.style.transform = topDock ? `translateX(${delta}px)` : `translateY(${delta}px)`;
+    tile.style.transform = horizontalDock ? `translateX(${delta}px)` : `translateY(${delta}px)`;
     requestAnimationFrame(() => {
       tile.style.transition = 'transform 180ms ease';
       tile.style.transform = '';
@@ -741,15 +817,110 @@ containerEl.addEventListener('dragover', (event) => {
 const appEl = document.querySelector('.app');
 
 function reportSize() {
-  if (isEdgeCollapsed()) return;
+  if (isEdgeCollapsed() || document.body.classList.contains('edge-transitioning')) return;
   const rect = appEl.getBoundingClientRect();
+  let padX = 20;
+  let padY = 20;
+  if (document.body.classList.contains('edge-left') || document.body.classList.contains('edge-right')) {
+    padX = 10;
+    padY = 0;
+  }
+  if (document.body.classList.contains('edge-top') || document.body.classList.contains('edge-bottom')) {
+    padY = 10;
+  }
   window.api.resizeTo({
-    width: Math.min(640, Math.ceil(rect.width) + 20),
-    height: Math.min(900, Math.ceil(rect.height) + 20),
+    width: Math.min(640, Math.ceil(rect.width) + padX),
+    height: Math.min(900, Math.ceil(rect.height) + padY),
   });
 }
 
 new ResizeObserver(reportSize).observe(appEl);
+
+let ignoringMouse = true;
+let lastMouse = { x: 0, y: 0 };
+let windowDragging = false;
+let dragCandidate = null;
+const DRAG_THRESHOLD_PX = 4;
+
+function setIgnoreMouse(ignore) {
+  if (!isWidgetMode) return;
+  if (windowDragging) return;
+  if (ignore === ignoringMouse) return;
+  ignoringMouse = ignore;
+  window.api.setIgnoreMouseEvents(ignore);
+}
+
+function isOverInteractive(el) {
+  if (!el) return false;
+  return !!el.closest('.notch, .flyout, .edge-peek-tab, #settings-panel');
+}
+
+function syncIgnoreMouseFromPoint(clientX, clientY) {
+  if (!isWidgetMode) return;
+  lastMouse = { x: clientX, y: clientY };
+  const el = document.elementFromPoint(clientX, clientY);
+  setIgnoreMouse(!isOverInteractive(el));
+}
+
+function refreshIgnoreMouse() {
+  if (!isWidgetMode) return;
+  syncIgnoreMouseFromPoint(lastMouse.x, lastMouse.y);
+}
+
+function isWidgetDragSource(target) {
+  if (!target || !target.closest) return false;
+  if (target.closest('button, input, a, label, .dock-edge-picker, .flyout')) return false;
+  return !!target.closest('.notch');
+}
+
+function endWindowDrag() {
+  if (!windowDragging && !dragCandidate) return;
+  dragCandidate = null;
+  if (windowDragging) {
+    windowDragging = false;
+    window.api.endWidgetDrag();
+    refreshIgnoreMouse();
+  }
+}
+
+if (isWidgetMode) {
+  document.addEventListener('mousemove', (event) => {
+    if (windowDragging) {
+      window.api.moveWidgetDrag({ screenX: event.screenX, screenY: event.screenY });
+      return;
+    }
+    if (dragCandidate) {
+      const dx = event.screenX - dragCandidate.screenX;
+      const dy = event.screenY - dragCandidate.screenY;
+      if (Math.hypot(dx, dy) >= DRAG_THRESHOLD_PX) {
+        windowDragging = true;
+        suppressTileClick = true;
+        setIgnoreMouse(false);
+        window.api.startWidgetDrag({
+          screenX: dragCandidate.screenX,
+          screenY: dragCandidate.screenY,
+        });
+        window.api.moveWidgetDrag({ screenX: event.screenX, screenY: event.screenY });
+        dragCandidate = null;
+      }
+      return;
+    }
+    syncIgnoreMouseFromPoint(event.clientX, event.clientY);
+  }, { passive: true });
+
+  document.addEventListener('mousedown', (event) => {
+    if (event.button !== 0) return;
+    if (isOverInteractive(event.target)) setIgnoreMouse(false);
+    if (!isWidgetDragSource(event.target)) return;
+    dragCandidate = { screenX: event.screenX, screenY: event.screenY };
+  }, true);
+
+  document.addEventListener('mouseup', () => endWindowDrag(), true);
+  document.addEventListener('mouseleave', () => {
+    if (!windowDragging) setIgnoreMouse(true);
+  }, { passive: true });
+  window.addEventListener('blur', () => endWindowDrag());
+}
 
 async function init() {
   placeSettingsPanel();

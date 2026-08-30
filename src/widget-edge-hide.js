@@ -1,12 +1,18 @@
 const EDGE_SNAP_THRESHOLD = 28;
 /** Collapsed pill thickness; matches the 84px widget notch. */
 const PEEK_SIZE = 84;
+/** Collapsed left/right pill width: 56 ring + 12 pad + 1 border. */
+const SIDE_PILL_WIDTH = 69;
+/** Allow a tighter side pill than PEEK_SIZE once content is measured. */
+const MIN_WIDGET_SIZE = 64;
 const DEFAULT_FULL_WIDTH = 108;
 const DEFAULT_FULL_HEIGHT = 360;
-/** Top-edge collapsed size: four 56px rings plus labels. */
+/** Top/bottom collapsed size: four 56px rings plus labels. */
 const COLLAPSED_TOP_WIDTH = 288;
 const COLLAPSED_TOP_HEIGHT = 100;
-const VALID_EDGES = new Set(['left', 'right', 'top']);
+/** Left/right collapsed height: 4 rings (56+label) + gaps + padding. */
+const COLLAPSED_SIDE_HEIGHT = 340;
+const VALID_EDGES = new Set(['left', 'right', 'top', 'bottom']);
 
 function normalizeEdge(edge) {
   if (VALID_EDGES.has(edge)) return edge;
@@ -22,18 +28,19 @@ function edgeDistances(bounds, workArea) {
     left: bounds.x - workArea.x,
     right: (workArea.x + workArea.width) - (bounds.x + bounds.width),
     top: bounds.y - workArea.y,
+    bottom: (workArea.y + workArea.height) - (bounds.y + bounds.height),
   };
 }
 
 /**
  * Snap to the nearest work-area edge within threshold.
- * @returns {'left'|'right'|'top'|null}
+ * @returns {'left'|'right'|'top'|'bottom'|null}
  */
 function detectSnapEdge(bounds, workArea, threshold = EDGE_SNAP_THRESHOLD) {
   const distances = edgeDistances(bounds, workArea);
   let best = null;
   let bestDist = Infinity;
-  for (const edge of ['left', 'right', 'top']) {
+  for (const edge of ['left', 'right', 'top', 'bottom']) {
     const d = distances[edge];
     if (d <= threshold && d < bestDist) {
       best = edge;
@@ -44,20 +51,25 @@ function detectSnapEdge(bounds, workArea, threshold = EDGE_SNAP_THRESHOLD) {
 }
 
 /**
- * Prefer the nearest edge for the Hide button (ties break: top, then left, then right).
+ * Prefer the nearest edge for the Hide button (ties break: top, bottom, left, right).
  */
 function preferDockEdge(bounds, workArea) {
   if (!bounds || !workArea) return 'top';
   const distances = edgeDistances(bounds, workArea);
   let best = 'top';
   let bestDist = distances.top;
-  for (const edge of ['left', 'right']) {
+  for (const edge of ['bottom', 'left', 'right']) {
     if (distances[edge] < bestDist) {
       best = edge;
       bestDist = distances[edge];
     }
   }
   return best;
+}
+
+function horizontalCenterX(bounds, width, workArea) {
+  const centerX = bounds.x + bounds.width / 2;
+  return clampX(centerX - width / 2, width, workArea);
 }
 
 function clampX(x, width, workArea) {
@@ -72,25 +84,35 @@ function clampY(y, height, workArea) {
 
 /**
  * Fully visible bounds flush against the docked edge (same monitor).
+ * @param edgeArea optional monitor frame for the docked axis (defaults to workArea)
  */
-function expandedBounds(edge, bounds, workArea, fullWidth = DEFAULT_FULL_WIDTH, fullHeight = DEFAULT_FULL_HEIGHT) {
+function expandedBounds(edge, bounds, workArea, fullWidth = DEFAULT_FULL_WIDTH, fullHeight = DEFAULT_FULL_HEIGHT, edgeArea = null) {
+  const flush = edgeArea || workArea;
   const width = fullWidth;
   const height = Math.max(fullHeight, 120);
   if (edge === 'left') {
-    return { x: workArea.x, y: clampY(bounds.y, height, workArea), width, height };
+    return { x: flush.x, y: clampY(bounds.y, height, workArea), width, height };
   }
   if (edge === 'right') {
     return {
-      x: workArea.x + workArea.width - width,
+      x: flush.x + flush.width - width,
       y: clampY(bounds.y, height, workArea),
       width,
       height,
     };
   }
-  // top
+  if (edge === 'top') {
+    return {
+      x: horizontalCenterX(bounds, width, workArea),
+      y: flush.y,
+      width,
+      height,
+    };
+  }
+  // bottom
   return {
-    x: clampX(bounds.x, width, workArea),
-    y: workArea.y,
+    x: horizontalCenterX(bounds, width, workArea),
+    y: flush.y + flush.height - height,
     width,
     height,
   };
@@ -98,34 +120,45 @@ function expandedBounds(edge, bounds, workArea, fullWidth = DEFAULT_FULL_WIDTH, 
 
 /**
  * Collapsed pill along the docked edge (same monitor).
- * left/right → vertical pill; top → horizontal pill.
+ * left/right → vertical pill sized to the rings; top/bottom → horizontal pill.
  */
-function collapsedBounds(edge, bounds, workArea, peekSize = PEEK_SIZE, fullWidth = DEFAULT_FULL_WIDTH, fullHeight = DEFAULT_FULL_HEIGHT) {
+function collapsedBounds(edge, bounds, workArea, peekSize = PEEK_SIZE, fullWidth = DEFAULT_FULL_WIDTH, pillSpan = COLLAPSED_SIDE_HEIGHT, edgeArea = null) {
+  const flush = edgeArea || workArea;
   if (edge === 'left') {
-    const height = Math.max(fullHeight, 120);
+    const height = Math.max(peekSize, pillSpan);
     return {
-      x: workArea.x,
+      x: flush.x,
       y: clampY(bounds.y, height, workArea),
       width: peekSize,
       height,
     };
   }
   if (edge === 'right') {
-    const height = Math.max(fullHeight, 120);
+    const height = Math.max(peekSize, pillSpan);
     return {
-      x: workArea.x + workArea.width - peekSize,
+      x: flush.x + flush.width - peekSize,
       y: clampY(bounds.y, height, workArea),
       width: peekSize,
       height,
     };
   }
-  // top: a horizontal pill, not a thin strip
+  if (edge === 'top') {
+    const width = Math.max(fullWidth, COLLAPSED_TOP_WIDTH);
+    return {
+      x: horizontalCenterX(bounds, width, workArea),
+      y: flush.y,
+      width,
+      height: Math.max(peekSize, COLLAPSED_TOP_HEIGHT),
+    };
+  }
+  // bottom: horizontal pill
   const width = Math.max(fullWidth, COLLAPSED_TOP_WIDTH);
+  const height = Math.max(peekSize, COLLAPSED_TOP_HEIGHT);
   return {
-    x: clampX(bounds.x, width, workArea),
-    y: workArea.y,
+    x: horizontalCenterX(bounds, width, workArea),
+    y: flush.y + flush.height - height,
     width,
-    height: Math.max(peekSize, COLLAPSED_TOP_HEIGHT),
+    height,
   };
 }
 
@@ -137,11 +170,20 @@ function isCursorNearDock(edge, cursor, workArea, widgetBounds, fullWidth = DEFA
   const pad = 24;
 
   if (edge === 'top') {
-    const left = Math.min(widgetBounds.x, clampX(widgetBounds.x, fullWidth, workArea)) - pad;
+    const left = Math.min(widgetBounds.x, horizontalCenterX(widgetBounds, fullWidth, workArea)) - pad;
     const right = Math.max(widgetBounds.x + widgetBounds.width, left + fullWidth) + pad;
     if (cursor.x < left || cursor.x > right) return false;
     const zoneHeight = Math.max(widgetBounds.height, fullHeight) + pad;
     return cursor.y >= workArea.y - pad && cursor.y <= workArea.y + zoneHeight;
+  }
+
+  if (edge === 'bottom') {
+    const left = Math.min(widgetBounds.x, horizontalCenterX(widgetBounds, fullWidth, workArea)) - pad;
+    const right = Math.max(widgetBounds.x + widgetBounds.width, left + fullWidth) + pad;
+    if (cursor.x < left || cursor.x > right) return false;
+    const zoneBottom = workArea.y + workArea.height;
+    const zoneHeight = Math.max(widgetBounds.height, fullHeight) + pad;
+    return cursor.y >= zoneBottom - zoneHeight && cursor.y <= zoneBottom + pad;
   }
 
   const top = Math.min(widgetBounds.y, clampY(widgetBounds.y, fullHeight, workArea)) - pad;
@@ -164,7 +206,7 @@ function isCursorNearDock(edge, cursor, workArea, widgetBounds, fullWidth = DEFA
  * must not be treated as a new drag-to-edge hide, or peek-open immediately
  * collapses again.
  *
- * @param {{ dockedEdge: 'left'|'right'|'top'|null, expanded: boolean, detectedEdge: 'left'|'right'|'top'|null }} state
+ * @param {{ dockedEdge: 'left'|'right'|'top'|'bottom'|null, expanded: boolean, detectedEdge: 'left'|'right'|'top'|'bottom'|null }} state
  * @returns {'ignore'|'keep-expanded'|'undock'|'dock-collapse'|'save-bounds'}
  */
 function decideMoveSnap({ dockedEdge, expanded, detectedEdge }) {
@@ -178,8 +220,11 @@ function decideMoveSnap({ dockedEdge, expanded, detectedEdge }) {
 module.exports = {
   EDGE_SNAP_THRESHOLD,
   PEEK_SIZE,
+  SIDE_PILL_WIDTH,
+  MIN_WIDGET_SIZE,
   COLLAPSED_TOP_WIDTH,
   COLLAPSED_TOP_HEIGHT,
+  COLLAPSED_SIDE_HEIGHT,
   DEFAULT_FULL_WIDTH,
   DEFAULT_FULL_HEIGHT,
   VALID_EDGES,
@@ -187,6 +232,7 @@ module.exports = {
   edgeDistances,
   detectSnapEdge,
   preferDockEdge,
+  horizontalCenterX,
   expandedBounds,
   collapsedBounds,
   isCursorNearDock,
