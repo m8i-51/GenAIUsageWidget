@@ -500,7 +500,7 @@ async function updateCursorCard() {
   if (!beginCard('cursor', result)) return;
   const resetEl = document.getElementById('cursor-reset');
 
-  const { percent, autoPercent, apiPercent, billingCycleEnd } = result.usage;
+  const { percent, autoPercent, apiPercent, billingCycleEnd, grokBot } = result.usage;
   setMeter('cursor', percent);
   applyStaleState('cursor', result, resetEl, `cycle ends in ${formatCountdown(billingCycleEnd)}`);
 
@@ -509,6 +509,13 @@ async function updateCursorCard() {
   ];
   if (autoPercent != null) rows.push({ label: 'Auto', percent: autoPercent });
   if (apiPercent != null) rows.push({ label: 'API', percent: apiPercent });
+  if (grokBot?.percent != null) {
+    rows.push({
+      label: 'Grok Bot',
+      percent: grokBot.percent,
+      sub: formatResetLabel(grokBot.resetsAt),
+    });
+  }
   setDetail('cursor', rows);
 }
 

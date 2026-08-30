@@ -8,7 +8,7 @@ info for the AI coding tools you're already signed into locally:
 
 - **Claude** — session (5h), weekly, and model-scoped weekly usage
 - **Codex** — primary (and, when present, weekly) rate-limit window usage
-- **Cursor** — plan usage with Total / Auto / API breakdown and billing-cycle countdown
+- **Cursor** — plan usage with Total / Auto / API breakdown, Grok Bot weekly allowance when available, and billing-cycle countdown
 - **Antigravity (Gemini Code Assist)** — weekly quota per model group
 
 It reads each provider's existing local session/credentials instead of asking

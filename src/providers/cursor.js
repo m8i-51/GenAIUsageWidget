@@ -52,27 +52,57 @@ function deriveUserId(token) {
   return sub.split('|').pop();
 }
 
+async function fetchGrokBotUsage(cookie) {
+  try {
+    const res = await fetch('https://cursor.com/api/dashboard/get-sand-usage-status', {
+      method: 'POST',
+      headers: {
+        Cookie: cookie,
+        Origin: 'https://cursor.com',
+        'Content-Type': 'application/json',
+      },
+      body: '{}',
+    });
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    if (data.hasNonZeroIncludedLimit !== true || data.usagePercent == null) {
+      return null;
+    }
+    return {
+      percent: data.usagePercent,
+      resetsAt: data.nextResetTimestampUtc ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function fetchCursorUsage() {
   const token = await readAccessToken();
   const userId = deriveUserId(token);
   const cookie = `WorkosCursorSessionToken=${userId}%3A%3A${token}`;
 
-  const res = await fetch('https://cursor.com/api/usage-summary', {
-    headers: { Cookie: cookie },
-  });
+  const [summarySettled, grokBot] = await Promise.all([
+    fetch('https://cursor.com/api/usage-summary', {
+      headers: { Cookie: cookie },
+    }).then(async (res) => {
+      if (!res.ok) {
+        throw new Error(`Cursor usage request failed: ${res.status}`);
+      }
+      return res.json();
+    }),
+    fetchGrokBotUsage(cookie),
+  ]);
 
-  if (!res.ok) {
-    throw new Error(`Cursor usage request failed: ${res.status}`);
-  }
-
-  const data = await res.json();
-  const plan = data.individualUsage?.plan;
+  const plan = summarySettled.individualUsage?.plan;
 
   return {
     percent: plan?.totalPercentUsed ?? null,
     autoPercent: plan?.autoPercentUsed ?? null,
     apiPercent: plan?.apiPercentUsed ?? null,
-    billingCycleEnd: data.billingCycleEnd ?? null,
+    billingCycleEnd: summarySettled.billingCycleEnd ?? null,
+    grokBot,
   };
 }
 
