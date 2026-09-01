@@ -14,6 +14,13 @@ info for the AI coding tools you're already signed into locally:
 It reads each provider's existing local session/credentials instead of asking
 you to log in again, and polls their usage APIs about once a minute.
 
+<p align="center">
+  <img src="docs/screenshots/widget-flyout.png" alt="Desktop widget docked to the right edge, with circular usage rings and a Claude detail flyout" width="380">
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/tray-popup.png" alt="Tray popup with usage cards for Claude, Codex, Antigravity, and Cursor" width="230">
+</p>
+<p align="center"><sub>Desktop widget (left) and tray popup (right). Screenshots use demo data (<code>GENAI_USAGE_DEMO=1</code>).</sub></p>
+
 ## Features
 
 - **Side-notch UI** — a dark pill with circular usage rings (green / yellow /
@@ -98,7 +105,10 @@ src/
   index.html / renderer.js   Shared UI for both the popup and the widget
   providers/           One module per provider, each exporting a fetchXUsage()
                        function; not-configured.js marks "not set up" errors
+  demo-usage.js        Sample usage payloads for GENAI_USAGE_DEMO=1
+scripts/capture-readme-screenshots.js  Regenerates README screenshots (`npm run screenshots`)
 assets/icon.png        Tray icon
+docs/screenshots/      README images (widget flyout + tray popup)
 ```
 
 ## Known limitations

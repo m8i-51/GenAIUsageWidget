@@ -7,7 +7,8 @@
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder",
-    "verify:edge-hide": "electron scripts/verify-edge-hide.js"
+    "verify:edge-hide": "electron scripts/verify-edge-hide.js",
+    "screenshots": "electron scripts/capture-readme-screenshots.js"
   },
   "author": "m8i-51 <51511166+m8i-51@users.noreply.github.com>",
   "homepage": "https://github.com/m8i-51/GenAIUsageWidget",

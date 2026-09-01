@@ -14,6 +14,13 @@ Windows / Linux 向けのトレイアプリ + デスクトップウィジェッ�
 各プロバイダのローカルの認証情報をそのまま読むので、改めてログインする必要は
 ありません。使用量APIはおよそ1分ごとにポーリングします。
 
+<p align="center">
+  <img src="docs/screenshots/widget-flyout.png" alt="右端にドックしたデスクトップウィジェット。円形の使用量リングと Claude の詳細フライアウト" width="380">
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/tray-popup.png" alt="Claude / Codex / Antigravity / Cursor の使用量カードを並べたトレイのポップアップ" width="230">
+</p>
+<p align="center"><sub>デスクトップウィジェット（左）とトレイのポップアップ（右）。スクリーンショットはデモデータ（<code>GENAI_USAGE_DEMO=1</code>）です。</sub></p>
+
 ## 特徴
 
 - **サイドノッチ UI** — 暗いピル型のドックに円形の使用量リング。使用量が増えると
@@ -98,7 +105,10 @@ src/
   index.html / renderer.js   ポップアップとウィジェットで共有するUI
   providers/           プロバイダごとに1モジュール(fetchXUsage() をエクスポート)。
                        not-configured.js は「未セットアップ」エラーの目印
+  demo-usage.js        GENAI_USAGE_DEMO=1 用のサンプル使用量
+scripts/capture-readme-screenshots.js  README用スクリーンショットの再生成 (`npm run screenshots`)
 assets/icon.png        トレイアイコン
+docs/screenshots/      README用画像（ウィジェットのフライアウトとトレイのポップアップ）
 ```
 
 ## 既知の制限
