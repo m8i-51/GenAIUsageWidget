@@ -2,8 +2,30 @@
 
 [English](README.md) | 日本語
 
-Windows / Linux 向けのトレイアプリ + デスクトップウィジェットです
-(macOS専用の [CodexBar](https://github.com/steipete/CodexBar) にインスパイアされています)。
+AIコーディングツールの使用量上限を追う、クロスプラットフォームのトレイアプリ / デスクトップウィジェット。
+
+macOS アプリ [CodexBar](https://github.com/steipete/CodexBar) に着想を得た、Windows / Linux 向けの別ウィジェットです。移植版ではなく、開発元とも無関係で、そのまま置き換えるものでもありません。
+
+<p align="center">
+  <img src="docs/screenshots/widget-flyout.png" alt="右端にドックしたデスクトップウィジェット。円形の使用量リングと Claude の詳細フライアウト" width="380">
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/tray-popup.png" alt="Claude / Codex / Antigravity / Cursor の使用量カードを並べたトレイのポップアップ" width="230">
+</p>
+<p align="center"><sub>ウィジェット（左）、トレイのポップアップ（右）。デモデータ（<code>GENAI_USAGE_DEMO=1</code>）。</sub></p>
+
+## ダウンロード
+
+最新リリース **[v2026.9.1-a551105](https://github.com/m8i-51/GenAIUsageWidget/releases/tag/v2026.9.1-a551105)** — [すべてのリリース](https://github.com/m8i-51/GenAIUsageWidget/releases):
+
+- **Windows** — [GenAIUsageWidget.Setup.2026.9.1-a551105.exe](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.1-a551105/GenAIUsageWidget.Setup.2026.9.1-a551105.exe)
+- **Linux** — [GenAIUsageWidget-2026.9.1-a551105.AppImage](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.1-a551105/GenAIUsageWidget-2026.9.1-a551105.AppImage) · [genai-usage-widget_2026.9.1-a551105_amd64.deb](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.1-a551105/genai-usage-widget_2026.9.1-a551105_amd64.deb)
+
+未署名のインストーラです。初回起動時の警告は[既知の制限](#既知の制限)、ソースからのビルドは[セットアップ](#セットアップ)を参照してください。
+
+## こんな人向け
+
+- Windows / Linux で、Claude・Codex・Cursor の残り枠を、各ダッシュボードを開かずに見ておきたい人。
+
 ローカルでサインイン済みのAIコーディングツールの使用量・レート制限を表示します:
 
 - **Claude** — セッション(5時間)・週間・モデル別週間の使用量
@@ -13,13 +35,6 @@ Windows / Linux 向けのトレイアプリ + デスクトップウィジェッ�
 
 各プロバイダのローカルの認証情報をそのまま読むので、改めてログインする必要は
 ありません。使用量APIはおよそ1分ごとにポーリングします。
-
-<p align="center">
-  <img src="docs/screenshots/widget-flyout.png" alt="右端にドックしたデスクトップウィジェット。円形の使用量リングと Claude の詳細フライアウト" width="380">
-  &nbsp;&nbsp;
-  <img src="docs/screenshots/tray-popup.png" alt="Claude / Codex / Antigravity / Cursor の使用量カードを並べたトレイのポップアップ" width="230">
-</p>
-<p align="center"><sub>デスクトップウィジェット（左）とトレイのポップアップ（右）。スクリーンショットはデモデータ（<code>GENAI_USAGE_DEMO=1</code>）です。</sub></p>
 
 ## 特徴
 
@@ -65,10 +80,7 @@ GENAI_USAGE_DEMO=1 npm start
 
 ### インストーラ
 
-タグ付きバージョンごとに、ビルド済みインストーラ(Windows `.exe`、Linux
-`.AppImage` / `.deb`)を[Releasesページ](https://github.com/m8i-51/GenAIUsageWidget/releases)
-に公開しています。[`.github/workflows/release.yml`](.github/workflows/release.yml)
-が自動でビルドします。
+ビルド済みの Windows `.exe` と Linux AppImage / `.deb` は[ダウンロード](#ダウンロード)にあります。タグ付きバージョンごとに [`.github/workflows/release.yml`](.github/workflows/release.yml) が公開します。
 
 自分でビルドする場合:
 
