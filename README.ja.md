@@ -2,9 +2,9 @@
 
 [English](README.md) | 日本語
 
-AIコーディングツールの使用量上限を追う、クロスプラットフォームのトレイアプリ / デスクトップウィジェット。
+AIコーディングツールの使用量上限を追う、クロスプラットフォームのトレイアプリ / デスクトップウィジェット（macOS の [CodexBar](https://github.com/steipete/CodexBar) に着想）。
 
-macOS アプリ [CodexBar](https://github.com/steipete/CodexBar) に着想を得た、Windows / Linux 向けの別ウィジェットです。移植版ではなく、開発元とも無関係で、そのまま置き換えるものでもありません。
+Windows / Linux 向けの別プロジェクトです。移植版ではなく、開発元とも無関係で、そのまま置き換えるものでもありません。
 
 <p align="center">
   <img src="docs/screenshots/widget-flyout.png" alt="右端にドックしたデスクトップウィジェット。円形の使用量リングと Claude の詳細フライアウト" width="380">
@@ -20,7 +20,7 @@ macOS アプリ [CodexBar](https://github.com/steipete/CodexBar) に着想を得
 - **Windows** — [GenAIUsageWidget.Setup.2026.9.1-a551105.exe](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.1-a551105/GenAIUsageWidget.Setup.2026.9.1-a551105.exe)
 - **Linux** — [GenAIUsageWidget-2026.9.1-a551105.AppImage](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.1-a551105/GenAIUsageWidget-2026.9.1-a551105.AppImage) · [genai-usage-widget_2026.9.1-a551105_amd64.deb](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.1-a551105/genai-usage-widget_2026.9.1-a551105_amd64.deb)
 
-未署名のインストーラです。初回起動時の警告は[既知の制限](#既知の制限)、ソースからのビルドは[セットアップ](#セットアップ)を参照してください。
+Windows の `.exe` は未署名です。SmartScreen が出たら「詳細情報」→「実行」を選んでください。詳しくは[既知の制限](#既知の制限)。ソースからビルドする場合は[セットアップ](#セットアップ)。
 
 ## こんな人向け
 

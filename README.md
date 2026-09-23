@@ -2,9 +2,9 @@
 
 English | [日本語](README.ja.md)
 
-Cross-platform tray app / desktop widget tracking AI coding provider usage limits.
+Cross-platform tray app / desktop widget tracking AI coding provider usage limits (inspired by macOS [CodexBar](https://github.com/steipete/CodexBar)).
 
-Inspired by the macOS app [CodexBar](https://github.com/steipete/CodexBar) — a separate Windows & Linux widget, not a port, not affiliated, and not a drop-in replacement.
+A separate Windows & Linux project — not a port, not affiliated, and not a drop-in replacement.
 
 <p align="center">
   <img src="docs/screenshots/widget-flyout.png" alt="Desktop widget docked to the right edge, with circular usage rings and a Claude detail flyout" width="380">
@@ -20,7 +20,7 @@ Latest release **[v2026.9.1-a551105](https://github.com/m8i-51/GenAIUsageWidget/
 - **Windows** — [GenAIUsageWidget.Setup.2026.9.1-a551105.exe](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.1-a551105/GenAIUsageWidget.Setup.2026.9.1-a551105.exe)
 - **Linux** — [GenAIUsageWidget-2026.9.1-a551105.AppImage](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.1-a551105/GenAIUsageWidget-2026.9.1-a551105.AppImage) · [genai-usage-widget_2026.9.1-a551105_amd64.deb](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.1-a551105/genai-usage-widget_2026.9.1-a551105_amd64.deb)
 
-Unsigned installers. First-run warnings are under [Known limitations](#known-limitations). Build from source under [Setup](#setup).
+The Windows `.exe` is unsigned. SmartScreen may warn on first launch: choose **More info**, then **Run anyway**. See [Known limitations](#known-limitations). Build from source under [Setup](#setup).
 
 ## Who this is for
 
