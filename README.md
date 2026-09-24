@@ -9,7 +9,7 @@ A separate Windows & Linux project — not a port, not affiliated, and not a dro
 <p align="center">
   <img src="docs/screenshots/widget-flyout.png" alt="Desktop widget docked to the right edge, with circular usage rings and a Claude detail flyout" width="380">
   &nbsp;&nbsp;
-  <img src="docs/screenshots/tray-popup.png" alt="Tray popup with usage cards for Claude, Codex, Antigravity, and Cursor" width="230">
+  <img src="docs/screenshots/tray-popup.png" alt="Tray popup with usage cards for Claude, Codex, Copilot, Antigravity, and Cursor" width="230">
 </p>
 <p align="center"><sub>Widget (left), tray popup (right). Demo data (<code>GENAI_USAGE_DEMO=1</code>).</sub></p>
 

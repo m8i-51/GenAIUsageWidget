@@ -9,7 +9,7 @@ Windows / Linux 向けの別プロジェクトです。移植版ではなく、�
 <p align="center">
   <img src="docs/screenshots/widget-flyout.png" alt="右端にドックしたデスクトップウィジェット。円形の使用量リングと Claude の詳細フライアウト" width="380">
   &nbsp;&nbsp;
-  <img src="docs/screenshots/tray-popup.png" alt="Claude / Codex / Antigravity / Cursor の使用量カードを並べたトレイのポップアップ" width="230">
+  <img src="docs/screenshots/tray-popup.png" alt="Claude / Codex / Copilot / Antigravity / Cursor の使用量カードを並べたトレイのポップアップ" width="230">
 </p>
 <p align="center"><sub>ウィジェット（左）、トレイのポップアップ（右）。デモデータ（<code>GENAI_USAGE_DEMO=1</code>）。</sub></p>
 
