@@ -49,6 +49,36 @@ def read_credential(target):
         advapi32.CredFree(cred_ptr)
 
 
+def read_first_matching(pattern):
+    # CredEnumerateW accepts a trailing "*" wildcard, e.g. "copilot-cli*".
+    advapi32 = ctypes.windll.advapi32
+    advapi32.CredEnumerateW.argtypes = [
+        wintypes.LPWSTR,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+        ctypes.POINTER(ctypes.POINTER(ctypes.POINTER(CREDENTIAL)))
+    ]
+    advapi32.CredEnumerateW.restype = wintypes.BOOL
+
+    count = wintypes.DWORD()
+    creds = ctypes.POINTER(ctypes.POINTER(CREDENTIAL))()
+    ok = advapi32.CredEnumerateW(pattern, 0, ctypes.byref(count), ctypes.byref(creds))
+    if not ok:
+        raise RuntimeError(f"CredEnumerateW failed for filter {pattern!r}")
+    try:
+        for i in range(count.value):
+            cred = creds[i].contents
+            if cred.CredentialBlobSize:
+                buf = ctypes.string_at(cred.CredentialBlob, cred.CredentialBlobSize)
+                return buf.decode("utf-8")
+        raise RuntimeError(f"No credential blob for filter {pattern!r}")
+    finally:
+        advapi32.CredFree(creds)
+
+
 if __name__ == "__main__":
     target = sys.argv[1]
-    print(read_credential(target))
+    if target.endswith("*"):
+        print(read_first_matching(target))
+    else:
+        print(read_credential(target))

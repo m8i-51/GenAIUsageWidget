@@ -1,10 +1,12 @@
-const { app, Tray, Menu, BrowserWindow, screen, ipcMain, nativeImage } = require('electron');
+const { app, Tray, Menu, BrowserWindow, screen, ipcMain, nativeImage, Notification } = require('electron');
 const path = require('path');
 const { fetchClaudeUsage } = require('./providers/claude');
 const { fetchCodexUsage } = require('./providers/codex');
 const { fetchCursorUsage } = require('./providers/cursor');
 const { fetchAntigravityUsage } = require('./providers/antigravity');
+const { fetchCopilotUsage } = require('./providers/copilot');
 const autostart = require('./autostart');
+const alerts = require('./alerts');
 const { loadSettings, saveSettings } = require('./settings');
 const { fetchWithCache, preloadLastGood } = require('./usage-cache');
 const { summarizeForTray, formatTooltip, renderTrayPng } = require('./tray-icon');
@@ -811,6 +813,12 @@ function createTray() {
       },
       { type: 'separator' },
       {
+        label: 'Usage Alerts',
+        type: 'checkbox',
+        checked: loadSettings().alertsEnabled,
+        click: (menuItem) => broadcastSettings(saveSettings({ alertsEnabled: menuItem.checked })),
+      },
+      {
         label: 'Start at Login',
         type: 'checkbox',
         checked: autostart.isEnabled(),
@@ -921,6 +929,7 @@ const USAGE_FETCHERS = {
   codex: fetchCodexUsage,
   cursor: fetchCursorUsage,
   antigravity: fetchAntigravityUsage,
+  copilot: fetchCopilotUsage,
 };
 
 function getUsage(providerId) {
@@ -928,10 +937,31 @@ function getUsage(providerId) {
   return fetchWithCache(providerId, USAGE_FETCHERS[providerId]);
 }
 
-ipcMain.handle('get-claude-usage', () => getUsage('claude'));
-ipcMain.handle('get-codex-usage', () => getUsage('codex'));
-ipcMain.handle('get-cursor-usage', () => getUsage('cursor'));
-ipcMain.handle('get-antigravity-usage', () => getUsage('antigravity'));
+function showUsageNotification(title, body) {
+  if (!Notification.isSupported()) return;
+  new Notification({ title, body, icon: path.join(__dirname, '..', 'assets', 'icon.png') }).show();
+}
+
+// Popup and widget both poll; the alert state machine dedupes repeat results.
+async function withUsageAlerts(providerId, resultPromise) {
+  const result = await resultPromise;
+  const settings = loadSettings();
+  if (!settings.hiddenProviders.includes(providerId)) {
+    try {
+      alerts.checkAndNotify(providerId, result, {
+        enabled: settings.alertsEnabled,
+        notify: showUsageNotification,
+      });
+    } catch (err) {
+      console.warn(`Usage alert failed for ${providerId}:`, err.message);
+    }
+  }
+  return result;
+}
+
+for (const providerId of Object.keys(USAGE_FETCHERS)) {
+  ipcMain.handle(`get-${providerId}-usage`, () => withUsageAlerts(providerId, getUsage(providerId)));
+}
 
 ipcMain.on('resize-to', (event, size) => {
   const win = BrowserWindow.fromWebContents(event.sender);
@@ -981,7 +1011,11 @@ ipcMain.on('resize-to', (event, size) => {
 });
 
 app.whenReady().then(() => {
-  preloadLastGood(['claude', 'codex', 'cursor', 'antigravity']);
+  // Windows only shows toast notifications for apps with an AppUserModelID.
+  if (process.platform === 'win32') {
+    app.setAppUserModelId('com.github.m8i-51.genaiusagewidget');
+  }
+  preloadLastGood(['claude', 'codex', 'cursor', 'antigravity', 'copilot']);
   loadSettings();
   createPopup();
   createWidget();

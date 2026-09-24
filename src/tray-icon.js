@@ -11,6 +11,7 @@ const PROVIDER_LABELS = {
   codex: 'Codex',
   cursor: 'Cursor',
   antigravity: 'Antigravity',
+  copilot: 'Copilot',
 };
 
 // Same thresholds as the cards (renderer.js severityClass), on percent used.
@@ -60,6 +61,16 @@ function extractWindows(providerId, usage) {
       if (percents.length === 0) return null;
       return { session: Math.max(...percents), week: null };
     }
+    case 'copilot': {
+      // Premium requests on top, chat below (both monthly), matching the card.
+      const top = usage.primary ?? usage.secondary;
+      if (!top) return null;
+      return {
+        session: clampPercent(top.percent),
+        week: usage.primary ? clampPercent(usage.secondary?.percent) : null,
+        weekLabel: 'chat',
+      };
+    }
     default:
       return null;
   }
@@ -90,7 +101,7 @@ function formatTooltip(summary) {
   if (!summary.primary) return 'GenAIUsageWidget';
   const lines = summary.entries.map((e) => {
     let line = `${e.label}: ${Math.round(100 - e.session)}% left`;
-    if (e.week != null) line += ` (week ${Math.round(100 - e.week)}%)`;
+    if (e.week != null) line += ` (${e.weekLabel || 'week'} ${Math.round(100 - e.week)}%)`;
     if (e.stale) line += ' *';
     return line;
   });

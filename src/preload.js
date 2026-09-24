@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('api', {
   getCodexUsage: () => ipcRenderer.invoke('get-codex-usage'),
   getCursorUsage: () => ipcRenderer.invoke('get-cursor-usage'),
   getAntigravityUsage: () => ipcRenderer.invoke('get-antigravity-usage'),
+  getCopilotUsage: () => ipcRenderer.invoke('get-copilot-usage'),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   setSettings: (partial) => ipcRenderer.invoke('set-settings', partial),
   onSettingsChanged: (cb) => {

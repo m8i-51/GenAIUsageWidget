@@ -55,4 +55,16 @@ function antigravity() {
   });
 }
 
-module.exports = { claude, codex, cursor, antigravity };
+function copilot() {
+  const firstOfNextMonth = new Date();
+  firstOfNextMonth.setUTCMonth(firstOfNextMonth.getUTCMonth() + 1, 1);
+  firstOfNextMonth.setUTCHours(0, 0, 0, 0);
+  const resetsAt = firstOfNextMonth.toISOString();
+  return ok({
+    primary: { percent: 38, resetsAt },
+    secondary: { percent: 12, resetsAt },
+    plan: 'individual',
+  });
+}
+
+module.exports = { claude, codex, cursor, antigravity, copilot };

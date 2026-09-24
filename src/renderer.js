@@ -1,6 +1,7 @@
 const PROVIDERS = [
   { id: 'claude', label: 'Claude' },
   { id: 'codex', label: 'Codex' },
+  { id: 'copilot', label: 'Copilot' },
   { id: 'cursor', label: 'Cursor' },
   { id: 'antigravity', label: 'Antigravity' },
 ];
@@ -206,6 +207,9 @@ function authHint(prefix, message) {
   }
   if (prefix === 'cursor' && lower.includes('token')) {
     return 'Sign in again in the Cursor app';
+  }
+  if (prefix === 'copilot' && (lower.includes('401') || lower.includes('403') || lower.includes('signed in'))) {
+    return 'Run copilot login to re-authenticate';
   }
   if (prefix === 'antigravity' && (lower.includes('401') || lower.includes('cred'))) {
     return 'Run agy login to re-authenticate';
@@ -504,6 +508,39 @@ async function updateCodexCard() {
   setDetail('codex', rows);
 }
 
+function formatCopilotPlan(plan) {
+  if (!plan) return '';
+  return plan.charAt(0).toUpperCase() + plan.slice(1);
+}
+
+async function updateCopilotCard() {
+  const result = await window.api.getCopilotUsage();
+  if (!beginCard('copilot', result)) return;
+  const resetEl = document.getElementById('copilot-reset');
+
+  const { primary, secondary, plan } = result.usage;
+  const planLabel = formatCopilotPlan(plan);
+  if (!primary && !secondary) {
+    resetEl.textContent = planLabel ? `${planLabel} · No quota data` : 'No quota data';
+    setDetail('copilot', []);
+    return;
+  }
+
+  const headline = primary ?? secondary;
+  setMeter('copilot', headline.percent);
+  const planPrefix = planLabel ? `${planLabel} · ` : '';
+  applyStaleState('copilot', result, resetEl, `${planPrefix}resets in ${formatCountdown(headline.resetsAt)}`);
+
+  const rows = [];
+  if (primary) {
+    rows.push({ label: 'Premium', percent: primary.percent, sub: formatResetLabel(primary.resetsAt) });
+  }
+  if (secondary) {
+    rows.push({ label: 'Chat', percent: secondary.percent, sub: formatResetLabel(secondary.resetsAt) });
+  }
+  setDetail('copilot', rows);
+}
+
 async function updateCursorCard() {
   const result = await window.api.getCursorUsage();
   if (!beginCard('cursor', result)) return;
@@ -576,6 +613,7 @@ async function updateAll() {
   await Promise.all([
     updateClaudeCard(),
     updateCodexCard(),
+    updateCopilotCard(),
     updateCursorCard(),
     updateAntigravityCard(),
   ]);
