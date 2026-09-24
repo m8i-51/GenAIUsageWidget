@@ -76,6 +76,7 @@ app.whenReady().then(async () => {
     ipcMain.handle('get-codex-usage', async () => ({ error: 'not configured' }));
     ipcMain.handle('get-cursor-usage', async () => ({ error: 'not configured' }));
     ipcMain.handle('get-antigravity-usage', async () => ({ error: 'not configured' }));
+    ipcMain.handle('get-copilot-usage', async () => ({ error: 'not configured' }));
     ipcMain.on('resize-to', () => {});
 
     fs.mkdirSync(OUT_DIR, { recursive: true });
