@@ -4,6 +4,7 @@ const { fetchClaudeUsage } = require('./providers/claude');
 const { fetchCodexUsage } = require('./providers/codex');
 const { fetchCursorUsage } = require('./providers/cursor');
 const { fetchAntigravityUsage } = require('./providers/antigravity');
+const { fetchCopilotUsage } = require('./providers/copilot');
 const autostart = require('./autostart');
 const { loadSettings, saveSettings } = require('./settings');
 const { fetchWithCache, preloadLastGood } = require('./usage-cache');
@@ -893,6 +894,10 @@ ipcMain.handle('get-antigravity-usage', () => {
   if (process.env.GENAI_USAGE_DEMO === '1') return require('./demo-usage').antigravity();
   return fetchWithCache('antigravity', fetchAntigravityUsage);
 });
+ipcMain.handle('get-copilot-usage', () => {
+  if (process.env.GENAI_USAGE_DEMO === '1') return require('./demo-usage').copilot();
+  return fetchWithCache('copilot', fetchCopilotUsage);
+});
 
 ipcMain.on('resize-to', (event, size) => {
   const win = BrowserWindow.fromWebContents(event.sender);
@@ -942,7 +947,7 @@ ipcMain.on('resize-to', (event, size) => {
 });
 
 app.whenReady().then(() => {
-  preloadLastGood(['claude', 'codex', 'cursor', 'antigravity']);
+  preloadLastGood(['claude', 'codex', 'cursor', 'antigravity', 'copilot']);
   loadSettings();
   createPopup();
   createWidget();
