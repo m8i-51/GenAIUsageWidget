@@ -2,9 +2,31 @@
 
 English | [日本語](README.ja.md)
 
-A tray app / desktop widget for Windows & Linux (inspired by the macOS-only
-[CodexBar](https://github.com/steipete/CodexBar)) that shows usage / rate-limit
-info for the AI coding tools you're already signed into locally:
+Cross-platform tray app / desktop widget tracking AI coding provider usage limits (inspired by macOS [CodexBar](https://github.com/steipete/CodexBar)).
+
+A separate Windows & Linux project — not a port, not affiliated, and not a drop-in replacement.
+
+<p align="center">
+  <img src="docs/screenshots/widget-flyout.png" alt="Desktop widget docked to the right edge, with circular usage rings and a Claude detail flyout" width="380">
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/tray-popup.png" alt="Tray popup with usage cards for Claude, Codex, Antigravity, and Cursor" width="230">
+</p>
+<p align="center"><sub>Widget (left), tray popup (right). Demo data (<code>GENAI_USAGE_DEMO=1</code>).</sub></p>
+
+## Downloads
+
+Latest release **[v2026.9.1-a551105](https://github.com/m8i-51/GenAIUsageWidget/releases/tag/v2026.9.1-a551105)** — [all releases](https://github.com/m8i-51/GenAIUsageWidget/releases):
+
+- **Windows** — [GenAIUsageWidget.Setup.2026.9.1-a551105.exe](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.1-a551105/GenAIUsageWidget.Setup.2026.9.1-a551105.exe)
+- **Linux** — [GenAIUsageWidget-2026.9.1-a551105.AppImage](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.1-a551105/GenAIUsageWidget-2026.9.1-a551105.AppImage) · [genai-usage-widget_2026.9.1-a551105_amd64.deb](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.1-a551105/genai-usage-widget_2026.9.1-a551105_amd64.deb)
+
+The Windows `.exe` is unsigned. SmartScreen may warn on first launch: choose **More info**, then **Run anyway**. See [Known limitations](#known-limitations). Build from source under [Setup](#setup).
+
+## Who this is for
+
+- Windows and Linux users who want Claude, Codex, and Cursor remaining quota visible without opening dashboards.
+
+Shows usage / rate-limit info for the AI coding tools you're already signed into locally:
 
 - **Claude** — session (5h), weekly, and model-scoped weekly usage
 - **Codex** — primary (and, when present, weekly) rate-limit window usage
@@ -13,13 +35,6 @@ info for the AI coding tools you're already signed into locally:
 
 It reads each provider's existing local session/credentials instead of asking
 you to log in again, and polls their usage APIs about once a minute.
-
-<p align="center">
-  <img src="docs/screenshots/widget-flyout.png" alt="Desktop widget docked to the right edge, with circular usage rings and a Claude detail flyout" width="380">
-  &nbsp;&nbsp;
-  <img src="docs/screenshots/tray-popup.png" alt="Tray popup with usage cards for Claude, Codex, Antigravity, and Cursor" width="230">
-</p>
-<p align="center"><sub>Desktop widget (left) and tray popup (right). Screenshots use demo data (<code>GENAI_USAGE_DEMO=1</code>).</sub></p>
 
 ## Features
 
@@ -65,10 +80,7 @@ GENAI_USAGE_DEMO=1 npm start
 
 ### Installers
 
-Prebuilt installers (Windows `.exe`, Linux `.AppImage` / `.deb`) are published
-on the [Releases page](https://github.com/m8i-51/GenAIUsageWidget/releases)
-for every tagged version, built automatically by
-[`.github/workflows/release.yml`](.github/workflows/release.yml).
+Prebuilt Windows `.exe` and Linux AppImage / `.deb` files are in [Downloads](#downloads), published for every tagged version by [`.github/workflows/release.yml`](.github/workflows/release.yml).
 
 To build them yourself:
 
