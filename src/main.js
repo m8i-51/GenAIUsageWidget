@@ -1,4 +1,4 @@
-const { app, Tray, Menu, BrowserWindow, screen, ipcMain } = require('electron');
+const { app, Tray, Menu, BrowserWindow, screen, ipcMain, nativeImage } = require('electron');
 const path = require('path');
 const { fetchClaudeUsage } = require('./providers/claude');
 const { fetchCodexUsage } = require('./providers/codex');
@@ -7,6 +7,7 @@ const { fetchAntigravityUsage } = require('./providers/antigravity');
 const autostart = require('./autostart');
 const { loadSettings, saveSettings } = require('./settings');
 const { fetchWithCache, preloadLastGood } = require('./usage-cache');
+const { summarizeForTray, formatTooltip, renderTrayPng } = require('./tray-icon');
 const {
   detectSnapEdge,
   preferDockEdge,
@@ -726,9 +727,46 @@ function toggleWidget() {
   }
 }
 
+const STATIC_TRAY_ICON = path.join(__dirname, '..', 'assets', 'icon.png');
+const TRAY_REFRESH_MS = 60 * 1000;
+let trayIconKey = 'static';
+
+function buildTrayImage(entry) {
+  const image = nativeImage.createEmpty();
+  for (const scaleFactor of [1, 1.5, 2]) {
+    image.addRepresentation({ scaleFactor, buffer: renderTrayPng(entry, Math.round(16 * scaleFactor)) });
+  }
+  return image;
+}
+
+/**
+ * Redraw the tray meter from the shared usage cache (same data the cards
+ * read, so this adds no extra provider requests within the cache TTL).
+ */
+async function refreshTrayIcon() {
+  if (!tray || tray.isDestroyed()) return;
+  const ids = Object.keys(USAGE_FETCHERS);
+  const payloads = await Promise.all(ids.map((id) => Promise.resolve().then(() => getUsage(id)).catch(() => null)));
+  if (!tray || tray.isDestroyed()) return;
+
+  const results = Object.fromEntries(ids.map((id, i) => [id, payloads[i]]));
+  const summary = summarizeForTray(results, loadSettings().hiddenProviders);
+  const { primary } = summary;
+  const key = primary
+    ? `${primary.id}:${Math.round(primary.session)}:${primary.week == null ? '-' : Math.round(primary.week)}:${primary.stale}`
+    : 'static';
+  if (key !== trayIconKey) {
+    trayIconKey = key;
+    tray.setImage(primary ? buildTrayImage(primary) : STATIC_TRAY_ICON);
+  }
+  tray.setToolTip(formatTooltip(summary));
+}
+
 function createTray() {
-  tray = new Tray(path.join(__dirname, '..', 'assets', 'icon.png'));
+  tray = new Tray(STATIC_TRAY_ICON);
   tray.setToolTip('GenAIUsageWidget');
+  refreshTrayIcon();
+  setInterval(refreshTrayIcon, TRAY_REFRESH_MS);
 
   tray.on('click', (_event, bounds) => {
     if (widget && !widget.isDestroyed() && widget.isVisible()) {
@@ -796,6 +834,7 @@ ipcMain.handle('set-settings', (_event, partial) => {
     }
   }
   broadcastSettings(settings);
+  if (partial.hiddenProviders !== undefined) refreshTrayIcon();
   return settings;
 });
 
@@ -877,22 +916,22 @@ ipcMain.on('widget-drag-end', () => {
   scheduleWidgetBoundsSave();
 });
 
-ipcMain.handle('get-claude-usage', () => {
-  if (process.env.GENAI_USAGE_DEMO === '1') return require('./demo-usage').claude();
-  return fetchWithCache('claude', fetchClaudeUsage);
-});
-ipcMain.handle('get-codex-usage', () => {
-  if (process.env.GENAI_USAGE_DEMO === '1') return require('./demo-usage').codex();
-  return fetchWithCache('codex', fetchCodexUsage);
-});
-ipcMain.handle('get-cursor-usage', () => {
-  if (process.env.GENAI_USAGE_DEMO === '1') return require('./demo-usage').cursor();
-  return fetchWithCache('cursor', fetchCursorUsage);
-});
-ipcMain.handle('get-antigravity-usage', () => {
-  if (process.env.GENAI_USAGE_DEMO === '1') return require('./demo-usage').antigravity();
-  return fetchWithCache('antigravity', fetchAntigravityUsage);
-});
+const USAGE_FETCHERS = {
+  claude: fetchClaudeUsage,
+  codex: fetchCodexUsage,
+  cursor: fetchCursorUsage,
+  antigravity: fetchAntigravityUsage,
+};
+
+function getUsage(providerId) {
+  if (process.env.GENAI_USAGE_DEMO === '1') return require('./demo-usage')[providerId]();
+  return fetchWithCache(providerId, USAGE_FETCHERS[providerId]);
+}
+
+ipcMain.handle('get-claude-usage', () => getUsage('claude'));
+ipcMain.handle('get-codex-usage', () => getUsage('codex'));
+ipcMain.handle('get-cursor-usage', () => getUsage('cursor'));
+ipcMain.handle('get-antigravity-usage', () => getUsage('antigravity'));
 
 ipcMain.on('resize-to', (event, size) => {
   const win = BrowserWindow.fromWebContents(event.sender);
