@@ -8,6 +8,7 @@ const PROVIDER_LABELS = {
   codex: 'Codex',
   cursor: 'Cursor',
   antigravity: 'Antigravity',
+  copilot: 'Copilot',
 };
 
 // Per provider: { warning: 'below'|'notified', critical: 'below'|'notified' }.
@@ -31,6 +32,10 @@ function headlineUsage(providerId, usage) {
       const buckets = (usage.groups ?? []).flatMap((g) => g.buckets ?? []);
       if (buckets.length === 0) return null;
       return { percent: Math.max(...buckets.map((b) => b.percent ?? 0)), label: 'highest model' };
+    }
+    case 'copilot': {
+      const headline = usage.primary ?? usage.secondary;
+      return headline ? { percent: headline.percent, label: usage.primary ? 'premium' : 'chat' } : null;
     }
     default:
       return null;

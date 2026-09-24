@@ -9,7 +9,7 @@ A separate Windows & Linux project — not a port, not affiliated, and not a dro
 <p align="center">
   <img src="docs/screenshots/widget-flyout.png" alt="Desktop widget docked to the right edge, with circular usage rings and a Claude detail flyout" width="380">
   &nbsp;&nbsp;
-  <img src="docs/screenshots/tray-popup.png" alt="Tray popup with usage cards for Claude, Codex, Antigravity, and Cursor" width="230">
+  <img src="docs/screenshots/tray-popup.png" alt="Tray popup with usage cards for Claude, Codex, Copilot, Antigravity, and Cursor" width="230">
 </p>
 <p align="center"><sub>Widget (left), tray popup (right). Demo data (<code>GENAI_USAGE_DEMO=1</code>).</sub></p>
 
@@ -24,12 +24,13 @@ The Windows `.exe` is unsigned. SmartScreen may warn on first launch: choose **M
 
 ## Who this is for
 
-- Windows and Linux users who want Claude, Codex, and Cursor remaining quota visible without opening dashboards.
+- Windows and Linux users who want Claude, Codex, Copilot, and Cursor remaining quota visible without opening dashboards.
 
 Shows usage / rate-limit info for the AI coding tools you're already signed into locally:
 
 - **Claude** — session (5h), weekly, and model-scoped weekly usage
 - **Codex** — primary (and, when present, weekly) rate-limit window usage
+- **Copilot** — monthly Premium request and Chat quota usage (via your GitHub Copilot CLI sign-in)
 - **Cursor** — plan usage with Total / Auto / API breakdown, Grok Bot weekly allowance when available, and billing-cycle countdown
 - **Antigravity (Gemini Code Assist)** — weekly quota per model group
 
@@ -105,6 +106,7 @@ tray icon's right-click menu (off by default).
 |---|---|---|
 | Claude | `~/.claude/.credentials.json` | Written by the Claude Code CLI on login |
 | Codex | `~/.codex/auth.json` | Written by the `codex` CLI (`npm i -g @openai/codex`, then `codex login`) |
+| Copilot | `COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN` env vars, then the OS keychain (service `copilot-cli`), then `~/.copilot/config.json` | Run `copilot login` with the GitHub Copilot CLI (`npm i -g @github/copilot`). On Windows the keychain is read via `src/providers/win-cred-read.py`, so Python must be on `PATH`; on Linux it uses `secret-tool` (libsecret) when installed. Uses GitHub's unofficial `copilot_internal/user` endpoint, the same one the VS Code extension uses. |
 | Cursor | Cursor app's `state.vscdb` (SQLite, via `sql.js`) | Requires the Cursor desktop app to be installed and signed in |
 | Antigravity | Windows Credential Manager (target `gemini:antigravity`) on Windows; `~/.gemini/antigravity-cli/antigravity-oauth-token` on Linux | Requires the `agy` CLI to have been used to sign in at least once (`winget install Google.AntigravityCLI` on Windows, or the official install script on Linux). On Windows the credential is read via a small Python helper script (`src/providers/win-cred-read.py`), so Python must be on `PATH`. On Linux it's a plain JSON file, no extra dependency needed. Not yet supported on macOS. |
 

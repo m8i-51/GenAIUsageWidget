@@ -4,6 +4,7 @@ const { fetchClaudeUsage } = require('./providers/claude');
 const { fetchCodexUsage } = require('./providers/codex');
 const { fetchCursorUsage } = require('./providers/cursor');
 const { fetchAntigravityUsage } = require('./providers/antigravity');
+const { fetchCopilotUsage } = require('./providers/copilot');
 const autostart = require('./autostart');
 const alerts = require('./alerts');
 const { loadSettings, saveSettings } = require('./settings');
@@ -930,6 +931,12 @@ ipcMain.handle('get-antigravity-usage', () => {
   }
   return withUsageAlerts('antigravity', fetchWithCache('antigravity', fetchAntigravityUsage));
 });
+ipcMain.handle('get-copilot-usage', () => {
+  if (process.env.GENAI_USAGE_DEMO === '1') {
+    return withUsageAlerts('copilot', require('./demo-usage').copilot());
+  }
+  return withUsageAlerts('copilot', fetchWithCache('copilot', fetchCopilotUsage));
+});
 
 ipcMain.on('resize-to', (event, size) => {
   const win = BrowserWindow.fromWebContents(event.sender);
@@ -983,7 +990,7 @@ app.whenReady().then(() => {
   if (process.platform === 'win32') {
     app.setAppUserModelId('com.github.m8i-51.genaiusagewidget');
   }
-  preloadLastGood(['claude', 'codex', 'cursor', 'antigravity']);
+  preloadLastGood(['claude', 'codex', 'cursor', 'antigravity', 'copilot']);
   loadSettings();
   createPopup();
   createWidget();
