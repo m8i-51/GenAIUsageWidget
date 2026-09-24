@@ -46,7 +46,10 @@ you to log in again, and polls their usage APIs about once a minute.
   - **Tray icon** — when the desktop widget is hidden, click to open a popup near
     the tray (click elsewhere to dismiss). When the widget is already visible,
     click focuses the widget instead (and expands it if it was tucked to the top
-    edge).
+    edge). The icon itself is a live meter, like CodexBar's menu-bar bars: the
+    thick bar is session quota left and the thin bar is weekly quota left for
+    whichever visible provider is closest to its limit (green / amber / red).
+    Hover it for every provider's remaining quota.
   - **Desktop widget** — an always-on-top, draggable card pinned to the top-right
     of the screen. Toggle it from the tray icon's right-click menu. Drag it to the
     left, right, or top edge (or click the Hide button for the nearest edge) and
