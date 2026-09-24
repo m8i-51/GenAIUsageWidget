@@ -1,4 +1,4 @@
-const { app, Tray, Menu, BrowserWindow, screen, ipcMain } = require('electron');
+const { app, Tray, Menu, BrowserWindow, screen, ipcMain, Notification } = require('electron');
 const path = require('path');
 const { fetchClaudeUsage } = require('./providers/claude');
 const { fetchCodexUsage } = require('./providers/codex');
@@ -6,6 +6,7 @@ const { fetchCursorUsage } = require('./providers/cursor');
 const { fetchAntigravityUsage } = require('./providers/antigravity');
 const { fetchCopilotUsage } = require('./providers/copilot');
 const autostart = require('./autostart');
+const alerts = require('./alerts');
 const { loadSettings, saveSettings } = require('./settings');
 const { fetchWithCache, preloadLastGood } = require('./usage-cache');
 const {
@@ -774,6 +775,12 @@ function createTray() {
       },
       { type: 'separator' },
       {
+        label: 'Usage Alerts',
+        type: 'checkbox',
+        checked: loadSettings().alertsEnabled,
+        click: (menuItem) => broadcastSettings(saveSettings({ alertsEnabled: menuItem.checked })),
+      },
+      {
         label: 'Start at Login',
         type: 'checkbox',
         checked: autostart.isEnabled(),
@@ -878,25 +885,57 @@ ipcMain.on('widget-drag-end', () => {
   scheduleWidgetBoundsSave();
 });
 
+function showUsageNotification(title, body) {
+  if (!Notification.isSupported()) return;
+  new Notification({ title, body, icon: path.join(__dirname, '..', 'assets', 'icon.png') }).show();
+}
+
+// Popup and widget both poll; the alert state machine dedupes repeat results.
+async function withUsageAlerts(providerId, resultPromise) {
+  const result = await resultPromise;
+  const settings = loadSettings();
+  if (!settings.hiddenProviders.includes(providerId)) {
+    try {
+      alerts.checkAndNotify(providerId, result, {
+        enabled: settings.alertsEnabled,
+        notify: showUsageNotification,
+      });
+    } catch (err) {
+      console.warn(`Usage alert failed for ${providerId}:`, err.message);
+    }
+  }
+  return result;
+}
+
 ipcMain.handle('get-claude-usage', () => {
-  if (process.env.GENAI_USAGE_DEMO === '1') return require('./demo-usage').claude();
-  return fetchWithCache('claude', fetchClaudeUsage);
+  if (process.env.GENAI_USAGE_DEMO === '1') {
+    return withUsageAlerts('claude', require('./demo-usage').claude());
+  }
+  return withUsageAlerts('claude', fetchWithCache('claude', fetchClaudeUsage));
 });
 ipcMain.handle('get-codex-usage', () => {
-  if (process.env.GENAI_USAGE_DEMO === '1') return require('./demo-usage').codex();
-  return fetchWithCache('codex', fetchCodexUsage);
+  if (process.env.GENAI_USAGE_DEMO === '1') {
+    return withUsageAlerts('codex', require('./demo-usage').codex());
+  }
+  return withUsageAlerts('codex', fetchWithCache('codex', fetchCodexUsage));
 });
 ipcMain.handle('get-cursor-usage', () => {
-  if (process.env.GENAI_USAGE_DEMO === '1') return require('./demo-usage').cursor();
-  return fetchWithCache('cursor', fetchCursorUsage);
+  if (process.env.GENAI_USAGE_DEMO === '1') {
+    return withUsageAlerts('cursor', require('./demo-usage').cursor());
+  }
+  return withUsageAlerts('cursor', fetchWithCache('cursor', fetchCursorUsage));
 });
 ipcMain.handle('get-antigravity-usage', () => {
-  if (process.env.GENAI_USAGE_DEMO === '1') return require('./demo-usage').antigravity();
-  return fetchWithCache('antigravity', fetchAntigravityUsage);
+  if (process.env.GENAI_USAGE_DEMO === '1') {
+    return withUsageAlerts('antigravity', require('./demo-usage').antigravity());
+  }
+  return withUsageAlerts('antigravity', fetchWithCache('antigravity', fetchAntigravityUsage));
 });
 ipcMain.handle('get-copilot-usage', () => {
-  if (process.env.GENAI_USAGE_DEMO === '1') return require('./demo-usage').copilot();
-  return fetchWithCache('copilot', fetchCopilotUsage);
+  if (process.env.GENAI_USAGE_DEMO === '1') {
+    return withUsageAlerts('copilot', require('./demo-usage').copilot());
+  }
+  return withUsageAlerts('copilot', fetchWithCache('copilot', fetchCopilotUsage));
 });
 
 ipcMain.on('resize-to', (event, size) => {
@@ -947,6 +986,10 @@ ipcMain.on('resize-to', (event, size) => {
 });
 
 app.whenReady().then(() => {
+  // Windows only shows toast notifications for apps with an AppUserModelID.
+  if (process.platform === 'win32') {
+    app.setAppUserModelId('com.github.m8i-51.genaiusagewidget');
+  }
   preloadLastGood(['claude', 'codex', 'cursor', 'antigravity', 'copilot']);
   loadSettings();
   createPopup();

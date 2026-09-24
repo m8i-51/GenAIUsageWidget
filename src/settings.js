@@ -8,6 +8,7 @@ const DEFAULTS = {
   widgetBounds: null,
   widgetEdgeHide: null,
   widgetDockEdge: null,
+  alertsEnabled: true,
 };
 
 let settingsPath = null;
@@ -24,6 +25,9 @@ function mergeWithDefaults(raw) {
   const merged = { ...DEFAULTS, ...raw };
   if (!Array.isArray(merged.hiddenProviders)) {
     merged.hiddenProviders = [];
+  }
+  if (merged.alertsEnabled !== false) {
+    merged.alertsEnabled = true;
   }
   if (merged.compactMode !== true) {
     merged.compactMode = false;
