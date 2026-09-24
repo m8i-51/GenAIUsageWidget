@@ -62,6 +62,12 @@ you to log in again, and polls their usage APIs about once a minute.
   the popup and the widget, a 429 triggers a long backoff (honoring
   `Retry-After`), and the last good snapshot is shown (with its timestamp) while
   the API is unavailable — even across app restarts.
+- **Usage alerts** — a native OS notification when a provider's headline
+  meter crosses 70% (warning) or 90% (critical). It fires once per crossing and
+  again only after usage drops back below 65% / 85%. Hidden providers, errors,
+  and stale snapshots never alert. Toggle **Usage Alerts** in the tray icon's
+  right-click menu (on by default). On Linux this needs a notification daemon,
+  which most desktop environments already run.
 - The window auto-sizes to its content, so the transparent widget never blocks
   clicks on what's behind it.
 
