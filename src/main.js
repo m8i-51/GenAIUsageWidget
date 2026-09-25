@@ -9,6 +9,7 @@ const { fetchWindsurfUsage } = require('./providers/windsurf');
 const { fetchKiroUsage } = require('./providers/kiro');
 const autostart = require('./autostart');
 const alerts = require('./alerts');
+const leftoverAlerts = require('./leftover-alerts');
 const pace = require('./pace');
 const serviceStatus = require('./service-status');
 const { loadSettings, saveSettings } = require('./settings');
@@ -823,6 +824,12 @@ function createTray() {
         click: (menuItem) => broadcastSettings(saveSettings({ alertsEnabled: menuItem.checked })),
       },
       {
+        label: 'Unused Quota Reminders',
+        type: 'checkbox',
+        checked: loadSettings().leftoverAlertsEnabled,
+        click: (menuItem) => broadcastSettings(saveSettings({ leftoverAlertsEnabled: menuItem.checked })),
+      },
+      {
         label: 'Service Status',
         type: 'checkbox',
         checked: loadSettings().serviceStatusEnabled,
@@ -1025,6 +1032,14 @@ async function withUsageAlerts(providerId, resultPromise) {
       });
     } catch (err) {
       console.warn(`Usage alert failed for ${providerId}:`, err.message);
+    }
+    try {
+      leftoverAlerts.checkAndNotify(providerId, result, {
+        enabled: settings.leftoverAlertsEnabled,
+        notify: showUsageNotification,
+      });
+    } catch (err) {
+      console.warn(`Unused quota reminder failed for ${providerId}:`, err.message);
     }
   }
   return result;

@@ -9,6 +9,7 @@ const DEFAULTS = {
   widgetEdgeHide: null,
   widgetDockEdge: null,
   alertsEnabled: true,
+  leftoverAlertsEnabled: true,
   serviceStatusEnabled: true,
 };
 
@@ -29,6 +30,9 @@ function mergeWithDefaults(raw) {
   }
   if (merged.alertsEnabled !== false) {
     merged.alertsEnabled = true;
+  }
+  if (merged.leftoverAlertsEnabled !== false) {
+    merged.leftoverAlertsEnabled = true;
   }
   if (merged.serviceStatusEnabled !== false) {
     merged.serviceStatusEnabled = true;

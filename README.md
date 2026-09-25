@@ -74,6 +74,13 @@ you to log in again, and polls their usage APIs about once a minute.
   and stale snapshots never alert. Toggle **Usage Alerts** in the tray icon's
   right-click menu (on by default). On Linux this needs a notification daemon,
   which most desktop environments already run.
+- **Unused quota reminders** — within 24 hours of a weekly or monthly window
+  resetting (Claude/Codex weekly, Copilot premium, Cursor, Windsurf, Kiro, and
+  any other meter seen resetting more than 36 hours out), a notification says
+  how much would go to waste ("42% of weekly limit unused, resets in 5h") when
+  at least 30% is left and your recent pace won't use it up. Once per window;
+  5-hour sessions and daily quotas are skipped. Toggle **Unused Quota
+  Reminders** in the tray menu (on by default).
 - **Pace forecast** — under each meter, a line predicts when you'll hit the
   limit at your recent rate ("At this pace, limit in 36m"), or says you're on
   pace to last until the reset. The rate comes from the last hour of samples
