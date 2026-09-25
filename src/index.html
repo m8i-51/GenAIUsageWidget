@@ -1149,6 +1149,34 @@
             </div>
           </div>
 
+          <div class="tile" id="gemini-provider" data-provider="gemini">
+            <div class="ring-item">
+              <div class="ring">
+                <svg class="ring-svg" viewBox="0 0 64 64" aria-hidden="true">
+                  <circle class="ring-track" cx="32" cy="32" r="26" pathLength="100" />
+                  <circle class="ring-fill" id="gemini-bar" cx="32" cy="32" r="26" pathLength="100" transform="rotate(-90 32 32)" />
+                </svg>
+                <span class="ring-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 22A11.9 11.9 0 0 0 2 12 11.9 11.9 0 0 0 12 2a11.9 11.9 0 0 0 10 10 11.9 11.9 0 0 0-10 10Z"/></svg>
+                </span>
+              </div>
+              <span class="ring-value" id="gemini-value">–</span>
+              <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
+              <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <span class="status-dot" aria-hidden="true"></span>
+            </div>
+            <div class="tile-body">
+              <div class="flyout-head">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 22A11.9 11.9 0 0 0 2 12 11.9 11.9 0 0 0 12 2a11.9 11.9 0 0 0 10 10 11.9 11.9 0 0 0-10 10Z"/></svg>
+                <span>Gemini Usage</span>
+              </div>
+              <div class="tile-detail" id="gemini-detail"></div>
+              <div class="tile-sub" id="gemini-reset">Loading…</div>
+              <div class="tile-hint" id="gemini-hint" hidden></div>
+              <button type="button" class="tile-incident" id="gemini-incident" data-status-provider="gemini" hidden></button>
+            </div>
+          </div>
+
           <div class="tile" id="cursor-provider" data-provider="cursor">
             <div class="ring-item">
               <div class="ring">

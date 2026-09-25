@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('api', {
   getCursorUsage: () => ipcRenderer.invoke('get-cursor-usage'),
   getAntigravityUsage: () => ipcRenderer.invoke('get-antigravity-usage'),
   getCopilotUsage: () => ipcRenderer.invoke('get-copilot-usage'),
+  getGeminiUsage: () => ipcRenderer.invoke('get-gemini-usage'),
   getWindsurfUsage: () => ipcRenderer.invoke('get-windsurf-usage'),
   getKiroUsage: () => ipcRenderer.invoke('get-kiro-usage'),
   getSettings: () => ipcRenderer.invoke('get-settings'),

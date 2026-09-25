@@ -67,6 +67,18 @@ function copilot() {
   });
 }
 
+function gemini() {
+  const tomorrow = new Date();
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  tomorrow.setUTCHours(7, 0, 0, 0);
+  const resetsAt = tomorrow.toISOString();
+  return ok({
+    primary: { percent: 44, resetsAt, model: 'gemini-2.5-pro' },
+    secondary: { percent: 6, resetsAt, model: 'gemini-2.5-flash' },
+    plan: 'Free',
+  });
+}
+
 function windsurf() {
   return ok({
     primary: { percent: 64, resetsAt: minutesFromNow(9 * 60 + 20) },
@@ -98,6 +110,7 @@ const PACE_GAIN = {
   copilot: { primary: 3, secondary: 0 },
   windsurf: { primary: 5, secondary: 0 },
   kiro: { primary: 1, secondary: 0 },
+  gemini: { primary: 2, secondary: 0 },
 };
 
 function seedPace(providerId, result, seedSample) {
@@ -123,4 +136,4 @@ function serviceStatus(providerId) {
   return SERVICE_STATUS[providerId] ?? null;
 }
 
-module.exports = { claude, codex, cursor, antigravity, copilot, windsurf, kiro, seedPace, serviceStatus };
+module.exports = { claude, codex, cursor, antigravity, copilot, gemini, windsurf, kiro, seedPace, serviceStatus };

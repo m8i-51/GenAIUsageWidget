@@ -39,6 +39,7 @@ function installIpc() {
   ipcMain.handle('get-cursor-usage', () => demo.cursor());
   ipcMain.handle('get-antigravity-usage', () => demo.antigravity());
   ipcMain.handle('get-copilot-usage', () => demo.copilot());
+  ipcMain.handle('get-gemini-usage', () => demo.gemini());
   ipcMain.handle('get-windsurf-usage', () => demo.windsurf());
   ipcMain.handle('get-kiro-usage', () => demo.kiro());
   ipcMain.on('resize-to', () => {

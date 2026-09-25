@@ -5,6 +5,7 @@ const { fetchCodexUsage } = require('./providers/codex');
 const { fetchCursorUsage } = require('./providers/cursor');
 const { fetchAntigravityUsage } = require('./providers/antigravity');
 const { fetchCopilotUsage } = require('./providers/copilot');
+const { fetchGeminiUsage } = require('./providers/gemini');
 const { fetchWindsurfUsage } = require('./providers/windsurf');
 const { fetchKiroUsage } = require('./providers/kiro');
 const autostart = require('./autostart');
@@ -950,6 +951,7 @@ const USAGE_FETCHERS = {
   cursor: fetchCursorUsage,
   antigravity: fetchAntigravityUsage,
   copilot: fetchCopilotUsage,
+  gemini: fetchGeminiUsage,
   windsurf: fetchWindsurfUsage,
   kiro: fetchKiroUsage,
 };
