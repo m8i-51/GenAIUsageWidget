@@ -13,6 +13,7 @@ const secrets = require('./secrets');
 const autostart = require('./autostart');
 const alerts = require('./alerts');
 const pace = require('./pace');
+const { getLocalCost } = require('./local-cost');
 const serviceStatus = require('./service-status');
 const { loadSettings, saveSettings } = require('./settings');
 const { fetchWithCache, preloadLastGood, invalidate: invalidateUsage } = require('./usage-cache');
@@ -1128,6 +1129,16 @@ async function withUsageAlerts(providerId, resultPromise) {
 for (const providerId of Object.keys(USAGE_FETCHERS)) {
   ipcMain.handle(`get-${providerId}-usage`, () => withUsageAlerts(providerId, getUsage(providerId)));
 }
+
+ipcMain.handle('get-local-cost', async () => {
+  if (process.env.GENAI_USAGE_DEMO === '1') return require('./demo-usage').localCost();
+  try {
+    return await getLocalCost();
+  } catch (err) {
+    console.warn('Local cost scan failed:', err.message);
+    return null;
+  }
+});
 
 ipcMain.on('resize-to', (event, size) => {
   const win = BrowserWindow.fromWebContents(event.sender);
