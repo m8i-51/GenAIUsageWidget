@@ -59,6 +59,25 @@ function formatResetLabel(isoString) {
   return `Resets ${weekday} ${time}`;
 }
 
+/**
+ * One line for a meter's pace forecast (from main's pace.js), or null.
+ * @returns {{ text: string, tone: 'limit' | 'safe' } | null}
+ */
+function formatPace(forecast) {
+  if (!forecast) return null;
+  if (!forecast.limitAt || !forecast.beforeReset) {
+    return { text: 'On pace to last until reset', tone: 'safe' };
+  }
+  const date = new Date(forecast.limitAt);
+  const diffMs = date.getTime() - Date.now();
+  if (diffMs < 18 * 60 * 60 * 1000) {
+    return { text: `At this pace, limit in ${formatCountdown(forecast.limitAt)}`, tone: 'limit' };
+  }
+  const weekday = date.toLocaleDateString([], { weekday: 'short' });
+  const time = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return { text: `At this pace, limit ${weekday} ${time}`, tone: 'limit' };
+}
+
 function severityClass(percent) {
   if (percent >= 70) return 'critical';
   if (percent >= 45) return 'warning';
@@ -258,6 +277,10 @@ function setDetail(prefix, rows) {
     const clamped = Math.max(0, Math.min(100, row.percent ?? 0));
     const used = row.percent == null ? '–' : `${Math.round(clamped)}% Used`;
     const reset = row.sub ? escapeHtml(row.sub) : '';
+    const pace = formatPace(row.forecast);
+    const paceHtml = pace
+      ? `<span class="detail-pace pace-${pace.tone}">${escapeHtml(pace.text)}</span>`
+      : '';
     return (
       `<div class="detail-row">` +
         `<div class="detail-head">` +
@@ -265,7 +288,7 @@ function setDetail(prefix, rows) {
           `<span class="detail-reset">${reset}</span>` +
         `</div>` +
         `<div class="meter ${severityClass(clamped)}"><span class="meter-fill" style="width:${clamped}%"></span></div>` +
-        `<div class="detail-used">${used}</div>` +
+        `<div class="detail-used"><span>${used}</span>${paceHtml}</div>` +
       `</div>`
     );
   }).join('');
@@ -470,15 +493,17 @@ async function updateClaudeCard() {
     `Week ${week.percent}% (resets in ${formatCountdown(week.resetsAt)})`;
   applyStaleState('claude', result, resetEl, baseText);
 
+  const forecasts = result.forecasts ?? {};
   const rows = [
-    { label: 'Current session', percent: session.percent, sub: formatResetLabel(session.resetsAt) },
-    { label: 'All models', percent: week.percent, sub: formatResetLabel(week.resetsAt) },
+    { label: 'Current session', percent: session.percent, sub: formatResetLabel(session.resetsAt), forecast: forecasts.session },
+    { label: 'All models', percent: week.percent, sub: formatResetLabel(week.resetsAt), forecast: forecasts.week },
   ];
   if (weekScoped) {
     rows.push({
       label: weekScoped.name ? `Weekly (${weekScoped.name})` : 'Weekly (model-scoped)',
       percent: weekScoped.percent,
       sub: formatResetLabel(weekScoped.resetsAt),
+      forecast: forecasts.weekScoped,
     });
   }
   setDetail('claude', rows);
@@ -499,11 +524,12 @@ async function updateCodexCard() {
   setMeter('codex', primary.percent);
   applyStaleState('codex', result, resetEl, `resets in ${formatCountdown(primary.resetsAt)}`);
 
+  const forecasts = result.forecasts ?? {};
   const rows = [
-    { label: 'Current session', percent: primary.percent, sub: formatResetLabel(primary.resetsAt) },
+    { label: 'Current session', percent: primary.percent, sub: formatResetLabel(primary.resetsAt), forecast: forecasts.primary },
   ];
   if (secondary) {
-    rows.push({ label: 'Weekly', percent: secondary.percent, sub: formatResetLabel(secondary.resetsAt) });
+    rows.push({ label: 'Weekly', percent: secondary.percent, sub: formatResetLabel(secondary.resetsAt), forecast: forecasts.secondary });
   }
   setDetail('codex', rows);
 }
@@ -531,12 +557,13 @@ async function updateCopilotCard() {
   const planPrefix = planLabel ? `${planLabel} · ` : '';
   applyStaleState('copilot', result, resetEl, `${planPrefix}resets in ${formatCountdown(headline.resetsAt)}`);
 
+  const forecasts = result.forecasts ?? {};
   const rows = [];
   if (primary) {
-    rows.push({ label: 'Premium', percent: primary.percent, sub: formatResetLabel(primary.resetsAt) });
+    rows.push({ label: 'Premium', percent: primary.percent, sub: formatResetLabel(primary.resetsAt), forecast: forecasts.primary });
   }
   if (secondary) {
-    rows.push({ label: 'Chat', percent: secondary.percent, sub: formatResetLabel(secondary.resetsAt) });
+    rows.push({ label: 'Chat', percent: secondary.percent, sub: formatResetLabel(secondary.resetsAt), forecast: forecasts.secondary });
   }
   setDetail('copilot', rows);
 }
@@ -550,8 +577,9 @@ async function updateCursorCard() {
   setMeter('cursor', percent);
   applyStaleState('cursor', result, resetEl, `cycle ends in ${formatCountdown(billingCycleEnd)}`);
 
+  const forecasts = result.forecasts ?? {};
   const rows = [
-    { label: 'Total', percent, sub: formatResetLabel(billingCycleEnd) },
+    { label: 'Total', percent, sub: formatResetLabel(billingCycleEnd), forecast: forecasts.total },
   ];
   if (autoPercent != null) rows.push({ label: 'Auto', percent: autoPercent });
   if (apiPercent != null) rows.push({ label: 'API', percent: apiPercent });
@@ -560,6 +588,7 @@ async function updateCursorCard() {
       label: 'Grok Bot',
       percent: grokBot.percent,
       sub: formatResetLabel(grokBot.resetsAt),
+      forecast: forecasts.grokBot,
     });
   }
   setDetail('cursor', rows);
@@ -588,6 +617,7 @@ async function updateAntigravityCard() {
   applyStaleState('antigravity', result, resetEl, groupSummaries.join('\n'));
   resetEl.style.webkitLineClamp = String(groups.length);
 
+  const forecasts = result.forecasts ?? {};
   const detailRows = [];
   groups.forEach((g) => {
     if (g.buckets && g.buckets.length > 0) {
@@ -596,6 +626,7 @@ async function updateAntigravityCard() {
           label: `${g.name} (${b.name})`,
           percent: b.percent,
           sub: formatResetLabel(b.resetsAt),
+          forecast: forecasts[`${g.name}/${b.name}`],
         });
       });
     } else {
@@ -603,6 +634,7 @@ async function updateAntigravityCard() {
         label: g.name,
         percent: g.percent,
         sub: g.resetsAt ? formatResetLabel(g.resetsAt) : null,
+        forecast: forecasts[g.name],
       });
     }
   });

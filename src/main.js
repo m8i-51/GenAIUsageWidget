@@ -7,6 +7,7 @@ const { fetchAntigravityUsage } = require('./providers/antigravity');
 const { fetchCopilotUsage } = require('./providers/copilot');
 const autostart = require('./autostart');
 const alerts = require('./alerts');
+const pace = require('./pace');
 const { loadSettings, saveSettings } = require('./settings');
 const { fetchWithCache, preloadLastGood } = require('./usage-cache');
 const { summarizeForTray, formatTooltip, renderTrayPng } = require('./tray-icon');
@@ -932,9 +933,19 @@ const USAGE_FETCHERS = {
   copilot: fetchCopilotUsage,
 };
 
-function getUsage(providerId) {
-  if (process.env.GENAI_USAGE_DEMO === '1') return require('./demo-usage')[providerId]();
-  return fetchWithCache(providerId, USAGE_FETCHERS[providerId]);
+const demoPaceSeeded = new Set();
+
+async function getUsage(providerId) {
+  if (process.env.GENAI_USAGE_DEMO === '1') {
+    const demo = require('./demo-usage');
+    const result = demo[providerId]();
+    if (!demoPaceSeeded.has(providerId)) {
+      demoPaceSeeded.add(providerId);
+      demo.seedPace(providerId, result, pace.seedSample);
+    }
+    return pace.withForecasts(providerId, result);
+  }
+  return pace.withForecasts(providerId, await fetchWithCache(providerId, USAGE_FETCHERS[providerId]));
 }
 
 function showUsageNotification(title, body) {
