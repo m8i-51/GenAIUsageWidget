@@ -37,6 +37,8 @@ function meters(providerId, usage) {
     case 'codex':
     case 'copilot':
     case 'gemini':
+    case 'windsurf':
+    case 'kiro':
       add('primary', usage.primary);
       add('secondary', usage.secondary);
       break;

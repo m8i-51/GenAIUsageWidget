@@ -10,6 +10,8 @@ const PROVIDER_LABELS = {
   antigravity: 'Antigravity',
   copilot: 'Copilot',
   gemini: 'Gemini',
+  windsurf: 'Windsurf',
+  kiro: 'Kiro',
 };
 
 // Per provider: { warning: 'below'|'notified', critical: 'below'|'notified' }.
@@ -42,6 +44,16 @@ function headlineUsage(providerId, usage) {
       const headline = usage.primary ?? usage.secondary;
       return headline ? { percent: headline.percent, label: usage.primary ? 'Pro' : 'Flash' } : null;
     }
+    case 'windsurf': {
+      const headline = usage.primary ?? usage.secondary;
+      if (!headline) return null;
+      const label = usage.kind === 'credits'
+        ? (usage.primary ? 'prompt credits' : 'flow actions')
+        : (usage.primary ? 'daily' : 'weekly');
+      return { percent: headline.percent, label };
+    }
+    case 'kiro':
+      return usage.primary ? { percent: usage.primary.percent, label: 'monthly credits' } : null;
     default:
       return null;
   }

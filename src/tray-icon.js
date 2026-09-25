@@ -12,6 +12,8 @@ const PROVIDER_LABELS = {
   cursor: 'Cursor',
   antigravity: 'Antigravity',
   copilot: 'Copilot',
+  windsurf: 'Windsurf',
+  kiro: 'Kiro',
   gemini: 'Gemini',
 };
 
@@ -72,6 +74,15 @@ function extractWindows(providerId, usage) {
         weekLabel: 'chat',
       };
     }
+    case 'windsurf': {
+      const top = usage.primary ?? usage.secondary;
+      if (!top) return null;
+      return {
+        session: clampPercent(top.percent),
+        week: usage.primary ? clampPercent(usage.secondary?.percent) : null,
+        weekLabel: usage.kind === 'credits' ? 'flow' : 'week',
+      };
+    }
     case 'gemini': {
       // Pro on top, Flash below (both daily), matching the card.
       const top = usage.primary ?? usage.secondary;
@@ -82,6 +93,13 @@ function extractWindows(providerId, usage) {
         weekLabel: 'flash',
       };
     }
+    case 'kiro':
+      if (!usage.primary) return null;
+      return {
+        session: clampPercent(usage.primary.percent),
+        week: clampPercent(usage.secondary?.percent),
+        weekLabel: usage.secondaryKind || 'bonus',
+      };
     default:
       return null;
   }
@@ -99,14 +117,38 @@ function summarizeForTray(results, hiddenProviders = []) {
     if (hidden.has(id) || !result || !result.ok) continue;
     const windows = extractWindows(id, result.usage);
     if (!windows || windows.session == null) continue;
-    entries.push({ id, label: PROVIDER_LABELS[id] || id, stale: !!result.stale, ...windows });
+    entries.push({
+      id,
+      label: PROVIDER_LABELS[id] || id,
+      stale: !!result.stale,
+      status: result.serviceStatus?.level ?? 'none',
+      ...windows,
+    });
   }
-  if (entries.length === 0) return { primary: null, entries };
+  if (entries.length === 0) return { primary: null, entries, incident: null };
 
   const worst = (e) => Math.max(e.session, e.week ?? 0);
   const primary = entries.reduce((a, b) => (worst(b) > worst(a) ? b : a));
-  return { primary, entries };
+  return { primary, entries, incident: worstIncident(entries) };
 }
+
+const INCIDENT_RANK = { minor: 1, major: 2, critical: 3 };
+
+/** Worst outage among visible providers (maintenance does not count), or null. */
+function worstIncident(entries) {
+  let worst = null;
+  for (const { status } of entries) {
+    if ((INCIDENT_RANK[status] ?? 0) > (INCIDENT_RANK[worst] ?? 0)) worst = status;
+  }
+  return worst;
+}
+
+const STATUS_SUFFIX = {
+  maintenance: 'maint.',
+  minor: 'degraded',
+  major: 'outage',
+  critical: 'outage',
+};
 
 function formatTooltip(summary) {
   if (!summary.primary) return 'GenAIUsageWidget';
@@ -114,6 +156,7 @@ function formatTooltip(summary) {
     let line = `${e.label}: ${Math.round(100 - e.session)}% left`;
     if (e.week != null) line += ` (${e.weekLabel || 'week'} ${Math.round(100 - e.week)}%)`;
     if (e.stale) line += ' *';
+    if (STATUS_SUFFIX[e.status]) line += ` ⚠ ${STATUS_SUFFIX[e.status]}`;
     return line;
   });
   // Windows truncates tray tooltips at 127 characters.
@@ -221,7 +264,7 @@ function encodePng(pixels, size) {
 /**
  * Render the meter as a square PNG. Layout is defined on a 16px grid and
  * scaled, so 16/24/32px all share the same proportions.
- * @param {{ session: number, week: number | null, stale?: boolean }} entry
+ * @param {{ session: number, week: number | null, stale?: boolean, incident?: string | null }} entry
  */
 function renderTrayPng(entry, size = 16) {
   const s = size / 16;
@@ -234,6 +277,15 @@ function renderTrayPng(entry, size = 16) {
   if (hasWeek) {
     const bottom = { x: 1 * s, y: 10 * s, w: 14 * s, h: 3 * s, r: 1.5 * s };
     drawBar(pixels, size, bottom, entry.week, entry.stale);
+  }
+  if (entry.incident) {
+    // Status-page badge in the top-right corner: amber when degraded, red when down.
+    const color = entry.incident === 'minor' ? COLORS.warning : COLORS.critical;
+    const d = 6 * s;
+    blend(pixels, size, { x: size - d, y: 0, w: d, h: d, r: d / 2 }, [0, 0, 0], 0.55);
+    const inner = 4.4 * s;
+    const off = (d - inner) / 2;
+    blend(pixels, size, { x: size - d + off, y: off, w: inner, h: inner, r: inner / 2 }, color, 1);
   }
   return encodePng(pixels, size);
 }

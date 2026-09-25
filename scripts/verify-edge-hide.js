@@ -78,6 +78,8 @@ app.whenReady().then(async () => {
     ipcMain.handle('get-antigravity-usage', async () => ({ error: 'not configured' }));
     ipcMain.handle('get-copilot-usage', async () => ({ error: 'not configured' }));
     ipcMain.handle('get-gemini-usage', async () => ({ error: 'not configured' }));
+    ipcMain.handle('get-windsurf-usage', async () => ({ error: 'not configured' }));
+    ipcMain.handle('get-kiro-usage', async () => ({ error: 'not configured' }));
     ipcMain.on('resize-to', () => {});
 
     fs.mkdirSync(OUT_DIR, { recursive: true });
