@@ -70,7 +70,7 @@ you to log in again, and polls their usage APIs about once a minute.
   meter crosses 70% (warning) or 90% (critical). It fires once per crossing and
   again only after usage drops back below 65% / 85%. Hidden providers, errors,
   and stale snapshots never alert. Toggle **Usage Alerts** in the tray icon's
-  right-click menu (on by default). On Linux this needs a notification daemon,
+  right-click menu or in Settings (on by default). On Linux this needs a notification daemon,
   which most desktop environments already run.
 - **Pace forecast** — under each meter, a line predicts when you'll hit the
   limit at your recent rate ("At this pace, limit in 36m"), or says you're on
@@ -87,6 +87,18 @@ you to log in again, and polls their usage APIs about once a minute.
   partial or major outage (uses the **Usage Alerts** toggle). Turn checks off
   with **Service Status** in the tray menu. Antigravity has no public status
   page, so it is not checked. Only signed-in providers are checked.
+- **Settings window** — open it from the gear button on the widget or popup,
+  or **Settings…** in the tray menu. It has start at login, compact mode, the
+  widget's dock side, usage alerts, service status, a show/hide switch per
+  provider with whether it is signed in, and API keys for providers that have
+  no local login.
+- **API-key providers** — z.ai (GLM Coding Plan) shows its 5-hour window, the
+  weekly window when the plan has one, and the MCP quota. Paste the key under
+  Settings → Providers and pick the Global or China (BigModel) region. The key
+  is encrypted with the OS keystore (Electron `safeStorage`: DPAPI on Windows,
+  GNOME Keyring / KWallet on Linux) and is never passed back to the UI. On a
+  Linux desktop with no keyring it is only obfuscated, and the settings window
+  says so.
 - The window auto-sizes to its content, so the transparent widget never blocks
   clicks on what's behind it.
 
@@ -126,6 +138,7 @@ tray icon's right-click menu (off by default).
 | Codex | `~/.codex/auth.json` | Written by the `codex` CLI (`npm i -g @openai/codex`, then `codex login`) |
 | Copilot | `COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN` env vars, then the OS keychain (service `copilot-cli`), then `~/.copilot/config.json` | Run `copilot login` with the GitHub Copilot CLI (`npm i -g @github/copilot`). On Windows the keychain is read via `src/providers/win-cred-read.py`, so Python must be on `PATH`; on Linux it uses `secret-tool` (libsecret) when installed. Uses GitHub's unofficial `copilot_internal/user` endpoint, the same one the VS Code extension uses. |
 | Cursor | Cursor app's `state.vscdb` (SQLite, via `sql.js`) | Requires the Cursor desktop app to be installed and signed in |
+| z.ai | API key saved in Settings → Providers (encrypted in `secrets.json` under the app's user data folder), or the `Z_AI_API_KEY` env var | Create a key in your z.ai account (GLM Coding Plan). Choose the China (BigModel) region for `open.bigmodel.cn` keys. Team quotas are not supported yet. |
 | Antigravity | Windows Credential Manager (target `gemini:antigravity`) on Windows; `~/.gemini/antigravity-cli/antigravity-oauth-token` on Linux | Requires the `agy` CLI to have been used to sign in at least once (`winget install Google.AntigravityCLI` on Windows, or the official install script on Linux). On Windows the credential is read via a small Python helper script (`src/providers/win-cred-read.py`), so Python must be on `PATH`. On Linux it's a plain JSON file, no extra dependency needed. Not yet supported on macOS. |
 
 If a provider isn't set up, its card is hidden. If a provider is set up but its
@@ -141,6 +154,9 @@ src/
   widget-edge-hide.js  Geometry helpers for docking the ring pill to an edge
   preload.js           Exposes the get-*-usage IPC calls and window resizing
   index.html / renderer.js   Shared UI for both the popup and the widget
+  settings.html / settings-renderer.js   Settings window
+  settings.js          Settings file (settings.json in the user data folder)
+  secrets.js           API keys, encrypted with Electron safeStorage
   providers/           One module per provider, each exporting a fetchXUsage()
                        function; not-configured.js marks "not set up" errors
   service-status.js    Polls provider status pages for outages

@@ -39,6 +39,7 @@ function installIpc() {
   ipcMain.handle('get-cursor-usage', () => demo.cursor());
   ipcMain.handle('get-antigravity-usage', () => demo.antigravity());
   ipcMain.handle('get-copilot-usage', () => demo.copilot());
+  ipcMain.handle('get-zai-usage', () => demo.zai());
   ipcMain.on('resize-to', () => {
     // Ignore renderer-driven resizes (they cap at 900px). The capture
     // script sizes the window from the measured .app box instead.

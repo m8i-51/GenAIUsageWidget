@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'" />
+<title>Settings</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #111111;
+    --sidebar: #0a0a0a;
+    --card: #1a1a1a;
+    --card-hover: #202020;
+    --field: #0f0f0f;
+    --text-primary: #f5f5f5;
+    --text-secondary: #a3a3a3;
+    --text-muted: #737373;
+    --hairline: rgba(255, 255, 255, 0.08);
+    --accent: #3dff8a;
+    --accent-soft: rgba(61, 255, 138, 0.14);
+    --warning: #f0d44a;
+    --critical: #ff5c33;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .layout {
+    display: flex;
+    height: 100%;
+  }
+
+  nav {
+    flex: 0 0 168px;
+    padding: 20px 10px;
+    background: var(--sidebar);
+    border-right: 1px solid var(--hairline);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .brand img { width: 20px; height: 20px; }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .nav-item:hover { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); }
+  .nav-item[aria-selected="true"] { background: var(--accent-soft); color: #fff; }
+  .nav-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 28px 32px;
+  }
+
+  section[hidden] { display: none; }
+
+  h1 {
+    margin: 0 0 16px;
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  h2 {
+    margin: 20px 0 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .group {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 52px;
+    padding: 10px 14px;
+  }
+
+  .row + .row { border-top: 1px solid var(--hairline); }
+
+  .row-text { flex: 1; min-width: 0; }
+  .row-title { font-size: 13px; }
+  .row-sub { margin-top: 2px; font-size: 12px; color: var(--text-muted); }
+
+  /* Switch built on a checkbox so keyboard and screen readers work unchanged. */
+  .switch {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+    appearance: none;
+    margin: 0;
+    border-radius: 10px;
+    background: #3a3a3a;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.15s ease;
+  }
+
+  .switch:checked { background: var(--accent); }
+  .switch:checked::after { transform: translateX(16px); background: #0a0a0a; }
+  .switch:disabled { opacity: 0.4; cursor: not-allowed; }
+  .switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  select, input[type="password"], input[type="text"] {
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    background: var(--field);
+    color: var(--text-primary);
+    font: inherit;
+  }
+
+  select:focus, input:focus { outline: none; border-color: rgba(61, 255, 138, 0.45); }
+
+  .segmented {
+    display: inline-flex;
+    padding: 2px;
+    border-radius: 8px;
+    background: var(--field);
+    border: 1px solid var(--hairline);
+  }
+
+  .segmented button {
+    padding: 4px 10px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .segmented button[aria-pressed="true"] { background: #2e2e2e; color: #fff; }
+  .segmented button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  .btn {
+    height: 30px;
+    padding: 0 14px;
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    background: #262626;
+    color: var(--text-primary);
+    font: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .btn:hover { background: #2e2e2e; }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+  .btn.primary { background: var(--accent); border-color: transparent; color: #0a0a0a; font-weight: 600; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.danger { color: var(--critical); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .link {
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .link:hover { text-decoration: underline; }
+
+  .provider-icon {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: #262626;
+    color: var(--text-primary);
+    font-weight: 700;
+  }
+
+  .provider-icon svg { width: 18px; height: 18px; }
+
+  .badge {
+    display: inline-flex;
+    margin-left: 8px;
+    vertical-align: 1px;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .badge::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .badge.on { color: var(--accent); }
+  .badge.error { color: var(--warning); }
+
+  .key-panel {
+    padding: 4px 14px 14px 56px;
+    border-top: none !important;
+  }
+
+  .key-form { display: flex; gap: 8px; }
+  .key-form input { flex: 1; min-width: 0; }
+
+  .key-saved {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .key-dots {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+  }
+
+  .note {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .note.warn { color: var(--warning); }
+  .note.error { color: var(--critical); }
+
+  .field-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .field-row label { color: var(--text-secondary); font-size: 12px; }
+
+  .about {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 14px;
+  }
+
+  .about img { width: 44px; height: 44px; }
+  .about-name { font-size: 15px; font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .switch, .switch::after { transition: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="layout">
+    <nav role="tablist" aria-label="Settings sections">
+      <div class="brand"><img src="../assets/icon.png" alt="" />Settings</div>
+      <button type="button" class="nav-item" role="tab" data-tab="general" aria-selected="true">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/><circle cx="5.5" cy="4.5" r="1.5" fill="currentColor"/><circle cx="10.5" cy="8" r="1.5" fill="currentColor"/><circle cx="6.5" cy="11.5" r="1.5" fill="currentColor"/></svg>
+        General
+      </button>
+      <button type="button" class="nav-item" role="tab" data-tab="notifications" aria-selected="false">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4 11V7a4 4 0 0 1 8 0v4l1.2 1.5H2.8Z"/><path d="M6.5 14a1.6 1.6 0 0 0 3 0"/></svg>
+        Notifications
+      </button>
+      <button type="button" class="nav-item" role="tab" data-tab="providers" aria-selected="false">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v5.5l3.5 2" stroke-linecap="round"/></svg>
+        Providers
+      </button>
+      <button type="button" class="nav-item" role="tab" data-tab="about" aria-selected="false">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v4"/><circle cx="8" cy="4.8" r="0.4" fill="currentColor"/></svg>
+        About
+      </button>
+    </nav>
+
+    <main>
+      <section id="tab-general" role="tabpanel">
+        <h1>General</h1>
+        <div class="group">
+          <label class="row">
+            <div class="row-text">
+              <div class="row-title">Start at login</div>
+              <div class="row-sub">Open the widget when you sign in</div>
+            </div>
+            <input type="checkbox" class="switch" id="autostart" />
+          </label>
+        </div>
+
+        <h2>Desktop widget</h2>
+        <div class="group">
+          <label class="row">
+            <div class="row-text">
+              <div class="row-title">Compact mode</div>
+              <div class="row-sub">Tighter cards, and smaller rings without the percentage</div>
+            </div>
+            <input type="checkbox" class="switch" id="compactMode" />
+          </label>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Dock side</div>
+              <div class="row-sub">Where "Hide to edge" tucks the widget</div>
+            </div>
+            <select id="widgetDockEdge" aria-label="Dock side">
+              <option value="auto">Nearest edge</option>
+              <option value="top">Top</option>
+              <option value="bottom">Bottom</option>
+              <option value="left">Left</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-notifications" role="tabpanel" hidden>
+        <h1>Notifications</h1>
+        <div class="group">
+          <label class="row">
+            <div class="row-text">
+              <div class="row-title">Usage alerts</div>
+              <div class="row-sub">Notify at 70% and 90% of a provider's headline limit</div>
+            </div>
+            <input type="checkbox" class="switch" id="alertsEnabled" />
+          </label>
+          <label class="row">
+            <div class="row-text">
+              <div class="row-title">Service status</div>
+              <div class="row-sub">Show outages from provider status pages, and notify when one starts</div>
+            </div>
+            <input type="checkbox" class="switch" id="serviceStatusEnabled" />
+          </label>
+        </div>
+      </section>
+
+      <section id="tab-providers" role="tabpanel" hidden>
+        <h1>Providers</h1>
+        <h2>Signed in on this machine</h2>
+        <div class="group" id="local-providers"></div>
+        <div class="note">These are read from each tool's own login. Sign in with the tool's CLI or app and they show up here.</div>
+
+        <h2>API key</h2>
+        <div class="group" id="key-providers"></div>
+      </section>
+
+      <section id="tab-about" role="tabpanel" hidden>
+        <h1>About</h1>
+        <div class="group">
+          <div class="about">
+            <img src="../assets/icon.png" alt="" />
+            <div>
+              <div class="about-name">GenAIUsageWidget</div>
+              <div class="row-sub" id="app-version"></div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-text">
+              <div class="row-title">Source code and releases</div>
+              <div class="row-sub">github.com/m8i-51/GenAIUsageWidget</div>
+            </div>
+            <button type="button" class="btn" id="open-repo">Open</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="settings-renderer.js"></script>
+</body>
+</html>

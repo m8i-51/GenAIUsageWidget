@@ -4,6 +4,7 @@ const PROVIDERS = [
   { id: 'copilot', label: 'Copilot' },
   { id: 'cursor', label: 'Cursor' },
   { id: 'antigravity', label: 'Antigravity' },
+  { id: 'zai', label: 'z.ai' },
 ];
 
 let appSettings = {
@@ -22,7 +23,6 @@ const isWidgetMode = document.body.classList.contains('widget-mode');
 const configuredProviders = Object.fromEntries(PROVIDERS.map((p) => [p.id, false]));
 
 let selectedProvider = null;
-let settingsOpen = false;
 let suppressTileClick = false;
 
 function formatCountdown(isoString) {
@@ -107,37 +107,8 @@ function applySettings(settings) {
       : null,
   };
   document.body.classList.toggle('compact-mode', appSettings.compactMode);
-  const compactToggle = document.getElementById('compact-mode-toggle');
-  if (compactToggle) compactToggle.checked = appSettings.compactMode;
-  syncDockEdgePicker(appSettings.widgetDockEdge || 'auto');
-  renderProviderToggles();
   applyHiddenProviders();
   syncFlyout();
-}
-
-const DOCK_EDGE_LABELS = {
-  auto: 'Auto (nearest edge)',
-  top: 'Top',
-  bottom: 'Bottom',
-  left: 'Left',
-  right: 'Right',
-};
-
-function syncDockEdgePicker(value) {
-  const next = DOCK_EDGE_LABELS[value] ? value : 'auto';
-  const label = document.getElementById('dock-edge-label');
-  if (label) label.textContent = DOCK_EDGE_LABELS[next];
-  document.querySelectorAll('.dock-edge-option').forEach((btn) => {
-    btn.setAttribute('aria-selected', btn.dataset.value === next ? 'true' : 'false');
-  });
-}
-
-function setDockEdgeMenuOpen(open) {
-  const menu = document.getElementById('dock-edge-menu');
-  const trigger = document.getElementById('dock-edge-trigger');
-  if (!menu || !trigger) return;
-  menu.hidden = !open;
-  trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
 function applyEdgeHideUi(state) {
@@ -232,6 +203,9 @@ function authHint(prefix, message) {
   }
   if (prefix === 'antigravity' && (lower.includes('401') || lower.includes('cred'))) {
     return 'Run agy login to re-authenticate';
+  }
+  if (prefix === 'zai' && (lower.includes('401') || lower.includes('403') || lower.includes('key'))) {
+    return 'Check the API key in Settings';
   }
   return null;
 }
@@ -403,9 +377,6 @@ function revealFromEdgeIfCollapsed() {
 
 function closeFlyout() {
   selectedProvider = null;
-  settingsOpen = false;
-  const settings = document.getElementById('settings-panel');
-  if (settings) settings.hidden = true;
   syncFlyout();
 }
 
@@ -422,8 +393,7 @@ function selectProvider(id, { toggle = true } = {}) {
 function syncPanelOpen() {
   const panel = document.getElementById('panel');
   const flyout = document.getElementById('flyout');
-  const settings = document.getElementById('settings-panel');
-  const open = isWidgetMode && ((flyout && !flyout.hidden) || (settings && !settings.hidden));
+  const open = isWidgetMode && flyout && !flyout.hidden;
   panel.classList.toggle('open', !!open);
 }
 
@@ -436,7 +406,7 @@ function syncFlyout() {
     tile.classList.toggle('selected', tile.dataset.provider === selectedProvider);
   });
 
-  if (!isWidgetMode || settingsOpen || !selectedProvider) {
+  if (!isWidgetMode || !selectedProvider) {
     flyout.hidden = true;
     content.innerHTML = '';
     syncPanelOpen();
@@ -683,6 +653,35 @@ async function updateAntigravityCard() {
   setDetail('antigravity', detailRows);
 }
 
+async function updateZaiCard() {
+  const result = await window.api.getZaiUsage();
+  if (!beginCard('zai', result)) return;
+  const resetEl = document.getElementById('zai-reset');
+
+  const { plan, primary, secondary, mcp } = result.usage;
+  if (!primary) {
+    resetEl.textContent = plan ? `${plan} · No quota data` : 'No quota data';
+    setDetail('zai', []);
+    return;
+  }
+
+  setMeter('zai', primary.percent);
+  const planPrefix = plan ? `${plan} · ` : '';
+  applyStaleState('zai', result, resetEl, `${planPrefix}resets in ${formatCountdown(primary.resetsAt)}`);
+
+  const forecasts = result.forecasts ?? {};
+  const rows = [
+    { label: primary.label, percent: primary.percent, sub: formatResetLabel(primary.resetsAt), forecast: forecasts.primary },
+  ];
+  if (secondary) {
+    rows.push({ label: secondary.label, percent: secondary.percent, sub: formatResetLabel(secondary.resetsAt), forecast: forecasts.secondary });
+  }
+  if (mcp) {
+    rows.push({ label: 'MCP', percent: mcp.percent, sub: formatResetLabel(mcp.resetsAt), forecast: forecasts.mcp });
+  }
+  setDetail('zai', rows);
+}
+
 async function updateAll() {
   await Promise.all([
     updateClaudeCard(),
@@ -690,10 +689,10 @@ async function updateAll() {
     updateCopilotCard(),
     updateCursorCard(),
     updateAntigravityCard(),
+    updateZaiCard(),
   ]);
 
   refreshEmptyState();
-  renderProviderToggles();
 
   const updatedEl = document.getElementById('last-updated');
   if (updatedEl) {
@@ -703,82 +702,9 @@ async function updateAll() {
   syncFlyout();
 }
 
-function renderProviderToggles() {
-  const container = document.getElementById('provider-toggles');
-  if (!container) return;
-
-  container.innerHTML = PROVIDERS.map(({ id, label }) => {
-    const configured = configuredProviders[id];
-    const visible = configured && !isProviderHidden(id);
-    const disabledAttr = configured ? '' : 'disabled';
-    const note = configured ? '' : '<span class="provider-toggle-note">Not set up</span>';
-    return (
-      `<label class="settings-row provider-toggle${configured ? '' : ' disabled'}">` +
-        `<span>${escapeHtml(label)}${note}</span>` +
-        `<input type="checkbox" data-provider="${id}" ${visible ? 'checked' : ''} ${disabledAttr} />` +
-      `</label>`
-    );
-  }).join('');
-}
-
-async function onProviderToggleChange(event) {
-  const input = event.target.closest('input[data-provider]');
-  if (!input || input.disabled) return;
-
-  const providerId = input.dataset.provider;
-  const hidden = new Set(appSettings.hiddenProviders);
-  if (input.checked) {
-    hidden.delete(providerId);
-  } else {
-    hidden.add(providerId);
-  }
-  const settings = await window.api.setSettings({ hiddenProviders: [...hidden] });
-  applySettings(settings);
-  await updateAll();
-}
-
-function placeSettingsPanel() {
-  const settings = document.getElementById('settings-panel');
-  const panel = document.getElementById('panel');
-  const notch = document.getElementById('notch');
-  if (!settings || !panel || !notch) return;
-  if (isWidgetMode) {
-    panel.appendChild(settings);
-  } else {
-    notch.appendChild(settings);
-  }
-}
-
-function showSettingsPanel(show) {
-  settingsOpen = !!show;
-  const settings = document.getElementById('settings-panel');
-  const cards = document.getElementById('cards-view');
-  settings.hidden = !show;
-
-  if (isWidgetMode) {
-    cards.hidden = false;
-    if (show) {
-      document.getElementById('flyout').hidden = true;
-      setIgnoreMouse(false);
-    }
-    syncPanelOpen();
-    if (!show) syncFlyout();
-    refreshIgnoreMouse();
-  } else {
-    cards.hidden = show;
-    document.getElementById('panel').classList.remove('open');
-  }
-}
-
 document.getElementById('settings-btn').addEventListener('click', (event) => {
   event.stopPropagation();
-  revealFromEdgeIfCollapsed();
-  showSettingsPanel(true);
-  renderProviderToggles();
-});
-
-document.getElementById('settings-back-btn').addEventListener('click', () => {
-  showSettingsPanel(false);
+  window.api.openSettings();
 });
 
 const hideEdgeBtn = document.getElementById('hide-edge-btn');
@@ -803,33 +729,6 @@ if (isWidgetMode) {
     });
   }
   window.api.onWidgetEdgeHideChanged((state) => applyEdgeHideUi(state));
-}
-
-document.getElementById('compact-mode-toggle').addEventListener('change', async (event) => {
-  const settings = await window.api.setSettings({ compactMode: event.target.checked });
-  applySettings(settings);
-});
-
-const dockEdgeTrigger = document.getElementById('dock-edge-trigger');
-const dockEdgeMenu = document.getElementById('dock-edge-menu');
-if (dockEdgeTrigger && dockEdgeMenu) {
-  dockEdgeTrigger.addEventListener('click', (event) => {
-    event.stopPropagation();
-    setDockEdgeMenuOpen(dockEdgeMenu.hidden);
-  });
-  dockEdgeMenu.addEventListener('click', async (event) => {
-    const option = event.target.closest('.dock-edge-option');
-    if (!option) return;
-    event.stopPropagation();
-    const value = option.dataset.value || 'auto';
-    setDockEdgeMenuOpen(false);
-    syncDockEdgePicker(value);
-    const settings = await window.api.setSettings({
-      widgetDockEdge: value === 'auto' ? null : value,
-    });
-    applySettings(settings);
-  });
-  document.addEventListener('click', () => setDockEdgeMenuOpen(false));
 }
 
 // Card and flyout incident lines open that provider's status page.
@@ -992,7 +891,7 @@ function setIgnoreMouse(ignore) {
 
 function isOverInteractive(el) {
   if (!el) return false;
-  return !!el.closest('.notch, .flyout, .edge-peek-tab, #settings-panel');
+  return !!el.closest('.notch, .flyout, .edge-peek-tab');
 }
 
 function syncIgnoreMouseFromPoint(clientX, clientY) {
@@ -1009,7 +908,7 @@ function refreshIgnoreMouse() {
 
 function isWidgetDragSource(target) {
   if (!target || !target.closest) return false;
-  if (target.closest('button, input, a, label, .dock-edge-picker, .flyout')) return false;
+  if (target.closest('button, input, a, label, .flyout')) return false;
   return !!target.closest('.notch');
 }
 
@@ -1063,9 +962,6 @@ if (isWidgetMode) {
 }
 
 async function init() {
-  placeSettingsPanel();
-  document.getElementById('provider-toggles').addEventListener('change', onProviderToggleChange);
-
   const settings = await window.api.getSettings();
   applySettings(settings);
   if (isWidgetMode && settings.widgetEdgeHide) {
