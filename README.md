@@ -90,13 +90,15 @@ you to log in again, and polls their usage APIs about once a minute.
   at least 30% is left and your recent pace won't use it up. Once per window;
   5-hour sessions and daily quotas are skipped. Toggle **Unused Quota
   Reminders** in the tray menu or in Settings (on by default).
-- **Pace forecast** — under each meter, a line predicts when you'll hit the
-  limit at your recent rate ("At this pace, limit in 36m"), or says you're on
-  pace to last until the reset. The rate comes from the last hour of samples
+- **Pace forecast** — when your recent rate would hit a limit before it
+  resets, the meter shows when in orange ("Limit in 36m"). Otherwise it stays
+  quiet; hover the meter to see that you're on pace to last until the reset. The rate comes from the last hour of samples
   (six hours for weekly/monthly windows) and needs about 10 minutes of
   observation after launch before it appears.
-- **Prompts left** — Claude and Codex meters also say how many more prompts
-  fit before the limit ("About 6 more prompts"). The app counts the prompts you
+- **Prompts left** — Claude and Codex estimate how many more prompts fit
+  before the limit. When 20 or fewer are left (and no pace warning is showing)
+  the meter says so ("~6 prompts left"); the full estimate is in the meter's
+  tooltip. The app counts the prompts you
   sent in the current window from the Claude Code and Codex CLI logs on this
   computer and divides the usage so far by that count. Usage from other apps
   (claude.ai, ChatGPT, IDE plugins) also fills the meter, so the estimate errs
@@ -104,16 +106,16 @@ you to log in again, and polls their usage APIs about once a minute.
 - **Service status** — every 5 minutes the app reads each provider's public
   status page (status.claude.com, status.openai.com, status.cursor.com,
   githubstatus.com) and, during an incident, puts a colored dot on that
-  provider's ring, a "Partial outage: …" line on its card (click it to open the
+  provider's ring, a "Partial outage …" line at the top of its card (click it to open the
   status page), a dot on the tray icon, and a note in the tray tooltip. Claude,
   Codex and Copilot only count the components those tools use (for example
   Copilot on GitHub's page). A notification fires when a provider goes into a
   partial or major outage (uses the **Usage Alerts** toggle). Turn checks off
   with **Service Status** in the tray menu. Antigravity has no public status
   page, so it is not checked. Only signed-in providers are checked.
-- **Local cost estimate** — the Claude and Codex details add a Cost section:
-  today's and the last 30 days' tokens and estimated cost, plus the projects
-  that used the most. It reads the logs Claude Code (`~/.claude/projects`) and
+- **Local cost estimate** — the Claude and Codex details end with a one-line
+  Cost summary (today and the last 30 days); click it to see token counts and
+  the projects that used the most. It reads the logs Claude Code (`~/.claude/projects`) and
   Codex CLI (`~/.codex/sessions`) already keep on disk, so nothing leaves your
   machine. Costs use public API list prices; on a subscription plan this is
   what the same usage would cost pay-as-you-go, not what you are billed.

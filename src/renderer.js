@@ -65,29 +65,38 @@ function formatResetLabel(isoString) {
 }
 
 /**
- * One line for a meter's pace forecast (from main's pace.js), or null.
- * @returns {{ text: string, tone: 'limit' | 'safe' } | null}
+ * Pace forecast (from main's pace.js) for a meter, or null without one.
+ * Only a forecast that hits the limit before reset is shown on the meter;
+ * "on pace" is the normal case and lives in the row's tooltip.
+ * @returns {{ warn: string | null, title: string } | null}
  */
 function formatPace(forecast) {
   if (!forecast) return null;
   if (!forecast.limitAt || !forecast.beforeReset) {
-    return { text: 'On pace to last until reset', tone: 'safe' };
+    return { warn: null, title: 'On pace to last until reset.' };
   }
   const date = new Date(forecast.limitAt);
   const diffMs = date.getTime() - Date.now();
+  let when;
   if (diffMs < 18 * 60 * 60 * 1000) {
-    return { text: `At this pace, limit in ${formatCountdown(forecast.limitAt)}`, tone: 'limit' };
+    when = `in ${formatCountdown(forecast.limitAt)}`;
+  } else {
+    const weekday = date.toLocaleDateString([], { weekday: 'short' });
+    const time = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    when = `${weekday} ${time}`;
   }
-  const weekday = date.toLocaleDateString([], { weekday: 'short' });
-  const time = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  return { text: `At this pace, limit ${weekday} ${time}`, tone: 'limit' };
+  return { warn: `Limit ${when}`, title: `At this pace, the limit is reached ${when}, before it resets.` };
 }
+
+// Prompts-left counts at or below this show on the meter; above it they are
+// in the tooltip, since "about 544 more prompts" is not something to act on.
+const PROMPTS_LEFT_SHOWN_AT = 20;
 
 /**
  * "About 12 more prompts" from main's prompts-left.js, or null. Prompts are
  * counted from local Claude Code / Codex logs; each costs this window's
  * average so far.
- * @returns {{ text: string, title: string } | null}
+ * @returns {{ short: string | null, title: string } | null}
  */
 function formatPromptsLeft(estimate) {
   if (!estimate) return null;
@@ -95,9 +104,13 @@ function formatPromptsLeft(estimate) {
   if (estimate.left <= 0) text = 'Less than 1 more prompt';
   else if (estimate.capped) text = `${estimate.left}+ more prompts`;
   else text = `About ${estimate.left} more prompt${estimate.left === 1 ? '' : 's'}`;
-  const title = `Based on ${estimate.prompts} prompts sent from this computer in this window. `
+  let short = null;
+  if (!estimate.capped && estimate.left <= PROMPTS_LEFT_SHOWN_AT) {
+    short = estimate.left <= 0 ? '<1 prompt left' : `~${estimate.left} prompt${estimate.left === 1 ? '' : 's'} left`;
+  }
+  const title = `${text}, based on ${estimate.prompts} prompts sent from this computer in this window. `
     + 'Use from other apps also counts toward the limit, so the real number may be higher.';
-  return { text, title };
+  return { short, title };
 }
 
 function severityClass(percent) {
@@ -289,28 +302,31 @@ function settleMeters(root) {
 function setDetail(prefix, rows) {
   const detailEl = document.getElementById(`${prefix}-detail`);
 
+  // Each meter reads as: name and % used, the bar, then when it resets.
+  // Pace and prompts-left only appear when they are a warning (pace first);
+  // the full numbers are in the row's tooltip.
   detailEl.innerHTML = rows.map((row, index) => {
     const clamped = Math.max(0, Math.min(100, row.percent ?? 0));
-    let used = row.percent == null ? '–' : `${Math.round(clamped)}% Used`;
-    if (row.amount) used += ` · ${row.amount}`;
-    const reset = row.sub ? escapeHtml(row.sub) : '';
+    const used = row.percent == null ? '–' : `${Math.round(clamped)}%`;
+    const sub = [row.sub, row.amount].filter(Boolean).join(' · ');
     const pace = formatPace(row.forecast);
-    const paceHtml = pace
-      ? `<span class="detail-pace pace-${pace.tone}">${escapeHtml(pace.text)}</span>`
-      : '';
     const prompts = formatPromptsLeft(row.promptsLeft);
-    const promptsHtml = prompts
-      ? `<div class="detail-prompts" title="${escapeHtml(prompts.title)}">${escapeHtml(prompts.text)}</div>`
-      : '';
+    // One warning at most, so the reset time never gets squeezed out.
+    const warn = pace?.warn ?? prompts?.short ?? '';
+    const title = [pace?.title, prompts?.title].filter(Boolean).join('\n');
     return (
-      `<div class="detail-row">` +
+      `<div class="detail-row"${title ? ` title="${escapeHtml(title)}"` : ''}>` +
         `<div class="detail-head">` +
           `<span class="detail-label">${escapeHtml(row.label)}</span>` +
-          `<span class="detail-reset">${reset}</span>` +
+          `<span class="detail-used">${escapeHtml(used)}<span class="detail-used-unit">${row.percent == null ? '' : ' used'}</span></span>` +
         `</div>` +
         `<div class="meter ${severityClass(clamped)}"><span class="meter-fill" data-width="${clamped}" style="width:${lastMeterWidths.get(`${prefix}:${index}`) ?? 0}%"></span></div>` +
-        `<div class="detail-used"><span>${escapeHtml(used)}</span>${paceHtml}</div>` +
-        promptsHtml +
+        ((sub || warn)
+          ? `<div class="detail-sub">` +
+              `<span class="detail-reset">${escapeHtml(sub)}</span>` +
+              (warn ? `<span class="detail-warn">${escapeHtml(warn)}</span>` : '') +
+            `</div>`
+          : '') +
       `</div>`
     );
   }).join('');
@@ -345,7 +361,16 @@ function formatTokens(count) {
   return String(count);
 }
 
-/** Today / last-30-days cost block for providers whose CLI keeps local logs. */
+// Cost details (tokens, per project) are opened with the Cost line; the
+// choice is shared by every card and the flyout and kept until restart.
+let costExpanded = false;
+
+const CHEVRON_SVG = '<svg class="cost-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>';
+
+/**
+ * Today / last-30-days cost for providers whose CLI keeps local logs: one
+ * summary line, with tokens and top projects behind it.
+ */
 function costHtml(prefix) {
   const summary = localCost?.[prefix];
   if (!COST_SOURCES[prefix] || !summary) return '';
@@ -354,16 +379,6 @@ function costHtml(prefix) {
     : '';
   const title = `Estimated from local ${COST_SOURCES[prefix]} logs at API list prices. ` +
     `Subscription plans are not billed per token.${unpriced}`;
-  const totals = [
-    ['Today', summary.today],
-    ['30 days', summary.last30Days],
-  ].map(([label, t]) => (
-    `<div class="cost-total">` +
-      `<span class="cost-value">${formatUsd(t.cost)}</span>` +
-      `<span class="cost-caption">${label}</span>` +
-      `<span class="cost-caption">${formatTokens(t.tokens)} tokens</span>` +
-    `</div>`
-  )).join('');
   const projects = summary.projects.map((p) => (
     `<div class="cost-project">` +
       `<span class="cost-project-name">${escapeHtml(p.name)}</span>` +
@@ -374,15 +389,33 @@ function costHtml(prefix) {
     ? `<div class="cost-more">+${summary.projectCount - summary.projects.length} more projects</div>`
     : '';
   return (
-    `<div class="detail-row cost-block" title="${escapeHtml(title)}">` +
-      `<div class="detail-head">` +
+    `<div class="detail-row cost-block${costExpanded ? ' open' : ''}" title="${escapeHtml(title)}">` +
+      `<button type="button" class="cost-toggle" data-cost-toggle aria-expanded="${costExpanded}">` +
         `<span class="detail-label">Cost</span>` +
-        `<span class="detail-reset">${unpriced ? 'Partial estimate' : 'API-price estimate'}</span>` +
+        `<span class="cost-summary">` +
+          `<span class="cost-value">${formatUsd(summary.today.cost)}</span> today` +
+          `<span class="cost-sep">·</span>` +
+          `<span class="cost-value">${formatUsd(summary.last30Days.cost)}</span> 30d` +
+        `</span>` +
+        CHEVRON_SVG +
+      `</button>` +
+      `<div class="cost-details">` +
+        `<div class="cost-caption">${unpriced ? 'Partial API-price estimate' : 'API-price estimate'} · ` +
+          `${formatTokens(summary.today.tokens)} / ${formatTokens(summary.last30Days.tokens)} tokens</div>` +
+        (projects ? `<div class="cost-projects">${projects}${more}</div>` : '') +
       `</div>` +
-      `<div class="cost-totals">${totals}</div>` +
-      (projects ? `<div class="cost-projects">${projects}${more}</div>` : '') +
     `</div>`
   );
+}
+
+function redrawCostBlocks() {
+  for (const prefix of Object.keys(COST_SOURCES)) {
+    const detailEl = document.getElementById(`${prefix}-detail`);
+    if (!detailEl) continue;
+    detailEl.querySelector('.cost-block')?.remove();
+    detailEl.insertAdjacentHTML('beforeend', costHtml(prefix));
+  }
+  syncFlyout();
 }
 
 async function updateLocalCost() {
@@ -391,13 +424,7 @@ async function updateLocalCost() {
   } catch {
     localCost = null;
   }
-  for (const prefix of Object.keys(COST_SOURCES)) {
-    const detailEl = document.getElementById(`${prefix}-detail`);
-    if (!detailEl) continue;
-    detailEl.querySelector('.cost-block')?.remove();
-    detailEl.insertAdjacentHTML('beforeend', costHtml(prefix));
-  }
-  syncFlyout();
+  redrawCostBlocks();
 }
 
 function setMeter(prefix, percent) {
@@ -465,7 +492,7 @@ function applyServiceStatus(prefix, result) {
   if (ringEl) ringEl.title = summary;
   if (incidentEl) {
     incidentEl.className = `tile-incident status-${status.level}`;
-    incidentEl.title = `Open ${status.url}`;
+    incidentEl.title = `${summary}\nClick to open ${status.url}`;
     incidentEl.innerHTML =
       `<span class="incident-mark"></span>` +
       `<span><span class="incident-label">${escapeHtml(status.label)}</span>` +
@@ -609,9 +636,9 @@ function syncFlyout() {
   }
 
   content.innerHTML =
-    `<div class="flyout-head">${icon}<span>${escapeHtml(provider.label)} Usage</span></div>` +
-    body +
+    `<div class="flyout-head">${icon}<span>${escapeHtml(provider.label)}</span></div>` +
     incident +
+    body +
     (updated ? `<div class="flyout-updated">${escapeHtml(updated)}</div>` : '');
 
   flyout.hidden = false;
@@ -1020,6 +1047,14 @@ if (isWidgetMode) {
   }
   window.api.onWidgetEdgeHideChanged((state) => applyEdgeHideUi(state));
 }
+
+// The Cost line opens and closes its details, in cards and the flyout alike.
+document.addEventListener('click', (event) => {
+  if (!event.target.closest?.('[data-cost-toggle]')) return;
+  event.stopPropagation();
+  costExpanded = !costExpanded;
+  redrawCostBlocks();
+}, true);
 
 // Card and flyout incident lines open that provider's status page.
 document.addEventListener('click', (event) => {
