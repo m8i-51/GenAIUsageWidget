@@ -12,6 +12,9 @@ const PROVIDER_LABELS = {
   cursor: 'Cursor',
   antigravity: 'Antigravity',
   copilot: 'Copilot',
+  windsurf: 'Windsurf',
+  kiro: 'Kiro',
+  gemini: 'Gemini',
   zai: 'z.ai',
 };
 
@@ -73,6 +76,32 @@ function extractWindows(providerId, usage) {
         weekLabel: 'chat',
       };
     }
+    case 'windsurf': {
+      const top = usage.primary ?? usage.secondary;
+      if (!top) return null;
+      return {
+        session: clampPercent(top.percent),
+        week: usage.primary ? clampPercent(usage.secondary?.percent) : null,
+        weekLabel: usage.kind === 'credits' ? 'flow' : 'week',
+      };
+    }
+    case 'gemini': {
+      // Pro on top, Flash below (both daily), matching the card.
+      const top = usage.primary ?? usage.secondary;
+      if (!top) return null;
+      return {
+        session: clampPercent(top.percent),
+        week: usage.primary ? clampPercent(usage.secondary?.percent) : null,
+        weekLabel: 'flash',
+      };
+    }
+    case 'kiro':
+      if (!usage.primary) return null;
+      return {
+        session: clampPercent(usage.primary.percent),
+        week: clampPercent(usage.secondary?.percent),
+        weekLabel: usage.secondaryKind || 'bonus',
+      };
     default:
       return null;
   }

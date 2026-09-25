@@ -966,6 +966,34 @@
             </div>
           </div>
 
+          <div class="tile" id="gemini-provider" data-provider="gemini">
+            <div class="ring-item">
+              <div class="ring">
+                <svg class="ring-svg" viewBox="0 0 64 64" aria-hidden="true">
+                  <circle class="ring-track" cx="32" cy="32" r="26" pathLength="100" />
+                  <circle class="ring-fill" id="gemini-bar" cx="32" cy="32" r="26" pathLength="100" transform="rotate(-90 32 32)" />
+                </svg>
+                <span class="ring-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 22A11.9 11.9 0 0 0 2 12 11.9 11.9 0 0 0 12 2a11.9 11.9 0 0 0 10 10 11.9 11.9 0 0 0-10 10Z"/></svg>
+                </span>
+              </div>
+              <span class="ring-value" id="gemini-value">–</span>
+              <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
+              <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <span class="status-dot" aria-hidden="true"></span>
+            </div>
+            <div class="tile-body">
+              <div class="flyout-head">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 22A11.9 11.9 0 0 0 2 12 11.9 11.9 0 0 0 12 2a11.9 11.9 0 0 0 10 10 11.9 11.9 0 0 0-10 10Z"/></svg>
+                <span>Gemini Usage</span>
+              </div>
+              <div class="tile-detail" id="gemini-detail"></div>
+              <div class="tile-sub" id="gemini-reset">Loading…</div>
+              <div class="tile-hint" id="gemini-hint" hidden></div>
+              <button type="button" class="tile-incident" id="gemini-incident" data-status-provider="gemini" hidden></button>
+            </div>
+          </div>
+
           <div class="tile" id="cursor-provider" data-provider="cursor">
             <div class="ring-item">
               <div class="ring">
@@ -991,6 +1019,62 @@
               <div class="tile-sub" id="cursor-reset">Loading…</div>
               <div class="tile-hint" id="cursor-hint" hidden></div>
               <button type="button" class="tile-incident" id="cursor-incident" data-status-provider="cursor" hidden></button>
+            </div>
+          </div>
+
+          <div class="tile" id="windsurf-provider" data-provider="windsurf">
+            <div class="ring-item">
+              <div class="ring">
+                <svg class="ring-svg" viewBox="0 0 64 64" aria-hidden="true">
+                  <circle class="ring-track" cx="32" cy="32" r="26" pathLength="100" />
+                  <circle class="ring-fill" id="windsurf-bar" cx="32" cy="32" r="26" pathLength="100" transform="rotate(-90 32 32)" />
+                </svg>
+                <span class="ring-icon">
+                  <svg viewBox="115 122 780 780" fill="currentColor" aria-hidden="true"><path d="M897.246 286.869H889.819C850.735 286.808 819.017 318.46 819.017 357.539V515.589C819.017 547.15 792.93 572.716 761.882 572.716C743.436 572.716 725.02 563.433 714.093 547.85L552.673 317.304C539.28 298.16 517.486 286.747 493.895 286.747C457.094 286.747 423.976 318.034 423.976 356.657V515.619C423.976 547.181 398.103 572.746 366.842 572.746C348.335 572.746 329.949 563.463 319.021 547.881L138.395 289.882C134.316 284.038 125.154 286.93 125.154 294.052V431.892C125.154 438.862 127.285 445.619 131.272 451.34L309.037 705.2C319.539 720.204 335.033 731.344 352.9 735.392C397.616 745.557 438.77 711.135 438.77 667.278V508.406C438.77 476.845 464.339 451.279 495.904 451.279H495.995C515.02 451.279 532.857 460.562 543.785 476.145L705.235 706.661C718.659 725.835 739.327 737.218 763.983 737.218C801.606 737.218 833.841 705.9 833.841 667.308V508.376C833.841 476.815 859.41 451.249 890.975 451.249H897.276C901.233 451.249 904.43 448.053 904.43 444.097V294.021C904.43 290.065 901.233 286.869 897.276 286.869H897.246Z"/></svg>
+                </span>
+              </div>
+              <span class="ring-value" id="windsurf-value">–</span>
+              <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
+              <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <span class="status-dot" aria-hidden="true"></span>
+            </div>
+            <div class="tile-body">
+              <div class="flyout-head">
+                <svg viewBox="115 122 780 780" fill="currentColor" aria-hidden="true"><path d="M897.246 286.869H889.819C850.735 286.808 819.017 318.46 819.017 357.539V515.589C819.017 547.15 792.93 572.716 761.882 572.716C743.436 572.716 725.02 563.433 714.093 547.85L552.673 317.304C539.28 298.16 517.486 286.747 493.895 286.747C457.094 286.747 423.976 318.034 423.976 356.657V515.619C423.976 547.181 398.103 572.746 366.842 572.746C348.335 572.746 329.949 563.463 319.021 547.881L138.395 289.882C134.316 284.038 125.154 286.93 125.154 294.052V431.892C125.154 438.862 127.285 445.619 131.272 451.34L309.037 705.2C319.539 720.204 335.033 731.344 352.9 735.392C397.616 745.557 438.77 711.135 438.77 667.278V508.406C438.77 476.845 464.339 451.279 495.904 451.279H495.995C515.02 451.279 532.857 460.562 543.785 476.145L705.235 706.661C718.659 725.835 739.327 737.218 763.983 737.218C801.606 737.218 833.841 705.9 833.841 667.308V508.376C833.841 476.815 859.41 451.249 890.975 451.249H897.276C901.233 451.249 904.43 448.053 904.43 444.097V294.021C904.43 290.065 901.233 286.869 897.276 286.869H897.246Z"/></svg>
+                <span>Windsurf Usage</span>
+              </div>
+              <div class="tile-detail" id="windsurf-detail"></div>
+              <div class="tile-sub" id="windsurf-reset">Loading…</div>
+              <div class="tile-hint" id="windsurf-hint" hidden></div>
+              <button type="button" class="tile-incident" id="windsurf-incident" data-status-provider="windsurf" hidden></button>
+            </div>
+          </div>
+
+          <div class="tile" id="kiro-provider" data-provider="kiro">
+            <div class="ring-item">
+              <div class="ring">
+                <svg class="ring-svg" viewBox="0 0 64 64" aria-hidden="true">
+                  <circle class="ring-track" cx="32" cy="32" r="26" pathLength="100" />
+                  <circle class="ring-fill" id="kiro-bar" cx="32" cy="32" r="26" pathLength="100" transform="rotate(-90 32 32)" />
+                </svg>
+                <span class="ring-icon">
+                  <svg viewBox="5 7 38 38" fill="currentColor" aria-hidden="true"><path transform="translate(0 48) scale(0.1 -0.1)" d="M175 367c-25-25-35-45-40-83-3-27-10-59-16-72-15-37-11-63 10-69 12-3 21-15 23-32 2-20 9-27 30-29 15-2 36 2 48 8 13 7 20 7 20 0 0-13 36-13 62 1 32 17 58 86 58 157 0 103-38 152-118 152-36 0-50-6-77-33zm93-86c3-16-1-22-10-19-7 3-15 15-16 27-3 16 1 22 10 19 7-3 15-15 16-27zm52 4c0-26-14-33-25-15-9 14 1 40 15 40 5 0 10-11 10-25z"/></svg>
+                </span>
+              </div>
+              <span class="ring-value" id="kiro-value">–</span>
+              <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
+              <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <span class="status-dot" aria-hidden="true"></span>
+            </div>
+            <div class="tile-body">
+              <div class="flyout-head">
+                <svg viewBox="5 7 38 38" fill="currentColor" aria-hidden="true"><path transform="translate(0 48) scale(0.1 -0.1)" d="M175 367c-25-25-35-45-40-83-3-27-10-59-16-72-15-37-11-63 10-69 12-3 21-15 23-32 2-20 9-27 30-29 15-2 36 2 48 8 13 7 20 7 20 0 0-13 36-13 62 1 32 17 58 86 58 157 0 103-38 152-118 152-36 0-50-6-77-33zm93-86c3-16-1-22-10-19-7 3-15 15-16 27-3 16 1 22 10 19 7-3 15-15 16-27zm52 4c0-26-14-33-25-15-9 14 1 40 15 40 5 0 10-11 10-25z"/></svg>
+                <span>Kiro Usage</span>
+              </div>
+              <div class="tile-detail" id="kiro-detail"></div>
+              <div class="tile-sub" id="kiro-reset">Loading…</div>
+              <div class="tile-hint" id="kiro-hint" hidden></div>
+              <button type="button" class="tile-incident" id="kiro-incident" data-status-provider="kiro" hidden></button>
             </div>
           </div>
 
