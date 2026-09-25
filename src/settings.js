@@ -9,7 +9,10 @@ const DEFAULTS = {
   widgetEdgeHide: null,
   widgetDockEdge: null,
   alertsEnabled: true,
+  leftoverAlertsEnabled: true,
   serviceStatusEnabled: true,
+  zaiRegion: 'global',
+  liveRefreshEnabled: true,
 };
 
 let settingsPath = null;
@@ -30,8 +33,17 @@ function mergeWithDefaults(raw) {
   if (merged.alertsEnabled !== false) {
     merged.alertsEnabled = true;
   }
+  if (merged.leftoverAlertsEnabled !== false) {
+    merged.leftoverAlertsEnabled = true;
+  }
   if (merged.serviceStatusEnabled !== false) {
     merged.serviceStatusEnabled = true;
+  }
+  if (merged.zaiRegion !== 'cn') {
+    merged.zaiRegion = 'global';
+  }
+  if (merged.liveRefreshEnabled !== false) {
+    merged.liveRefreshEnabled = true;
   }
   if (merged.compactMode !== true) {
     merged.compactMode = false;

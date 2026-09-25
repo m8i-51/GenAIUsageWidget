@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('api', {
   getGeminiUsage: () => ipcRenderer.invoke('get-gemini-usage'),
   getWindsurfUsage: () => ipcRenderer.invoke('get-windsurf-usage'),
   getKiroUsage: () => ipcRenderer.invoke('get-kiro-usage'),
+  getZaiUsage: () => ipcRenderer.invoke('get-zai-usage'),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   setSettings: (partial) => ipcRenderer.invoke('set-settings', partial),
   onSettingsChanged: (cb) => {
@@ -17,11 +18,25 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('settings-changed', listener);
     return () => ipcRenderer.removeListener('settings-changed', listener);
   },
+  openSettings: () => ipcRenderer.send('open-settings'),
+  getAutostart: () => ipcRenderer.invoke('get-autostart'),
+  setAutostart: (enabled) => ipcRenderer.invoke('set-autostart', enabled),
+  getAppInfo: () => ipcRenderer.invoke('get-app-info'),
+  getProviderStates: () => ipcRenderer.invoke('get-provider-states'),
+  setApiKey: (providerId, key) => ipcRenderer.invoke('set-api-key', providerId, key),
+  clearApiKey: (providerId) => ipcRenderer.invoke('clear-api-key', providerId),
+  openHomepage: () => ipcRenderer.send('open-homepage'),
+  openProviderDashboard: (providerId) => ipcRenderer.send('open-provider-dashboard', providerId),
   openStatusPage: (providerId) => ipcRenderer.send('open-status-page', providerId),
   onServiceStatusChanged: (cb) => {
     const listener = () => cb();
     ipcRenderer.on('service-status-changed', listener);
     return () => ipcRenderer.removeListener('service-status-changed', listener);
+  },
+  onUsageActivity: (cb) => {
+    const listener = (_event, providerId) => cb(providerId);
+    ipcRenderer.on('usage-activity', listener);
+    return () => ipcRenderer.removeListener('usage-activity', listener);
   },
   saveWidgetBounds: (bounds) => ipcRenderer.send('save-widget-bounds', bounds),
   resizeTo: (size) => ipcRenderer.send('resize-to', size),

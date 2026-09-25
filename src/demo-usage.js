@@ -100,6 +100,15 @@ function kiro() {
   });
 }
 
+function zai() {
+  return ok({
+    plan: 'GLM Coding Pro',
+    primary: { percent: 44, resetsAt: minutesFromNow(2 * 60 + 35), label: '5-hour' },
+    secondary: { percent: 18, resetsAt: nextWeekdayMidnight(1), label: 'Weekly' },
+    mcp: { percent: 6, resetsAt: nextWeekdayMidnight(1), label: 'MCP' },
+  });
+}
+
 // Percent gained over the last 40 minutes, so demo cards show a pace forecast
 // right away: Claude and Cursor run out before reset, the rest last.
 const PACE_GAIN = {
@@ -111,6 +120,7 @@ const PACE_GAIN = {
   windsurf: { primary: 5, secondary: 0 },
   kiro: { primary: 1, secondary: 0 },
   gemini: { primary: 2, secondary: 0 },
+  zai: { primary: 6, secondary: 0, mcp: 0 },
 };
 
 function seedPace(providerId, result, seedSample) {
@@ -120,6 +130,16 @@ function seedPace(providerId, result, seedSample) {
   for (const { key, percent, resetsAt } of meters(providerId, result.usage)) {
     if (key in gains) seedSample(providerId, key, percent - gains[key], resetsAt, at);
   }
+}
+
+// Prompts sent in each window, so demo cards show "about N more prompts".
+const PROMPT_COUNT = {
+  claude: { session: 18, week: 41 },
+  codex: { primary: 6, secondary: 14 },
+};
+
+function promptCount(providerId, key) {
+  return PROMPT_COUNT[providerId]?.[key] ?? 0;
 }
 
 function localCost() {
@@ -163,4 +183,4 @@ function serviceStatus(providerId) {
   return SERVICE_STATUS[providerId] ?? null;
 }
 
-module.exports = { claude, codex, cursor, antigravity, copilot, gemini, windsurf, kiro, seedPace, serviceStatus, localCost };
+module.exports = { claude, codex, cursor, antigravity, copilot, gemini, windsurf, kiro, zai, seedPace, promptCount, serviceStatus, localCost };

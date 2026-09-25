@@ -7,6 +7,7 @@ const PROVIDERS = [
   { id: 'gemini', label: 'Gemini' },
   { id: 'windsurf', label: 'Windsurf' },
   { id: 'kiro', label: 'Kiro' },
+  { id: 'zai', label: 'z.ai' },
 ];
 
 let appSettings = {
@@ -27,7 +28,6 @@ const configuredProviders = Object.fromEntries(PROVIDERS.map((p) => [p.id, false
 let selectedProvider = null;
 /** Local log totals from main's local-cost.js ({ claude, codex } or null). */
 let localCost = null;
-let settingsOpen = false;
 let suppressTileClick = false;
 
 function formatCountdown(isoString) {
@@ -83,6 +83,23 @@ function formatPace(forecast) {
   return { text: `At this pace, limit ${weekday} ${time}`, tone: 'limit' };
 }
 
+/**
+ * "About 12 more prompts" from main's prompts-left.js, or null. Prompts are
+ * counted from local Claude Code / Codex logs; each costs this window's
+ * average so far.
+ * @returns {{ text: string, title: string } | null}
+ */
+function formatPromptsLeft(estimate) {
+  if (!estimate) return null;
+  let text;
+  if (estimate.left <= 0) text = 'Less than 1 more prompt';
+  else if (estimate.capped) text = `${estimate.left}+ more prompts`;
+  else text = `About ${estimate.left} more prompt${estimate.left === 1 ? '' : 's'}`;
+  const title = `Based on ${estimate.prompts} prompts sent from this computer in this window. `
+    + 'Use from other apps also counts toward the limit, so the real number may be higher.';
+  return { text, title };
+}
+
 function severityClass(percent) {
   if (percent >= 70) return 'critical';
   if (percent >= 45) return 'warning';
@@ -112,37 +129,8 @@ function applySettings(settings) {
       : null,
   };
   document.body.classList.toggle('compact-mode', appSettings.compactMode);
-  const compactToggle = document.getElementById('compact-mode-toggle');
-  if (compactToggle) compactToggle.checked = appSettings.compactMode;
-  syncDockEdgePicker(appSettings.widgetDockEdge || 'auto');
-  renderProviderToggles();
   applyHiddenProviders();
   syncFlyout();
-}
-
-const DOCK_EDGE_LABELS = {
-  auto: 'Auto (nearest edge)',
-  top: 'Top',
-  bottom: 'Bottom',
-  left: 'Left',
-  right: 'Right',
-};
-
-function syncDockEdgePicker(value) {
-  const next = DOCK_EDGE_LABELS[value] ? value : 'auto';
-  const label = document.getElementById('dock-edge-label');
-  if (label) label.textContent = DOCK_EDGE_LABELS[next];
-  document.querySelectorAll('.dock-edge-option').forEach((btn) => {
-    btn.setAttribute('aria-selected', btn.dataset.value === next ? 'true' : 'false');
-  });
-}
-
-function setDockEdgeMenuOpen(open) {
-  const menu = document.getElementById('dock-edge-menu');
-  const trigger = document.getElementById('dock-edge-trigger');
-  if (!menu || !trigger) return;
-  menu.hidden = !open;
-  trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
 function applyEdgeHideUi(state) {
@@ -221,28 +209,31 @@ function refreshEmptyState() {
   syncFlyout();
 }
 
-function authHint(prefix, message) {
+function authHint(prefix, message, expired = false) {
   const lower = String(message ?? '').toLowerCase();
-  if (prefix === 'claude' && (lower.includes('401') || lower.includes('token'))) {
-    return 'Run claude login to re-authenticate';
+  if (prefix === 'claude' && (expired || lower.includes('401') || lower.includes('token'))) {
+    return 'Run claude to sign in again';
   }
-  if (prefix === 'codex' && (lower.includes('401') || lower.includes('auth'))) {
+  if (prefix === 'codex' && (expired || lower.includes('401') || lower.includes('auth'))) {
     return 'Run codex login to re-authenticate';
   }
-  if (prefix === 'cursor' && lower.includes('token')) {
+  if (prefix === 'cursor' && (expired || lower.includes('token'))) {
     return 'Sign in again in the Cursor app';
   }
-  if (prefix === 'copilot' && (lower.includes('401') || lower.includes('403') || lower.includes('signed in'))) {
+  if (prefix === 'copilot' && (expired || lower.includes('401') || lower.includes('403') || lower.includes('signed in'))) {
     return 'Run copilot login to re-authenticate';
   }
-  if (prefix === 'antigravity' && (lower.includes('401') || lower.includes('cred'))) {
+  if (prefix === 'antigravity' && (expired || lower.includes('401') || lower.includes('cred'))) {
     return 'Run agy login to re-authenticate';
   }
-  if (prefix === 'gemini' && (lower.includes('401') || lower.includes('expired') || lower.includes('refresh'))) {
+  if (prefix === 'gemini' && (expired || lower.includes('401') || lower.includes('expired') || lower.includes('refresh'))) {
     return 'Run gemini and sign in with Google again';
   }
-  if (prefix === 'kiro' && (lower.includes('401') || lower.includes('403') || lower.includes('expired'))) {
+  if (prefix === 'kiro' && (expired || lower.includes('401') || lower.includes('403') || lower.includes('expired'))) {
     return 'Open Kiro (or run kiro-cli login) to sign in again';
+  }
+  if (prefix === 'zai' && (expired || lower.includes('401') || lower.includes('403') || lower.includes('key'))) {
+    return 'Check the API key in Settings';
   }
   return null;
 }
@@ -269,16 +260,20 @@ function applyStaleState(prefix, result, resetEl, baseText) {
   const tileEl = document.getElementById(`${prefix}-provider`);
   tileEl.classList.toggle('stale', !!result.stale);
   tileEl.classList.remove('error-state');
-  setHint(prefix, null);
+  setHint(prefix, result.stale && result.authExpired ? authHint(prefix, result.staleError, true) : null);
 
   if (result.stale) {
     const asOf = new Date(result.staleAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    resetEl.textContent = `${baseText}\nas of ${asOf} · retrying`;
+    const status = result.authExpired ? 'sign-in expired' : 'retrying';
+    resetEl.textContent = `${baseText}\nas of ${asOf} · ${status}`;
     resetEl.title = result.staleError ?? '';
   } else {
     resetEl.textContent = baseText;
     resetEl.removeAttribute('title');
   }
+
+  // setDetail already redrew the flyout, before the stale state was known.
+  if (prefix === selectedProvider) syncFlyout();
 }
 
 // Last drawn width per meter, so a refresh slides each bar from where it was
@@ -303,6 +298,10 @@ function setDetail(prefix, rows) {
     const paceHtml = pace
       ? `<span class="detail-pace pace-${pace.tone}">${escapeHtml(pace.text)}</span>`
       : '';
+    const prompts = formatPromptsLeft(row.promptsLeft);
+    const promptsHtml = prompts
+      ? `<div class="detail-prompts" title="${escapeHtml(prompts.title)}">${escapeHtml(prompts.text)}</div>`
+      : '';
     return (
       `<div class="detail-row">` +
         `<div class="detail-head">` +
@@ -311,6 +310,7 @@ function setDetail(prefix, rows) {
         `</div>` +
         `<div class="meter ${severityClass(clamped)}"><span class="meter-fill" data-width="${clamped}" style="width:${lastMeterWidths.get(`${prefix}:${index}`) ?? 0}%"></span></div>` +
         `<div class="detail-used"><span>${escapeHtml(used)}</span>${paceHtml}</div>` +
+        promptsHtml +
       `</div>`
     );
   }).join('');
@@ -498,14 +498,14 @@ function beginCard(prefix, result) {
   clearTileState(prefix);
 
   if (!result.ok) {
-    setError(prefix, result.error);
+    setError(prefix, result.error, result.authExpired);
     setDetail(prefix, []);
     return false;
   }
   return true;
 }
 
-function setError(prefix, message) {
+function setError(prefix, message, expired = false) {
   const tileEl = document.getElementById(`${prefix}-provider`);
   const resetEl = document.getElementById(`${prefix}-reset`);
   resetEl.textContent = `Error: ${message}`;
@@ -513,7 +513,7 @@ function setError(prefix, message) {
   resetEl.classList.add('error');
   tileEl.classList.add('error-state');
   tileEl.classList.remove('stale');
-  setHint(prefix, authHint(prefix, message));
+  setHint(prefix, authHint(prefix, message, expired));
 }
 
 function firstVisibleProvider() {
@@ -533,9 +533,6 @@ function revealFromEdgeIfCollapsed() {
 
 function closeFlyout() {
   selectedProvider = null;
-  settingsOpen = false;
-  const settings = document.getElementById('settings-panel');
-  if (settings) settings.hidden = true;
   syncFlyout();
 }
 
@@ -552,8 +549,7 @@ function selectProvider(id, { toggle = true } = {}) {
 function syncPanelOpen() {
   const panel = document.getElementById('panel');
   const flyout = document.getElementById('flyout');
-  const settings = document.getElementById('settings-panel');
-  const open = isWidgetMode && ((flyout && !flyout.hidden) || (settings && !settings.hidden));
+  const open = isWidgetMode && flyout && !flyout.hidden;
   panel.classList.toggle('open', !!open);
 }
 
@@ -566,7 +562,7 @@ function syncFlyout() {
     tile.classList.toggle('selected', tile.dataset.provider === selectedProvider);
   });
 
-  if (!isWidgetMode || settingsOpen || !selectedProvider) {
+  if (!isWidgetMode || !selectedProvider) {
     flyout.hidden = true;
     content.innerHTML = '';
     syncPanelOpen();
@@ -604,6 +600,9 @@ function syncFlyout() {
     body = detail;
     if (isStale && resetEl?.textContent) {
       body += `<div class="tile-sub">${escapeHtml(resetEl.textContent)}</div>`;
+    }
+    if (isStale && hintEl && !hintEl.hidden && hintEl.textContent) {
+      body += `<div class="tile-hint">${escapeHtml(hintEl.textContent)}</div>`;
     }
   } else {
     body = `<div class="flyout-empty">${escapeHtml(resetEl?.textContent || '')}</div>`;
@@ -666,9 +665,10 @@ async function updateClaudeCard() {
   applyStaleState('claude', result, resetEl, baseText);
 
   const forecasts = result.forecasts ?? {};
+  const promptsLeft = result.promptsLeft ?? {};
   const rows = [
-    { label: 'Current session', percent: session.percent, sub: formatResetLabel(session.resetsAt), forecast: forecasts.session },
-    { label: 'All models', percent: week.percent, sub: formatResetLabel(week.resetsAt), forecast: forecasts.week },
+    { label: 'Current session', percent: session.percent, sub: formatResetLabel(session.resetsAt), forecast: forecasts.session, promptsLeft: promptsLeft.session },
+    { label: 'All models', percent: week.percent, sub: formatResetLabel(week.resetsAt), forecast: forecasts.week, promptsLeft: promptsLeft.week },
   ];
   if (weekScoped) {
     rows.push({
@@ -676,6 +676,7 @@ async function updateClaudeCard() {
       percent: weekScoped.percent,
       sub: formatResetLabel(weekScoped.resetsAt),
       forecast: forecasts.weekScoped,
+      promptsLeft: promptsLeft.weekScoped,
     });
   }
   setDetail('claude', rows);
@@ -697,11 +698,12 @@ async function updateCodexCard() {
   applyStaleState('codex', result, resetEl, `resets in ${formatCountdown(primary.resetsAt)}`);
 
   const forecasts = result.forecasts ?? {};
+  const promptsLeft = result.promptsLeft ?? {};
   const rows = [
-    { label: 'Current session', percent: primary.percent, sub: formatResetLabel(primary.resetsAt), forecast: forecasts.primary },
+    { label: 'Current session', percent: primary.percent, sub: formatResetLabel(primary.resetsAt), forecast: forecasts.primary, promptsLeft: promptsLeft.primary },
   ];
   if (secondary) {
-    rows.push({ label: 'Weekly', percent: secondary.percent, sub: formatResetLabel(secondary.resetsAt), forecast: forecasts.secondary });
+    rows.push({ label: 'Weekly', percent: secondary.percent, sub: formatResetLabel(secondary.resetsAt), forecast: forecasts.secondary, promptsLeft: promptsLeft.secondary });
   }
   setDetail('codex', rows);
 }
@@ -936,6 +938,35 @@ async function updateGeminiCard() {
   setDetail('gemini', rows);
 }
 
+async function updateZaiCard() {
+  const result = await window.api.getZaiUsage();
+  if (!beginCard('zai', result)) return;
+  const resetEl = document.getElementById('zai-reset');
+
+  const { plan, primary, secondary, mcp } = result.usage;
+  if (!primary) {
+    resetEl.textContent = plan ? `${plan} · No quota data` : 'No quota data';
+    setDetail('zai', []);
+    return;
+  }
+
+  setMeter('zai', primary.percent);
+  const planPrefix = plan ? `${plan} · ` : '';
+  applyStaleState('zai', result, resetEl, `${planPrefix}resets in ${formatCountdown(primary.resetsAt)}`);
+
+  const forecasts = result.forecasts ?? {};
+  const rows = [
+    { label: primary.label, percent: primary.percent, sub: formatResetLabel(primary.resetsAt), forecast: forecasts.primary },
+  ];
+  if (secondary) {
+    rows.push({ label: secondary.label, percent: secondary.percent, sub: formatResetLabel(secondary.resetsAt), forecast: forecasts.secondary });
+  }
+  if (mcp) {
+    rows.push({ label: 'MCP', percent: mcp.percent, sub: formatResetLabel(mcp.resetsAt), forecast: forecasts.mcp });
+  }
+  setDetail('zai', rows);
+}
+
 async function updateAll() {
   // Log scanning can take a moment on first run; cards do not wait for it.
   updateLocalCost();
@@ -948,10 +979,10 @@ async function updateAll() {
     updateGeminiCard(),
     updateWindsurfCard(),
     updateKiroCard(),
+    updateZaiCard(),
   ]);
 
   refreshEmptyState();
-  renderProviderToggles();
 
   const updatedEl = document.getElementById('last-updated');
   if (updatedEl) {
@@ -961,82 +992,9 @@ async function updateAll() {
   syncFlyout();
 }
 
-function renderProviderToggles() {
-  const container = document.getElementById('provider-toggles');
-  if (!container) return;
-
-  container.innerHTML = PROVIDERS.map(({ id, label }) => {
-    const configured = configuredProviders[id];
-    const visible = configured && !isProviderHidden(id);
-    const disabledAttr = configured ? '' : 'disabled';
-    const note = configured ? '' : '<span class="provider-toggle-note">Not set up</span>';
-    return (
-      `<label class="settings-row provider-toggle${configured ? '' : ' disabled'}">` +
-        `<span>${escapeHtml(label)}${note}</span>` +
-        `<input type="checkbox" data-provider="${id}" ${visible ? 'checked' : ''} ${disabledAttr} />` +
-      `</label>`
-    );
-  }).join('');
-}
-
-async function onProviderToggleChange(event) {
-  const input = event.target.closest('input[data-provider]');
-  if (!input || input.disabled) return;
-
-  const providerId = input.dataset.provider;
-  const hidden = new Set(appSettings.hiddenProviders);
-  if (input.checked) {
-    hidden.delete(providerId);
-  } else {
-    hidden.add(providerId);
-  }
-  const settings = await window.api.setSettings({ hiddenProviders: [...hidden] });
-  applySettings(settings);
-  await updateAll();
-}
-
-function placeSettingsPanel() {
-  const settings = document.getElementById('settings-panel');
-  const panel = document.getElementById('panel');
-  const notch = document.getElementById('notch');
-  if (!settings || !panel || !notch) return;
-  if (isWidgetMode) {
-    panel.appendChild(settings);
-  } else {
-    notch.appendChild(settings);
-  }
-}
-
-function showSettingsPanel(show) {
-  settingsOpen = !!show;
-  const settings = document.getElementById('settings-panel');
-  const cards = document.getElementById('cards-view');
-  settings.hidden = !show;
-
-  if (isWidgetMode) {
-    cards.hidden = false;
-    if (show) {
-      document.getElementById('flyout').hidden = true;
-      setIgnoreMouse(false);
-    }
-    syncPanelOpen();
-    if (!show) syncFlyout();
-    refreshIgnoreMouse();
-  } else {
-    cards.hidden = show;
-    document.getElementById('panel').classList.remove('open');
-  }
-}
-
 document.getElementById('settings-btn').addEventListener('click', (event) => {
   event.stopPropagation();
-  revealFromEdgeIfCollapsed();
-  showSettingsPanel(true);
-  renderProviderToggles();
-});
-
-document.getElementById('settings-back-btn').addEventListener('click', () => {
-  showSettingsPanel(false);
+  window.api.openSettings();
 });
 
 const hideEdgeBtn = document.getElementById('hide-edge-btn');
@@ -1061,33 +1019,6 @@ if (isWidgetMode) {
     });
   }
   window.api.onWidgetEdgeHideChanged((state) => applyEdgeHideUi(state));
-}
-
-document.getElementById('compact-mode-toggle').addEventListener('change', async (event) => {
-  const settings = await window.api.setSettings({ compactMode: event.target.checked });
-  applySettings(settings);
-});
-
-const dockEdgeTrigger = document.getElementById('dock-edge-trigger');
-const dockEdgeMenu = document.getElementById('dock-edge-menu');
-if (dockEdgeTrigger && dockEdgeMenu) {
-  dockEdgeTrigger.addEventListener('click', (event) => {
-    event.stopPropagation();
-    setDockEdgeMenuOpen(dockEdgeMenu.hidden);
-  });
-  dockEdgeMenu.addEventListener('click', async (event) => {
-    const option = event.target.closest('.dock-edge-option');
-    if (!option) return;
-    event.stopPropagation();
-    const value = option.dataset.value || 'auto';
-    setDockEdgeMenuOpen(false);
-    syncDockEdgePicker(value);
-    const settings = await window.api.setSettings({
-      widgetDockEdge: value === 'auto' ? null : value,
-    });
-    applySettings(settings);
-  });
-  document.addEventListener('click', () => setDockEdgeMenuOpen(false));
 }
 
 // Card and flyout incident lines open that provider's status page.
@@ -1250,7 +1181,7 @@ function setIgnoreMouse(ignore) {
 
 function isOverInteractive(el) {
   if (!el) return false;
-  return !!el.closest('.notch, .flyout, .edge-peek-tab, #settings-panel');
+  return !!el.closest('.notch, .flyout, .edge-peek-tab');
 }
 
 function syncIgnoreMouseFromPoint(clientX, clientY) {
@@ -1267,7 +1198,7 @@ function refreshIgnoreMouse() {
 
 function isWidgetDragSource(target) {
   if (!target || !target.closest) return false;
-  if (target.closest('button, input, a, label, .dock-edge-picker, .flyout')) return false;
+  if (target.closest('button, input, a, label, .flyout')) return false;
   return !!target.closest('.notch');
 }
 
@@ -1321,9 +1252,6 @@ if (isWidgetMode) {
 }
 
 async function init() {
-  placeSettingsPanel();
-  document.getElementById('provider-toggles').addEventListener('change', onProviderToggleChange);
-
   const settings = await window.api.getSettings();
   applySettings(settings);
   if (isWidgetMode && settings.widgetEdgeHide) {
@@ -1331,6 +1259,7 @@ async function init() {
   }
   window.api.onSettingsChanged((next) => applySettings(next));
   window.api.onServiceStatusChanged(() => updateAll());
+  window.api.onUsageActivity(() => updateAll());
   await updateAll();
   if (isWidgetMode && !selectedProvider && !isEdgeCollapsed()) {
     const first = firstVisibleProvider();

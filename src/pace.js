@@ -42,6 +42,11 @@ function meters(providerId, usage) {
       add('primary', usage.primary);
       add('secondary', usage.secondary);
       break;
+    case 'zai':
+      add('primary', usage.primary);
+      add('secondary', usage.secondary);
+      add('mcp', usage.mcp);
+      break;
     case 'cursor':
       add('total', usage, usage.billingCycleEnd);
       add('grokBot', usage.grokBot);

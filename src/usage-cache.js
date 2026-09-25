@@ -5,6 +5,10 @@ const { app } = require('electron');
 const DEFAULT_CACHE_TTL_MS = 60 * 1000;
 const CLAUDE_CACHE_TTL_MS = 150 * 1000;
 const DEFAULT_429_BACKOFF_MS = 10 * 60 * 1000;
+// Activity-triggered refreshes never hit a provider more often than this,
+// so a burst of short exchanges can't trip its rate limit.
+const DEFAULT_MIN_REFRESH_MS = 15 * 1000;
+const CLAUDE_MIN_REFRESH_MS = 30 * 1000;
 
 /** @type {Map<string, { at: number, ttl: number, payload: object }>} */
 const caches = new Map();
@@ -12,6 +16,8 @@ const caches = new Map();
 const pending = new Map();
 /** @type {Map<string, { usage: object, at: number } | null>} */
 const lastGood = new Map();
+/** Bumped by invalidate() so a fetch that started before it can't cache its result. */
+const generations = new Map();
 
 function userDataPath() {
   return app.getPath('userData');
@@ -69,6 +75,7 @@ async function fetchWithCache(providerId, fetchUsage) {
   }
 
   if (!pending.has(providerId)) {
+    const generation = generations.get(providerId) ?? 0;
     pending.set(providerId, (async () => {
       let payload;
       let ttl = getCacheTtl(providerId);
@@ -77,7 +84,7 @@ async function fetchWithCache(providerId, fetchUsage) {
       try {
         const usage = await fetchUsage();
         const good = { usage, at: Date.now() };
-        saveLastGood(providerId, good);
+        if (generation === (generations.get(providerId) ?? 0)) saveLastGood(providerId, good);
         payload = { ok: true, usage };
       } catch (err) {
         if (err.status === 429) {
@@ -90,19 +97,46 @@ async function fetchWithCache(providerId, fetchUsage) {
             stale: true,
             staleAt: snapshot.at,
             staleError: err.message,
+            authExpired: !!err.authExpired,
           };
         } else {
-          payload = { ok: false, error: err.message, notConfigured: !!err.notConfigured };
+          payload = {
+            ok: false,
+            error: err.message,
+            notConfigured: !!err.notConfigured,
+            authExpired: !!err.authExpired,
+          };
         }
       }
 
-      caches.set(providerId, { at: Date.now(), ttl, payload });
-      pending.delete(providerId);
+      if (generation === (generations.get(providerId) ?? 0)) {
+        caches.set(providerId, { at: Date.now(), ttl, payload, backoff: ttl !== getCacheTtl(providerId) });
+        pending.delete(providerId);
+      }
       return payload;
     })());
   }
 
   return pending.get(providerId);
+}
+
+/**
+ * Drop a provider's cached result so the next read fetches fresh data.
+ * Returns 0 when the cache was dropped, or how many ms to wait before trying
+ * again (the last fetch is too recent, still in flight, or in 429 backoff).
+ * @param {string} providerId
+ * @returns {number}
+ */
+function requestRefresh(providerId) {
+  const minAge = providerId === 'claude' ? CLAUDE_MIN_REFRESH_MS : DEFAULT_MIN_REFRESH_MS;
+  if (pending.has(providerId)) return minAge;
+  const cache = caches.get(providerId);
+  if (!cache) return 0;
+  const age = Date.now() - cache.at;
+  if (cache.backoff) return Math.max(cache.ttl - age, 0) || minAge;
+  if (age < minAge) return minAge - age;
+  caches.delete(providerId);
+  return 0;
 }
 
 function preloadLastGood(providerIds) {
@@ -111,4 +145,20 @@ function preloadLastGood(providerIds) {
   }
 }
 
-module.exports = { fetchWithCache, preloadLastGood };
+/**
+ * Drop the cached result so the next read fetches again (after a provider's
+ * credentials change). The last-good snapshot belongs to the old account.
+ */
+function invalidate(providerId) {
+  generations.set(providerId, (generations.get(providerId) ?? 0) + 1);
+  caches.delete(providerId);
+  pending.delete(providerId);
+  lastGood.set(providerId, null);
+  try {
+    fs.rmSync(lastGoodPath(providerId), { force: true });
+  } catch (err) {
+    console.warn(`Failed to clear last-good snapshot for ${providerId}:`, err.message);
+  }
+}
+
+module.exports = { fetchWithCache, preloadLastGood, invalidate, requestRefresh };

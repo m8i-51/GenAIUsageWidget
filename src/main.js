@@ -8,13 +8,18 @@ const { fetchCopilotUsage } = require('./providers/copilot');
 const { fetchGeminiUsage } = require('./providers/gemini');
 const { fetchWindsurfUsage } = require('./providers/windsurf');
 const { fetchKiroUsage } = require('./providers/kiro');
+const zai = require('./providers/zai');
+const secrets = require('./secrets');
 const autostart = require('./autostart');
 const alerts = require('./alerts');
+const leftoverAlerts = require('./leftover-alerts');
 const pace = require('./pace');
+const promptsLeft = require('./prompts-left');
 const { getLocalCost } = require('./local-cost');
 const serviceStatus = require('./service-status');
 const { loadSettings, saveSettings } = require('./settings');
-const { fetchWithCache, preloadLastGood } = require('./usage-cache');
+const { fetchWithCache, preloadLastGood, invalidate: invalidateUsage, requestRefresh } = require('./usage-cache');
+const { watchUsageActivity } = require('./usage-watch');
 const { summarizeForTray, formatTooltip, renderTrayPng, PROVIDER_LABELS } = require('./tray-icon');
 const {
   detectSnapEdge,
@@ -35,6 +40,7 @@ const {
 let tray = null;
 let popup = null;
 let widget = null;
+let settingsWindow = null;
 let lastTrayBounds = null;
 let widgetBoundsSaveTimer = null;
 let widgetSnapTimer = null;
@@ -54,7 +60,7 @@ let collapsedPeekWidth = SIDE_PILL_WIDTH;
 let widgetDrag = null;
 
 function broadcastSettings(settings) {
-  for (const win of [popup, widget]) {
+  for (const win of [popup, widget, settingsWindow]) {
     if (win && !win.isDestroyed()) {
       win.webContents.send('settings-changed', settings);
     }
@@ -735,6 +741,35 @@ function toggleWidget() {
   }
 }
 
+function openSettingsWindow() {
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    settingsWindow.show();
+    settingsWindow.focus();
+    return;
+  }
+  settingsWindow = new BrowserWindow({
+    width: 640,
+    height: 620,
+    minWidth: 480,
+    minHeight: 480,
+    show: false,
+    title: 'GenAIUsageWidget Settings',
+    icon: path.join(__dirname, '..', 'assets', 'icon.png'),
+    autoHideMenuBar: true,
+    backgroundColor: '#1c1c1e',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+    },
+  });
+  settingsWindow.setMenu(null);
+  settingsWindow.loadFile(path.join(__dirname, 'settings.html'));
+  settingsWindow.once('ready-to-show', () => settingsWindow.show());
+  settingsWindow.on('closed', () => {
+    settingsWindow = null;
+  });
+}
+
 const STATIC_TRAY_ICON = path.join(__dirname, '..', 'assets', 'icon.png');
 const TRAY_REFRESH_MS = 60 * 1000;
 let trayIconKey = 'static';
@@ -838,11 +873,18 @@ function createTray() {
         },
       },
       { type: 'separator' },
+      { label: 'Settings…', click: () => openSettingsWindow() },
       {
         label: 'Usage Alerts',
         type: 'checkbox',
         checked: loadSettings().alertsEnabled,
         click: (menuItem) => broadcastSettings(saveSettings({ alertsEnabled: menuItem.checked })),
+      },
+      {
+        label: 'Unused Quota Reminders',
+        type: 'checkbox',
+        checked: loadSettings().leftoverAlertsEnabled,
+        click: (menuItem) => broadcastSettings(saveSettings({ leftoverAlertsEnabled: menuItem.checked })),
       },
       {
         label: 'Service Status',
@@ -851,6 +893,15 @@ function createTray() {
         click: (menuItem) => {
           broadcastSettings(saveSettings({ serviceStatusEnabled: menuItem.checked }));
           broadcastServiceStatus();
+        },
+      },
+      {
+        label: 'Live Refresh',
+        type: 'checkbox',
+        checked: loadSettings().liveRefreshEnabled,
+        click: (menuItem) => {
+          broadcastSettings(saveSettings({ liveRefreshEnabled: menuItem.checked }));
+          applyLiveRefresh();
         },
       },
       {
@@ -877,8 +928,68 @@ ipcMain.handle('set-settings', (_event, partial) => {
     }
   }
   broadcastSettings(settings);
-  if (partial.hiddenProviders !== undefined) refreshTrayIcon();
+  if (partial.zaiRegion !== undefined) invalidateUsage('zai');
+  if (partial.serviceStatusEnabled !== undefined || partial.zaiRegion !== undefined) {
+    broadcastServiceStatus();
+  } else if (partial.hiddenProviders !== undefined) {
+    refreshTrayIcon();
+  }
+  if (partial.liveRefreshEnabled !== undefined) applyLiveRefresh();
   return settings;
+});
+
+ipcMain.on('open-settings', () => openSettingsWindow());
+
+ipcMain.handle('get-autostart', () => autostart.isEnabled());
+
+ipcMain.handle('set-autostart', (_event, enabled) => {
+  autostart.setEnabled(!!enabled);
+  return autostart.isEnabled();
+});
+
+ipcMain.handle('get-app-info', () => ({
+  version: app.getVersion(),
+  platform: process.platform,
+  keyStorage: secrets.storageLevel(),
+}));
+
+// Which providers are signed in, from the same cached reads the cards use.
+ipcMain.handle('get-provider-states', async () => {
+  const ids = Object.keys(USAGE_FETCHERS);
+  const results = await Promise.all(ids.map((id) => Promise.resolve().then(() => getUsage(id)).catch(() => null)));
+  return ids.map((id, i) => ({
+    id,
+    configured: !!results[i] && !results[i].notConfigured,
+    error: results[i] && !results[i].ok ? results[i].error : null,
+    hasApiKey: id === 'zai' ? secrets.hasApiKey('zai') : undefined,
+  }));
+});
+
+// The key goes main-ward only: the renderer can set or clear it, never read it back.
+ipcMain.handle('set-api-key', (_event, providerId, key) => {
+  if (providerId !== 'zai') throw new Error('Unknown provider');
+  secrets.setApiKey(providerId, key);
+  invalidateUsage(providerId);
+  // Cards and tray re-read usage on this signal, so the change shows at once.
+  broadcastServiceStatus();
+  return true;
+});
+
+ipcMain.handle('clear-api-key', (_event, providerId) => {
+  if (providerId !== 'zai') throw new Error('Unknown provider');
+  secrets.clearApiKey(providerId);
+  invalidateUsage(providerId);
+  // Cards and tray re-read usage on this signal, so the change shows at once.
+  broadcastServiceStatus();
+  return true;
+});
+
+ipcMain.on('open-homepage', () => {
+  shell.openExternal('https://github.com/m8i-51/GenAIUsageWidget');
+});
+
+ipcMain.on('open-provider-dashboard', (_event, providerId) => {
+  if (providerId === 'zai') shell.openExternal(zai.dashboardUrl());
 });
 
 ipcMain.on('save-widget-bounds', (_event, bounds) => {
@@ -968,6 +1079,7 @@ const USAGE_FETCHERS = {
   gemini: fetchGeminiUsage,
   windsurf: fetchWindsurfUsage,
   kiro: fetchKiroUsage,
+  zai: zai.fetchZaiUsage,
 };
 
 const demoPaceSeeded = new Set();
@@ -994,10 +1106,12 @@ async function getUsage(providerId) {
       demoPaceSeeded.add(providerId);
       demo.seedPace(providerId, result, pace.seedSample);
     }
-    return withServiceStatus(providerId, pace.withForecasts(providerId, result));
+    const withPace = pace.withForecasts(providerId, result);
+    const withPrompts = await promptsLeft.withPromptsLeft(providerId, withPace, { countPrompts: demo.promptCount });
+    return withServiceStatus(providerId, withPrompts);
   }
   const result = pace.withForecasts(providerId, await fetchWithCache(providerId, USAGE_FETCHERS[providerId]));
-  return withServiceStatus(providerId, result);
+  return withServiceStatus(providerId, await promptsLeft.withPromptsLeft(providerId, result));
 }
 
 function broadcastServiceStatus() {
@@ -1025,6 +1139,41 @@ serviceStatus.onChange((providerId, status, before) => {
   }
 });
 
+let usageWatcher = null;
+const liveRefreshRetry = new Map();
+
+// A Claude Code or Codex reply just finished: fetch that provider now and
+// push the new numbers to every window instead of waiting for the next poll.
+function onUsageActivity(providerId) {
+  clearTimeout(liveRefreshRetry.get(providerId));
+  liveRefreshRetry.delete(providerId);
+  const settings = loadSettings();
+  if (!settings.liveRefreshEnabled || settings.hiddenProviders.includes(providerId)) return;
+  const waitMs = requestRefresh(providerId);
+  if (waitMs > 0) {
+    // Fetched moments ago; come back once the rate-limit floor has passed so
+    // the last reply of a burst still shows up.
+    liveRefreshRetry.set(providerId, setTimeout(() => onUsageActivity(providerId), waitMs));
+    return;
+  }
+  for (const win of [popup, widget]) {
+    if (win && !win.isDestroyed()) win.webContents.send('usage-activity', providerId);
+  }
+  refreshTrayIcon();
+}
+
+function applyLiveRefresh() {
+  const enabled = loadSettings().liveRefreshEnabled;
+  if (enabled && !usageWatcher) {
+    usageWatcher = watchUsageActivity(onUsageActivity);
+  } else if (!enabled && usageWatcher) {
+    usageWatcher.stop();
+    usageWatcher = null;
+    for (const timer of liveRefreshRetry.values()) clearTimeout(timer);
+    liveRefreshRetry.clear();
+  }
+}
+
 ipcMain.on('open-status-page', (_event, providerId) => {
   // Only open the fixed status page for a known provider, never a renderer-supplied URL.
   const url = serviceStatus.pageUrl(providerId);
@@ -1048,6 +1197,14 @@ async function withUsageAlerts(providerId, resultPromise) {
       });
     } catch (err) {
       console.warn(`Usage alert failed for ${providerId}:`, err.message);
+    }
+    try {
+      leftoverAlerts.checkAndNotify(providerId, result, {
+        enabled: settings.leftoverAlertsEnabled,
+        notify: showUsageNotification,
+      });
+    } catch (err) {
+      console.warn(`Unused quota reminder failed for ${providerId}:`, err.message);
     }
   }
   return result;
@@ -1124,6 +1281,7 @@ app.whenReady().then(() => {
   createPopup();
   createWidget();
   createTray();
+  applyLiveRefresh();
 });
 
 app.on('window-all-closed', (event) => {

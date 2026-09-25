@@ -15,6 +15,7 @@ const PROVIDER_LABELS = {
   windsurf: 'Windsurf',
   kiro: 'Kiro',
   gemini: 'Gemini',
+  zai: 'z.ai',
 };
 
 // Same thresholds as the cards (renderer.js severityClass), on percent used.
@@ -50,6 +51,7 @@ function extractWindows(providerId, usage) {
         week: clampPercent(usage.week?.percent),
       };
     case 'codex':
+    case 'zai':
       if (!usage.primary) return null;
       return {
         session: clampPercent(usage.primary.percent),
