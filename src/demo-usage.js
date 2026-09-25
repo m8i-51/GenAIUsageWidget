@@ -122,6 +122,16 @@ function seedPace(providerId, result, seedSample) {
   }
 }
 
+// Prompts sent in each window, so demo cards show "about N more prompts".
+const PROMPT_COUNT = {
+  claude: { session: 18, week: 41 },
+  codex: { primary: 6, secondary: 14 },
+};
+
+function promptCount(providerId, key) {
+  return PROMPT_COUNT[providerId]?.[key] ?? 0;
+}
+
 // One provider mid-incident so the card badge, flyout line and tray dot all show.
 const SERVICE_STATUS = {
   codex: {
@@ -136,4 +146,4 @@ function serviceStatus(providerId) {
   return SERVICE_STATUS[providerId] ?? null;
 }
 
-module.exports = { claude, codex, cursor, antigravity, copilot, gemini, windsurf, kiro, seedPace, serviceStatus };
+module.exports = { claude, codex, cursor, antigravity, copilot, gemini, windsurf, kiro, seedPace, promptCount, serviceStatus };

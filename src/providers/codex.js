@@ -46,12 +46,14 @@ async function fetchCodexUsage() {
       ? {
           percent: primary.used_percent ?? null,
           resetsAt: primary.reset_at ? new Date(primary.reset_at * 1000).toISOString() : null,
+          windowSeconds: primary.limit_window_seconds ?? null,
         }
       : null,
     secondary: secondary
       ? {
           percent: secondary.used_percent ?? null,
           resetsAt: secondary.reset_at ? new Date(secondary.reset_at * 1000).toISOString() : null,
+          windowSeconds: secondary.limit_window_seconds ?? null,
         }
       : null,
   };

@@ -80,6 +80,12 @@ you to log in again, and polls their usage APIs about once a minute.
   pace to last until the reset. The rate comes from the last hour of samples
   (six hours for weekly/monthly windows) and needs about 10 minutes of
   observation after launch before it appears.
+- **Prompts left** — Claude and Codex meters also say how many more prompts
+  fit before the limit ("About 6 more prompts"). The app counts the prompts you
+  sent in the current window from the Claude Code and Codex CLI logs on this
+  computer and divides the usage so far by that count. Usage from other apps
+  (claude.ai, ChatGPT, IDE plugins) also fills the meter, so the estimate errs
+  low. It appears once a window has at least 3 prompts and 2% usage.
 - **Service status** — every 5 minutes the app reads each provider's public
   status page (status.claude.com, status.openai.com, status.cursor.com,
   githubstatus.com) and, during an incident, puts a colored dot on that

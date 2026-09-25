@@ -81,6 +81,23 @@ function formatPace(forecast) {
   return { text: `At this pace, limit ${weekday} ${time}`, tone: 'limit' };
 }
 
+/**
+ * "About 12 more prompts" from main's prompts-left.js, or null. Prompts are
+ * counted from local Claude Code / Codex logs; each costs this window's
+ * average so far.
+ * @returns {{ text: string, title: string } | null}
+ */
+function formatPromptsLeft(estimate) {
+  if (!estimate) return null;
+  let text;
+  if (estimate.left <= 0) text = 'Less than 1 more prompt';
+  else if (estimate.capped) text = `${estimate.left}+ more prompts`;
+  else text = `About ${estimate.left} more prompt${estimate.left === 1 ? '' : 's'}`;
+  const title = `Based on ${estimate.prompts} prompts sent from this computer in this window. `
+    + 'Use from other apps also counts toward the limit, so the real number may be higher.';
+  return { text, title };
+}
+
 function severityClass(percent) {
   if (percent >= 70) return 'critical';
   if (percent >= 45) return 'warning';
@@ -291,6 +308,10 @@ function setDetail(prefix, rows) {
     const paceHtml = pace
       ? `<span class="detail-pace pace-${pace.tone}">${escapeHtml(pace.text)}</span>`
       : '';
+    const prompts = formatPromptsLeft(row.promptsLeft);
+    const promptsHtml = prompts
+      ? `<div class="detail-prompts" title="${escapeHtml(prompts.title)}">${escapeHtml(prompts.text)}</div>`
+      : '';
     return (
       `<div class="detail-row">` +
         `<div class="detail-head">` +
@@ -299,6 +320,7 @@ function setDetail(prefix, rows) {
         `</div>` +
         `<div class="meter ${severityClass(clamped)}"><span class="meter-fill" style="width:${clamped}%"></span></div>` +
         `<div class="detail-used"><span>${escapeHtml(used)}</span>${paceHtml}</div>` +
+        promptsHtml +
       `</div>`
     );
   }).join('');
@@ -546,9 +568,10 @@ async function updateClaudeCard() {
   applyStaleState('claude', result, resetEl, baseText);
 
   const forecasts = result.forecasts ?? {};
+  const promptsLeft = result.promptsLeft ?? {};
   const rows = [
-    { label: 'Current session', percent: session.percent, sub: formatResetLabel(session.resetsAt), forecast: forecasts.session },
-    { label: 'All models', percent: week.percent, sub: formatResetLabel(week.resetsAt), forecast: forecasts.week },
+    { label: 'Current session', percent: session.percent, sub: formatResetLabel(session.resetsAt), forecast: forecasts.session, promptsLeft: promptsLeft.session },
+    { label: 'All models', percent: week.percent, sub: formatResetLabel(week.resetsAt), forecast: forecasts.week, promptsLeft: promptsLeft.week },
   ];
   if (weekScoped) {
     rows.push({
@@ -556,6 +579,7 @@ async function updateClaudeCard() {
       percent: weekScoped.percent,
       sub: formatResetLabel(weekScoped.resetsAt),
       forecast: forecasts.weekScoped,
+      promptsLeft: promptsLeft.weekScoped,
     });
   }
   setDetail('claude', rows);
@@ -577,11 +601,12 @@ async function updateCodexCard() {
   applyStaleState('codex', result, resetEl, `resets in ${formatCountdown(primary.resetsAt)}`);
 
   const forecasts = result.forecasts ?? {};
+  const promptsLeft = result.promptsLeft ?? {};
   const rows = [
-    { label: 'Current session', percent: primary.percent, sub: formatResetLabel(primary.resetsAt), forecast: forecasts.primary },
+    { label: 'Current session', percent: primary.percent, sub: formatResetLabel(primary.resetsAt), forecast: forecasts.primary, promptsLeft: promptsLeft.primary },
   ];
   if (secondary) {
-    rows.push({ label: 'Weekly', percent: secondary.percent, sub: formatResetLabel(secondary.resetsAt), forecast: forecasts.secondary });
+    rows.push({ label: 'Weekly', percent: secondary.percent, sub: formatResetLabel(secondary.resetsAt), forecast: forecasts.secondary, promptsLeft: promptsLeft.secondary });
   }
   setDetail('codex', rows);
 }
