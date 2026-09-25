@@ -83,8 +83,9 @@ Windows の `.exe` は未署名です。SmartScreen が出たら「詳細情報�
   「42% of weekly limit unused, resets in 5h」のように通知します。1つの枠につき
   1回だけで、5時間のセッション枠や日次の枠は対象外です。トレイメニューの
   **Unused Quota Reminders** か設定画面で ON/OFF できます(デフォルト ON)。
-- **ローカルのコスト推定** — Claude と Codex の詳細に Cost 欄を追加。今日と直近
-  30日のトークン数と推定コスト、使用量の多いプロジェクトを表示します。Claude Code
+- **ローカルのコスト推定** — Claude と Codex の詳細の最後に、今日と直近30日の
+  推定コストを1行で表示します。クリックするとトークン数と使用量の多いプロジェクトが
+  開きます。Claude Code
   (`~/.claude/projects`)と Codex CLI(`~/.codex/sessions`)がディスクに残している
   ログを読むだけなので、データは外部に送信しません。コストは公開 API の定価で
   計算します。サブスクリプションの場合は「従量課金だったらいくらか」の目安で、
