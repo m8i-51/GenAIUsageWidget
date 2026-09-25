@@ -216,21 +216,21 @@ function refreshEmptyState() {
   syncFlyout();
 }
 
-function authHint(prefix, message) {
+function authHint(prefix, message, expired = false) {
   const lower = String(message ?? '').toLowerCase();
-  if (prefix === 'claude' && (lower.includes('401') || lower.includes('token'))) {
-    return 'Run claude login to re-authenticate';
+  if (prefix === 'claude' && (expired || lower.includes('401') || lower.includes('token'))) {
+    return 'Run claude to sign in again';
   }
-  if (prefix === 'codex' && (lower.includes('401') || lower.includes('auth'))) {
+  if (prefix === 'codex' && (expired || lower.includes('401') || lower.includes('auth'))) {
     return 'Run codex login to re-authenticate';
   }
-  if (prefix === 'cursor' && lower.includes('token')) {
+  if (prefix === 'cursor' && (expired || lower.includes('token'))) {
     return 'Sign in again in the Cursor app';
   }
-  if (prefix === 'copilot' && (lower.includes('401') || lower.includes('403') || lower.includes('signed in'))) {
+  if (prefix === 'copilot' && (expired || lower.includes('401') || lower.includes('403') || lower.includes('signed in'))) {
     return 'Run copilot login to re-authenticate';
   }
-  if (prefix === 'antigravity' && (lower.includes('401') || lower.includes('cred'))) {
+  if (prefix === 'antigravity' && (expired || lower.includes('401') || lower.includes('cred'))) {
     return 'Run agy login to re-authenticate';
   }
   return null;
@@ -258,16 +258,20 @@ function applyStaleState(prefix, result, resetEl, baseText) {
   const tileEl = document.getElementById(`${prefix}-provider`);
   tileEl.classList.toggle('stale', !!result.stale);
   tileEl.classList.remove('error-state');
-  setHint(prefix, null);
+  setHint(prefix, result.stale && result.authExpired ? authHint(prefix, result.staleError, true) : null);
 
   if (result.stale) {
     const asOf = new Date(result.staleAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    resetEl.textContent = `${baseText}\nas of ${asOf} · retrying`;
+    const status = result.authExpired ? 'sign-in expired' : 'retrying';
+    resetEl.textContent = `${baseText}\nas of ${asOf} · ${status}`;
     resetEl.title = result.staleError ?? '';
   } else {
     resetEl.textContent = baseText;
     resetEl.removeAttribute('title');
   }
+
+  // setDetail already redrew the flyout, before the stale state was known.
+  if (prefix === selectedProvider) syncFlyout();
 }
 
 function setDetail(prefix, rows) {
@@ -331,14 +335,14 @@ function beginCard(prefix, result) {
   clearTileState(prefix);
 
   if (!result.ok) {
-    setError(prefix, result.error);
+    setError(prefix, result.error, result.authExpired);
     setDetail(prefix, []);
     return false;
   }
   return true;
 }
 
-function setError(prefix, message) {
+function setError(prefix, message, expired = false) {
   const tileEl = document.getElementById(`${prefix}-provider`);
   const resetEl = document.getElementById(`${prefix}-reset`);
   resetEl.textContent = `Error: ${message}`;
@@ -346,7 +350,7 @@ function setError(prefix, message) {
   resetEl.classList.add('error');
   tileEl.classList.add('error-state');
   tileEl.classList.remove('stale');
-  setHint(prefix, authHint(prefix, message));
+  setHint(prefix, authHint(prefix, message, expired));
 }
 
 function firstVisibleProvider() {
@@ -433,6 +437,9 @@ function syncFlyout() {
     body = detail;
     if (isStale && resetEl?.textContent) {
       body += `<div class="tile-sub">${escapeHtml(resetEl.textContent)}</div>`;
+    }
+    if (isStale && hintEl && !hintEl.hidden && hintEl.textContent) {
+      body += `<div class="tile-hint">${escapeHtml(hintEl.textContent)}</div>`;
     }
   } else {
     body = `<div class="flyout-empty">${escapeHtml(resetEl?.textContent || '')}</div>`;

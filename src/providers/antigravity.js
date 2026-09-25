@@ -3,6 +3,7 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { notConfigured } = require('./not-configured');
+const { authExpired } = require('./cli-refresh');
 
 const CRED_TARGET = 'gemini:antigravity';
 const LINUX_TOKEN_PATH = path.join(os.homedir(), '.gemini', 'antigravity-cli', 'antigravity-oauth-token');
@@ -59,6 +60,9 @@ async function callCloudCode(url, token, body) {
     },
     body: JSON.stringify(body),
   });
+  if (res.status === 401) {
+    throw authExpired('Antigravity sign-in expired');
+  }
   if (!res.ok) {
     throw new Error(`Antigravity request to ${url} failed: ${res.status}`);
   }
