@@ -90,6 +90,13 @@ you to log in again, and polls their usage APIs about once a minute.
   partial or major outage (uses the **Usage Alerts** toggle). Turn checks off
   with **Service Status** in the tray menu. Antigravity has no public status
   page, so it is not checked. Only signed-in providers are checked.
+- **Local cost estimate** — the Claude and Codex details add a Cost section:
+  today's and the last 30 days' tokens and estimated cost, plus the projects
+  that used the most. It reads the logs Claude Code (`~/.claude/projects`) and
+  Codex CLI (`~/.codex/sessions`) already keep on disk, so nothing leaves your
+  machine. Costs use public API list prices; on a subscription plan this is
+  what the same usage would cost pay-as-you-go, not what you are billed.
+  Models missing from the price table are counted in tokens only.
 - The window auto-sizes to its content, so the transparent widget never blocks
   clicks on what's behind it.
 

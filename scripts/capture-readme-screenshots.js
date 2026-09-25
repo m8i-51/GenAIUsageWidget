@@ -38,6 +38,7 @@ function installIpc() {
   });
   ipcMain.handle('get-claude-usage', () => demo.claude());
   ipcMain.handle('get-codex-usage', () => demo.codex());
+  ipcMain.handle('get-local-cost', () => demo.localCost());
   ipcMain.handle('get-cursor-usage', () => demo.cursor());
   ipcMain.handle('get-antigravity-usage', () => demo.antigravity());
   ipcMain.handle('get-copilot-usage', () => demo.copilot());
