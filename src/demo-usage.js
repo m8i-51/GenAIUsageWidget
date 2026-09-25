@@ -67,6 +67,27 @@ function copilot() {
   });
 }
 
+function windsurf() {
+  return ok({
+    primary: { percent: 64, resetsAt: minutesFromNow(9 * 60 + 20) },
+    secondary: { percent: 41, resetsAt: nextWeekdayMidnight(1) },
+    kind: 'quota',
+    plan: 'Pro',
+  });
+}
+
+function kiro() {
+  const firstOfNextMonth = new Date();
+  firstOfNextMonth.setUTCMonth(firstOfNextMonth.getUTCMonth() + 1, 1);
+  firstOfNextMonth.setUTCHours(0, 0, 0, 0);
+  return ok({
+    primary: { percent: 27.5, used: 275, limit: 1000, resetsAt: firstOfNextMonth.toISOString() },
+    secondary: { percent: 12, used: 60, limit: 500, resetsAt: minutesFromNow(12 * 24 * 60) },
+    secondaryKind: 'bonus',
+    plan: 'KIRO PRO',
+  });
+}
+
 // Percent gained over the last 40 minutes, so demo cards show a pace forecast
 // right away: Claude and Cursor run out before reset, the rest last.
 const PACE_GAIN = {
@@ -75,6 +96,8 @@ const PACE_GAIN = {
   cursor: { total: 4, grokBot: 0 },
   antigravity: { 'Gemini/Pro': 0, 'Gemini/Flash': 0 },
   copilot: { primary: 3, secondary: 0 },
+  windsurf: { primary: 5, secondary: 0 },
+  kiro: { primary: 1, secondary: 0 },
 };
 
 function seedPace(providerId, result, seedSample) {
@@ -100,4 +123,4 @@ function serviceStatus(providerId) {
   return SERVICE_STATUS[providerId] ?? null;
 }
 
-module.exports = { claude, codex, cursor, antigravity, copilot, seedPace, serviceStatus };
+module.exports = { claude, codex, cursor, antigravity, copilot, windsurf, kiro, seedPace, serviceStatus };
