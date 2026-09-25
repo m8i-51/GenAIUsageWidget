@@ -4,6 +4,7 @@ const PROVIDERS = [
   { id: 'copilot', label: 'Copilot' },
   { id: 'cursor', label: 'Cursor' },
   { id: 'antigravity', label: 'Antigravity' },
+  { id: 'gemini', label: 'Gemini' },
   { id: 'windsurf', label: 'Windsurf' },
   { id: 'kiro', label: 'Kiro' },
 ];
@@ -234,6 +235,9 @@ function authHint(prefix, message) {
   }
   if (prefix === 'antigravity' && (lower.includes('401') || lower.includes('cred'))) {
     return 'Run agy login to re-authenticate';
+  }
+  if (prefix === 'gemini' && (lower.includes('401') || lower.includes('expired') || lower.includes('refresh'))) {
+    return 'Run gemini and sign in with Google again';
   }
   if (prefix === 'kiro' && (lower.includes('401') || lower.includes('403') || lower.includes('expired'))) {
     return 'Open Kiro (or run kiro-cli login) to sign in again';
@@ -784,6 +788,34 @@ async function updateAntigravityCard() {
   setDetail('antigravity', detailRows);
 }
 
+async function updateGeminiCard() {
+  const result = await window.api.getGeminiUsage();
+  if (!beginCard('gemini', result)) return;
+  const resetEl = document.getElementById('gemini-reset');
+
+  const { primary, secondary, plan } = result.usage;
+  const planPrefix = formatPlanPrefix(plan);
+  if (!primary && !secondary) {
+    resetEl.textContent = `${planPrefix}No quota data`;
+    setDetail('gemini', []);
+    return;
+  }
+
+  const headline = primary ?? secondary;
+  setMeter('gemini', headline.percent);
+  applyStaleState('gemini', result, resetEl, `${planPrefix}resets in ${formatCountdown(headline.resetsAt)}`);
+
+  const forecasts = result.forecasts ?? {};
+  const rows = [];
+  if (primary) {
+    rows.push({ label: 'Pro', percent: primary.percent, sub: formatResetLabel(primary.resetsAt), forecast: forecasts.primary });
+  }
+  if (secondary) {
+    rows.push({ label: 'Flash', percent: secondary.percent, sub: formatResetLabel(secondary.resetsAt), forecast: forecasts.secondary });
+  }
+  setDetail('gemini', rows);
+}
+
 async function updateAll() {
   await Promise.all([
     updateClaudeCard(),
@@ -791,6 +823,7 @@ async function updateAll() {
     updateCopilotCard(),
     updateCursorCard(),
     updateAntigravityCard(),
+    updateGeminiCard(),
     updateWindsurfCard(),
     updateKiroCard(),
   ]);

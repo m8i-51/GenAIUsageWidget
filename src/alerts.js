@@ -9,6 +9,7 @@ const PROVIDER_LABELS = {
   cursor: 'Cursor',
   antigravity: 'Antigravity',
   copilot: 'Copilot',
+  gemini: 'Gemini',
   windsurf: 'Windsurf',
   kiro: 'Kiro',
 };
@@ -38,6 +39,10 @@ function headlineUsage(providerId, usage) {
     case 'copilot': {
       const headline = usage.primary ?? usage.secondary;
       return headline ? { percent: headline.percent, label: usage.primary ? 'premium' : 'chat' } : null;
+    }
+    case 'gemini': {
+      const headline = usage.primary ?? usage.secondary;
+      return headline ? { percent: headline.percent, label: usage.primary ? 'Pro' : 'Flash' } : null;
     }
     case 'windsurf': {
       const headline = usage.primary ?? usage.secondary;
