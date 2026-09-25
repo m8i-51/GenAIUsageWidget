@@ -22,6 +22,11 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('service-status-changed', listener);
     return () => ipcRenderer.removeListener('service-status-changed', listener);
   },
+  onUsageActivity: (cb) => {
+    const listener = (_event, providerId) => cb(providerId);
+    ipcRenderer.on('usage-activity', listener);
+    return () => ipcRenderer.removeListener('usage-activity', listener);
+  },
   saveWidgetBounds: (bounds) => ipcRenderer.send('save-widget-bounds', bounds),
   resizeTo: (size) => ipcRenderer.send('resize-to', size),
   hideWidgetToEdge: () => ipcRenderer.send('widget-hide-to-edge'),

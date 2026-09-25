@@ -90,6 +90,12 @@ you to log in again, and polls their usage APIs about once a minute.
   partial or major outage (uses the **Usage Alerts** toggle). Turn checks off
   with **Service Status** in the tray menu. Antigravity has no public status
   page, so it is not checked. Only signed-in providers are checked.
+- **Live refresh** — when a Claude Code or Codex reply finishes, the widget
+  sees the tool's local transcript change and refetches that meter right away
+  instead of waiting for the next minute poll. It only watches
+  `~/.claude/projects` and `~/.codex/sessions` for changes (no config is
+  written) and never refetches a provider more than every 30 s (Claude) or
+  15 s (Codex). Turn it off with **Live Refresh** in the tray menu.
 - The window auto-sizes to its content, so the transparent widget never blocks
   clicks on what's behind it.
 

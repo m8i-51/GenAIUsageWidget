@@ -13,7 +13,8 @@ const alerts = require('./alerts');
 const pace = require('./pace');
 const serviceStatus = require('./service-status');
 const { loadSettings, saveSettings } = require('./settings');
-const { fetchWithCache, preloadLastGood } = require('./usage-cache');
+const { fetchWithCache, preloadLastGood, invalidate: invalidateUsage } = require('./usage-cache');
+const { watchUsageActivity } = require('./usage-watch');
 const { summarizeForTray, formatTooltip, renderTrayPng, PROVIDER_LABELS } = require('./tray-icon');
 const {
   detectSnapEdge,
@@ -833,6 +834,15 @@ function createTray() {
         },
       },
       {
+        label: 'Live Refresh',
+        type: 'checkbox',
+        checked: loadSettings().liveRefreshEnabled,
+        click: (menuItem) => {
+          broadcastSettings(saveSettings({ liveRefreshEnabled: menuItem.checked }));
+          applyLiveRefresh();
+        },
+      },
+      {
         label: 'Start at Login',
         type: 'checkbox',
         checked: autostart.isEnabled(),
@@ -857,6 +867,7 @@ ipcMain.handle('set-settings', (_event, partial) => {
   }
   broadcastSettings(settings);
   if (partial.hiddenProviders !== undefined) refreshTrayIcon();
+  if (partial.liveRefreshEnabled !== undefined) applyLiveRefresh();
   return settings;
 });
 
@@ -1004,6 +1015,41 @@ serviceStatus.onChange((providerId, status, before) => {
   }
 });
 
+let usageWatcher = null;
+const liveRefreshRetry = new Map();
+
+// A Claude Code or Codex reply just finished: fetch that provider now and
+// push the new numbers to every window instead of waiting for the next poll.
+function onUsageActivity(providerId) {
+  clearTimeout(liveRefreshRetry.get(providerId));
+  liveRefreshRetry.delete(providerId);
+  const settings = loadSettings();
+  if (!settings.liveRefreshEnabled || settings.hiddenProviders.includes(providerId)) return;
+  const waitMs = invalidateUsage(providerId);
+  if (waitMs > 0) {
+    // Fetched moments ago; come back once the rate-limit floor has passed so
+    // the last reply of a burst still shows up.
+    liveRefreshRetry.set(providerId, setTimeout(() => onUsageActivity(providerId), waitMs));
+    return;
+  }
+  for (const win of [popup, widget]) {
+    if (win && !win.isDestroyed()) win.webContents.send('usage-activity', providerId);
+  }
+  refreshTrayIcon();
+}
+
+function applyLiveRefresh() {
+  const enabled = loadSettings().liveRefreshEnabled;
+  if (enabled && !usageWatcher) {
+    usageWatcher = watchUsageActivity(onUsageActivity);
+  } else if (!enabled && usageWatcher) {
+    usageWatcher.stop();
+    usageWatcher = null;
+    for (const timer of liveRefreshRetry.values()) clearTimeout(timer);
+    liveRefreshRetry.clear();
+  }
+}
+
 ipcMain.on('open-status-page', (_event, providerId) => {
   // Only open the fixed status page for a known provider, never a renderer-supplied URL.
   const url = serviceStatus.pageUrl(providerId);
@@ -1093,6 +1139,7 @@ app.whenReady().then(() => {
   createPopup();
   createWidget();
   createTray();
+  applyLiveRefresh();
 });
 
 app.on('window-all-closed', (event) => {

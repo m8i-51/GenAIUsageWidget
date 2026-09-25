@@ -10,6 +10,7 @@ const DEFAULTS = {
   widgetDockEdge: null,
   alertsEnabled: true,
   serviceStatusEnabled: true,
+  liveRefreshEnabled: true,
 };
 
 let settingsPath = null;
@@ -32,6 +33,9 @@ function mergeWithDefaults(raw) {
   }
   if (merged.serviceStatusEnabled !== false) {
     merged.serviceStatusEnabled = true;
+  }
+  if (merged.liveRefreshEnabled !== false) {
+    merged.liveRefreshEnabled = true;
   }
   if (merged.compactMode !== true) {
     merged.compactMode = false;
