@@ -11,6 +11,7 @@ const DEFAULTS = {
   alertsEnabled: true,
   leftoverAlertsEnabled: true,
   serviceStatusEnabled: true,
+  zaiRegion: 'global',
 };
 
 let settingsPath = null;
@@ -36,6 +37,9 @@ function mergeWithDefaults(raw) {
   }
   if (merged.serviceStatusEnabled !== false) {
     merged.serviceStatusEnabled = true;
+  }
+  if (merged.zaiRegion !== 'cn') {
+    merged.zaiRegion = 'global';
   }
   if (merged.compactMode !== true) {
     merged.compactMode = false;

@@ -69,19 +69,27 @@ you to log in again, and polls their usage APIs about once a minute.
   the popup and the widget, a 429 triggers a long backoff (honoring
   `Retry-After`), and the last good snapshot is shown (with its timestamp) while
   the API is unavailable — even across app restarts.
+- **Expired sign-ins recover on their own** — when a Claude or Codex sign-in
+  expires, the widget asks that provider's own CLI to refresh it (Claude:
+  `claude auth status`; Codex: `codex app-server`, which also returns the usage)
+  and reads the credentials the CLI saves. The widget never rewrites a CLI's
+  credential file itself, so your CLI login stays intact. A failed refresh is
+  retried at most every 5 minutes. If the CLI isn't installed or can't refresh, the
+  card keeps the last snapshot, says "sign-in expired", and tells you which
+  command signs you back in.
 - **Usage alerts** — a native OS notification when a provider's headline
   meter crosses 70% (warning) or 90% (critical). It fires once per crossing and
   again only after usage drops back below 65% / 85%. Hidden providers, errors,
   and stale snapshots never alert. Toggle **Usage Alerts** in the tray icon's
-  right-click menu (on by default). On Linux this needs a notification daemon,
+  right-click menu or in Settings (on by default). On Linux this needs a notification daemon,
   which most desktop environments already run.
 - **Unused quota reminders** — within 24 hours of a weekly or monthly window
-  resetting (Claude/Codex weekly, Copilot premium, Cursor, Windsurf, Kiro, and
+  resetting (Claude/Codex weekly, Copilot premium, Cursor, Windsurf, Kiro, z.ai weekly, and
   any other meter seen resetting more than 36 hours out), a notification says
   how much would go to waste ("42% of weekly limit unused, resets in 5h") when
   at least 30% is left and your recent pace won't use it up. Once per window;
   5-hour sessions and daily quotas are skipped. Toggle **Unused Quota
-  Reminders** in the tray menu (on by default).
+  Reminders** in the tray menu or in Settings (on by default).
 - **Pace forecast** — under each meter, a line predicts when you'll hit the
   limit at your recent rate ("At this pace, limit in 36m"), or says you're on
   pace to last until the reset. The rate comes from the last hour of samples
@@ -97,6 +105,25 @@ you to log in again, and polls their usage APIs about once a minute.
   partial or major outage (uses the **Usage Alerts** toggle). Turn checks off
   with **Service Status** in the tray menu. Antigravity has no public status
   page, so it is not checked. Only signed-in providers are checked.
+- **Local cost estimate** — the Claude and Codex details add a Cost section:
+  today's and the last 30 days' tokens and estimated cost, plus the projects
+  that used the most. It reads the logs Claude Code (`~/.claude/projects`) and
+  Codex CLI (`~/.codex/sessions`) already keep on disk, so nothing leaves your
+  machine. Costs use public API list prices; on a subscription plan this is
+  what the same usage would cost pay-as-you-go, not what you are billed.
+  Models missing from the price table are counted in tokens only.
+- **Settings window** — open it from the gear button on the widget or popup,
+  or **Settings…** in the tray menu. It has start at login, compact mode, the
+  widget's dock side, usage alerts, service status, a show/hide switch per
+  provider with whether it is signed in, and API keys for providers that have
+  no local login.
+- **API-key providers** — z.ai (GLM Coding Plan) shows its 5-hour window, the
+  weekly window when the plan has one, and the MCP quota. Paste the key under
+  Settings → Providers and pick the Global or China (BigModel) region. The key
+  is encrypted with the OS keystore (Electron `safeStorage`: DPAPI on Windows,
+  GNOME Keyring / KWallet on Linux) and is never passed back to the UI. On a
+  Linux desktop with no keyring it is only obfuscated, and the settings window
+  says so.
 - The window auto-sizes to its content, so the transparent widget never blocks
   clicks on what's behind it.
 
@@ -137,6 +164,7 @@ tray icon's right-click menu (off by default).
 | Copilot | `COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN` env vars, then the OS keychain (service `copilot-cli`), then `~/.copilot/config.json` | Run `copilot login` with the GitHub Copilot CLI (`npm i -g @github/copilot`). On Windows the keychain is read via `src/providers/win-cred-read.py`, so Python must be on `PATH`; on Linux it uses `secret-tool` (libsecret) when installed. Uses GitHub's unofficial `copilot_internal/user` endpoint, the same one the VS Code extension uses. |
 | Cursor | Cursor app's `state.vscdb` (SQLite, via `sql.js`) | Requires the Cursor desktop app to be installed and signed in |
 | Gemini CLI | `~/.gemini/oauth_creds.json` | Run `gemini` and choose **Sign in with Google** (API key and Vertex AI sign-ins have no quota to show). The access token expires after an hour; when it has, the app refreshes it in memory with the OAuth client found in your local `@google/gemini-cli` install, and never rewrites the CLI's own file. Sign-ins stored with `GEMINI_FORCE_ENCRYPTED_FILE_STORAGE=true` are not read. Uses the same unofficial `retrieveUserQuota` endpoint the CLI itself calls. |
+| z.ai | API key saved in Settings → Providers (encrypted in `secrets.json` under the app's user data folder), or the `Z_AI_API_KEY` env var | Create a key in your z.ai account (GLM Coding Plan). Choose the China (BigModel) region for `open.bigmodel.cn` keys. Team quotas are not supported yet. |
 | Antigravity | Windows Credential Manager (target `gemini:antigravity`) on Windows; `~/.gemini/antigravity-cli/antigravity-oauth-token` on Linux | Requires the `agy` CLI to have been used to sign in at least once (`winget install Google.AntigravityCLI` on Windows, or the official install script on Linux). On Windows the credential is read via a small Python helper script (`src/providers/win-cred-read.py`), so Python must be on `PATH`. On Linux it's a plain JSON file, no extra dependency needed. Not yet supported on macOS. |
 | Windsurf | Windsurf app's `state.vscdb` (key `windsurf.settings.cachedPlanInfo`) | Requires the Windsurf desktop app to be installed and signed in. This is the plan status Windsurf caches locally, so it only updates while Windsurf is running. |
 | Kiro | Kiro IDE's `~/.aws/sso/cache/kiro-auth-token.json`, then kiro-cli's `data.sqlite3` | Sign in to the Kiro IDE, or run `kiro-cli login`. Calls the same `GetUsageLimits` API Kiro itself uses. |
@@ -154,6 +182,9 @@ src/
   widget-edge-hide.js  Geometry helpers for docking the ring pill to an edge
   preload.js           Exposes the get-*-usage IPC calls and window resizing
   index.html / renderer.js   Shared UI for both the popup and the widget
+  settings.html / settings-renderer.js   Settings window
+  settings.js          Settings file (settings.json in the user data folder)
+  secrets.js           API keys, encrypted with Electron safeStorage
   providers/           One module per provider, each exporting a fetchXUsage()
                        function; not-configured.js marks "not set up" errors
   service-status.js    Polls provider status pages for outages
@@ -168,7 +199,8 @@ docs/screenshots/      README images (widget flyout + tray popup)
 - Antigravity support covers Windows and Linux; macOS isn't implemented yet (Cursor/Claude/Codex are cross-platform including macOS).
 - Windsurf numbers come from Windsurf's local cache, so they can lag until the
   Windsurf app is opened again.
-- No token-refresh handling yet — if a provider's token expires, its card shows
-  an error until you re-authenticate with that provider's own CLI/app.
+- Claude and Codex sign-ins are refreshed through their CLIs (which must be
+  installed), and Gemini's in memory. For other providers, open the app/CLI to
+  refresh an expired sign-in; the card says so when it happens.
 - Installers are unsigned, so Windows SmartScreen / Linux package managers may
   warn on first run — click through ("More info" → "Run anyway" on Windows).

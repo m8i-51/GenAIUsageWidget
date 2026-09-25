@@ -7,6 +7,7 @@ const PROVIDERS = [
   { id: 'gemini', label: 'Gemini' },
   { id: 'windsurf', label: 'Windsurf' },
   { id: 'kiro', label: 'Kiro' },
+  { id: 'zai', label: 'z.ai' },
 ];
 
 let appSettings = {
@@ -25,7 +26,8 @@ const isWidgetMode = document.body.classList.contains('widget-mode');
 const configuredProviders = Object.fromEntries(PROVIDERS.map((p) => [p.id, false]));
 
 let selectedProvider = null;
-let settingsOpen = false;
+/** Local log totals from main's local-cost.js ({ claude, codex } or null). */
+let localCost = null;
 let suppressTileClick = false;
 
 function formatCountdown(isoString) {
@@ -110,37 +112,8 @@ function applySettings(settings) {
       : null,
   };
   document.body.classList.toggle('compact-mode', appSettings.compactMode);
-  const compactToggle = document.getElementById('compact-mode-toggle');
-  if (compactToggle) compactToggle.checked = appSettings.compactMode;
-  syncDockEdgePicker(appSettings.widgetDockEdge || 'auto');
-  renderProviderToggles();
   applyHiddenProviders();
   syncFlyout();
-}
-
-const DOCK_EDGE_LABELS = {
-  auto: 'Auto (nearest edge)',
-  top: 'Top',
-  bottom: 'Bottom',
-  left: 'Left',
-  right: 'Right',
-};
-
-function syncDockEdgePicker(value) {
-  const next = DOCK_EDGE_LABELS[value] ? value : 'auto';
-  const label = document.getElementById('dock-edge-label');
-  if (label) label.textContent = DOCK_EDGE_LABELS[next];
-  document.querySelectorAll('.dock-edge-option').forEach((btn) => {
-    btn.setAttribute('aria-selected', btn.dataset.value === next ? 'true' : 'false');
-  });
-}
-
-function setDockEdgeMenuOpen(open) {
-  const menu = document.getElementById('dock-edge-menu');
-  const trigger = document.getElementById('dock-edge-trigger');
-  if (!menu || !trigger) return;
-  menu.hidden = !open;
-  trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
 function applyEdgeHideUi(state) {
@@ -219,28 +192,31 @@ function refreshEmptyState() {
   syncFlyout();
 }
 
-function authHint(prefix, message) {
+function authHint(prefix, message, expired = false) {
   const lower = String(message ?? '').toLowerCase();
-  if (prefix === 'claude' && (lower.includes('401') || lower.includes('token'))) {
-    return 'Run claude login to re-authenticate';
+  if (prefix === 'claude' && (expired || lower.includes('401') || lower.includes('token'))) {
+    return 'Run claude to sign in again';
   }
-  if (prefix === 'codex' && (lower.includes('401') || lower.includes('auth'))) {
+  if (prefix === 'codex' && (expired || lower.includes('401') || lower.includes('auth'))) {
     return 'Run codex login to re-authenticate';
   }
-  if (prefix === 'cursor' && lower.includes('token')) {
+  if (prefix === 'cursor' && (expired || lower.includes('token'))) {
     return 'Sign in again in the Cursor app';
   }
-  if (prefix === 'copilot' && (lower.includes('401') || lower.includes('403') || lower.includes('signed in'))) {
+  if (prefix === 'copilot' && (expired || lower.includes('401') || lower.includes('403') || lower.includes('signed in'))) {
     return 'Run copilot login to re-authenticate';
   }
-  if (prefix === 'antigravity' && (lower.includes('401') || lower.includes('cred'))) {
+  if (prefix === 'antigravity' && (expired || lower.includes('401') || lower.includes('cred'))) {
     return 'Run agy login to re-authenticate';
   }
-  if (prefix === 'gemini' && (lower.includes('401') || lower.includes('expired') || lower.includes('refresh'))) {
+  if (prefix === 'gemini' && (expired || lower.includes('401') || lower.includes('expired') || lower.includes('refresh'))) {
     return 'Run gemini and sign in with Google again';
   }
-  if (prefix === 'kiro' && (lower.includes('401') || lower.includes('403') || lower.includes('expired'))) {
+  if (prefix === 'kiro' && (expired || lower.includes('401') || lower.includes('403') || lower.includes('expired'))) {
     return 'Open Kiro (or run kiro-cli login) to sign in again';
+  }
+  if (prefix === 'zai' && (expired || lower.includes('401') || lower.includes('403') || lower.includes('key'))) {
+    return 'Check the API key in Settings';
   }
   return null;
 }
@@ -267,16 +243,20 @@ function applyStaleState(prefix, result, resetEl, baseText) {
   const tileEl = document.getElementById(`${prefix}-provider`);
   tileEl.classList.toggle('stale', !!result.stale);
   tileEl.classList.remove('error-state');
-  setHint(prefix, null);
+  setHint(prefix, result.stale && result.authExpired ? authHint(prefix, result.staleError, true) : null);
 
   if (result.stale) {
     const asOf = new Date(result.staleAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    resetEl.textContent = `${baseText}\nas of ${asOf} · retrying`;
+    const status = result.authExpired ? 'sign-in expired' : 'retrying';
+    resetEl.textContent = `${baseText}\nas of ${asOf} · ${status}`;
     resetEl.title = result.staleError ?? '';
   } else {
     resetEl.textContent = baseText;
     resetEl.removeAttribute('title');
   }
+
+  // setDetail already redrew the flyout, before the stale state was known.
+  if (prefix === selectedProvider) syncFlyout();
 }
 
 function setDetail(prefix, rows) {
@@ -303,7 +283,82 @@ function setDetail(prefix, rows) {
     );
   }).join('');
 
+  detailEl.insertAdjacentHTML('beforeend', costHtml(prefix));
+
   if (prefix === selectedProvider) syncFlyout();
+}
+
+const COST_SOURCES = {
+  claude: 'Claude Code',
+  codex: 'Codex CLI',
+};
+
+function formatUsd(value) {
+  if (value >= 1000) return `$${Math.round(value).toLocaleString('en-US')}`;
+  if (value >= 100) return `$${value.toFixed(0)}`;
+  return `$${value.toFixed(2)}`;
+}
+
+function formatTokens(count) {
+  if (count >= 1e9) return `${(count / 1e9).toFixed(1)}B`;
+  if (count >= 1e6) return `${(count / 1e6).toFixed(count >= 1e8 ? 0 : 1)}M`;
+  if (count >= 1e3) return `${Math.round(count / 1e3)}K`;
+  return String(count);
+}
+
+/** Today / last-30-days cost block for providers whose CLI keeps local logs. */
+function costHtml(prefix) {
+  const summary = localCost?.[prefix];
+  if (!COST_SOURCES[prefix] || !summary) return '';
+  const unpriced = summary.unpricedModels?.length
+    ? ` Not priced: ${summary.unpricedModels.join(', ')}.`
+    : '';
+  const title = `Estimated from local ${COST_SOURCES[prefix]} logs at API list prices. ` +
+    `Subscription plans are not billed per token.${unpriced}`;
+  const totals = [
+    ['Today', summary.today],
+    ['30 days', summary.last30Days],
+  ].map(([label, t]) => (
+    `<div class="cost-total">` +
+      `<span class="cost-value">${formatUsd(t.cost)}</span>` +
+      `<span class="cost-caption">${label}</span>` +
+      `<span class="cost-caption">${formatTokens(t.tokens)} tokens</span>` +
+    `</div>`
+  )).join('');
+  const projects = summary.projects.map((p) => (
+    `<div class="cost-project">` +
+      `<span class="cost-project-name">${escapeHtml(p.name)}</span>` +
+      `<span class="cost-project-value">${formatUsd(p.cost)}</span>` +
+    `</div>`
+  )).join('');
+  const more = summary.projectCount > summary.projects.length
+    ? `<div class="cost-more">+${summary.projectCount - summary.projects.length} more projects</div>`
+    : '';
+  return (
+    `<div class="detail-row cost-block" title="${escapeHtml(title)}">` +
+      `<div class="detail-head">` +
+        `<span class="detail-label">Cost</span>` +
+        `<span class="detail-reset">${unpriced ? 'Partial estimate' : 'API-price estimate'}</span>` +
+      `</div>` +
+      `<div class="cost-totals">${totals}</div>` +
+      (projects ? `<div class="cost-projects">${projects}${more}</div>` : '') +
+    `</div>`
+  );
+}
+
+async function updateLocalCost() {
+  try {
+    localCost = await window.api.getLocalCost();
+  } catch {
+    localCost = null;
+  }
+  for (const prefix of Object.keys(COST_SOURCES)) {
+    const detailEl = document.getElementById(`${prefix}-detail`);
+    if (!detailEl) continue;
+    detailEl.querySelector('.cost-block')?.remove();
+    detailEl.insertAdjacentHTML('beforeend', costHtml(prefix));
+  }
+  syncFlyout();
 }
 
 function setMeter(prefix, percent) {
@@ -378,14 +433,14 @@ function beginCard(prefix, result) {
   clearTileState(prefix);
 
   if (!result.ok) {
-    setError(prefix, result.error);
+    setError(prefix, result.error, result.authExpired);
     setDetail(prefix, []);
     return false;
   }
   return true;
 }
 
-function setError(prefix, message) {
+function setError(prefix, message, expired = false) {
   const tileEl = document.getElementById(`${prefix}-provider`);
   const resetEl = document.getElementById(`${prefix}-reset`);
   resetEl.textContent = `Error: ${message}`;
@@ -393,7 +448,7 @@ function setError(prefix, message) {
   resetEl.classList.add('error');
   tileEl.classList.add('error-state');
   tileEl.classList.remove('stale');
-  setHint(prefix, authHint(prefix, message));
+  setHint(prefix, authHint(prefix, message, expired));
 }
 
 function firstVisibleProvider() {
@@ -413,9 +468,6 @@ function revealFromEdgeIfCollapsed() {
 
 function closeFlyout() {
   selectedProvider = null;
-  settingsOpen = false;
-  const settings = document.getElementById('settings-panel');
-  if (settings) settings.hidden = true;
   syncFlyout();
 }
 
@@ -432,8 +484,7 @@ function selectProvider(id, { toggle = true } = {}) {
 function syncPanelOpen() {
   const panel = document.getElementById('panel');
   const flyout = document.getElementById('flyout');
-  const settings = document.getElementById('settings-panel');
-  const open = isWidgetMode && ((flyout && !flyout.hidden) || (settings && !settings.hidden));
+  const open = isWidgetMode && flyout && !flyout.hidden;
   panel.classList.toggle('open', !!open);
 }
 
@@ -446,7 +497,7 @@ function syncFlyout() {
     tile.classList.toggle('selected', tile.dataset.provider === selectedProvider);
   });
 
-  if (!isWidgetMode || settingsOpen || !selectedProvider) {
+  if (!isWidgetMode || !selectedProvider) {
     flyout.hidden = true;
     content.innerHTML = '';
     syncPanelOpen();
@@ -484,6 +535,9 @@ function syncFlyout() {
     body = detail;
     if (isStale && resetEl?.textContent) {
       body += `<div class="tile-sub">${escapeHtml(resetEl.textContent)}</div>`;
+    }
+    if (isStale && hintEl && !hintEl.hidden && hintEl.textContent) {
+      body += `<div class="tile-hint">${escapeHtml(hintEl.textContent)}</div>`;
     }
   } else {
     body = `<div class="flyout-empty">${escapeHtml(resetEl?.textContent || '')}</div>`;
@@ -816,7 +870,38 @@ async function updateGeminiCard() {
   setDetail('gemini', rows);
 }
 
+async function updateZaiCard() {
+  const result = await window.api.getZaiUsage();
+  if (!beginCard('zai', result)) return;
+  const resetEl = document.getElementById('zai-reset');
+
+  const { plan, primary, secondary, mcp } = result.usage;
+  if (!primary) {
+    resetEl.textContent = plan ? `${plan} · No quota data` : 'No quota data';
+    setDetail('zai', []);
+    return;
+  }
+
+  setMeter('zai', primary.percent);
+  const planPrefix = plan ? `${plan} · ` : '';
+  applyStaleState('zai', result, resetEl, `${planPrefix}resets in ${formatCountdown(primary.resetsAt)}`);
+
+  const forecasts = result.forecasts ?? {};
+  const rows = [
+    { label: primary.label, percent: primary.percent, sub: formatResetLabel(primary.resetsAt), forecast: forecasts.primary },
+  ];
+  if (secondary) {
+    rows.push({ label: secondary.label, percent: secondary.percent, sub: formatResetLabel(secondary.resetsAt), forecast: forecasts.secondary });
+  }
+  if (mcp) {
+    rows.push({ label: 'MCP', percent: mcp.percent, sub: formatResetLabel(mcp.resetsAt), forecast: forecasts.mcp });
+  }
+  setDetail('zai', rows);
+}
+
 async function updateAll() {
+  // Log scanning can take a moment on first run; cards do not wait for it.
+  updateLocalCost();
   await Promise.all([
     updateClaudeCard(),
     updateCodexCard(),
@@ -826,10 +911,10 @@ async function updateAll() {
     updateGeminiCard(),
     updateWindsurfCard(),
     updateKiroCard(),
+    updateZaiCard(),
   ]);
 
   refreshEmptyState();
-  renderProviderToggles();
 
   const updatedEl = document.getElementById('last-updated');
   if (updatedEl) {
@@ -839,82 +924,9 @@ async function updateAll() {
   syncFlyout();
 }
 
-function renderProviderToggles() {
-  const container = document.getElementById('provider-toggles');
-  if (!container) return;
-
-  container.innerHTML = PROVIDERS.map(({ id, label }) => {
-    const configured = configuredProviders[id];
-    const visible = configured && !isProviderHidden(id);
-    const disabledAttr = configured ? '' : 'disabled';
-    const note = configured ? '' : '<span class="provider-toggle-note">Not set up</span>';
-    return (
-      `<label class="settings-row provider-toggle${configured ? '' : ' disabled'}">` +
-        `<span>${escapeHtml(label)}${note}</span>` +
-        `<input type="checkbox" data-provider="${id}" ${visible ? 'checked' : ''} ${disabledAttr} />` +
-      `</label>`
-    );
-  }).join('');
-}
-
-async function onProviderToggleChange(event) {
-  const input = event.target.closest('input[data-provider]');
-  if (!input || input.disabled) return;
-
-  const providerId = input.dataset.provider;
-  const hidden = new Set(appSettings.hiddenProviders);
-  if (input.checked) {
-    hidden.delete(providerId);
-  } else {
-    hidden.add(providerId);
-  }
-  const settings = await window.api.setSettings({ hiddenProviders: [...hidden] });
-  applySettings(settings);
-  await updateAll();
-}
-
-function placeSettingsPanel() {
-  const settings = document.getElementById('settings-panel');
-  const panel = document.getElementById('panel');
-  const notch = document.getElementById('notch');
-  if (!settings || !panel || !notch) return;
-  if (isWidgetMode) {
-    panel.appendChild(settings);
-  } else {
-    notch.appendChild(settings);
-  }
-}
-
-function showSettingsPanel(show) {
-  settingsOpen = !!show;
-  const settings = document.getElementById('settings-panel');
-  const cards = document.getElementById('cards-view');
-  settings.hidden = !show;
-
-  if (isWidgetMode) {
-    cards.hidden = false;
-    if (show) {
-      document.getElementById('flyout').hidden = true;
-      setIgnoreMouse(false);
-    }
-    syncPanelOpen();
-    if (!show) syncFlyout();
-    refreshIgnoreMouse();
-  } else {
-    cards.hidden = show;
-    document.getElementById('panel').classList.remove('open');
-  }
-}
-
 document.getElementById('settings-btn').addEventListener('click', (event) => {
   event.stopPropagation();
-  revealFromEdgeIfCollapsed();
-  showSettingsPanel(true);
-  renderProviderToggles();
-});
-
-document.getElementById('settings-back-btn').addEventListener('click', () => {
-  showSettingsPanel(false);
+  window.api.openSettings();
 });
 
 const hideEdgeBtn = document.getElementById('hide-edge-btn');
@@ -939,33 +951,6 @@ if (isWidgetMode) {
     });
   }
   window.api.onWidgetEdgeHideChanged((state) => applyEdgeHideUi(state));
-}
-
-document.getElementById('compact-mode-toggle').addEventListener('change', async (event) => {
-  const settings = await window.api.setSettings({ compactMode: event.target.checked });
-  applySettings(settings);
-});
-
-const dockEdgeTrigger = document.getElementById('dock-edge-trigger');
-const dockEdgeMenu = document.getElementById('dock-edge-menu');
-if (dockEdgeTrigger && dockEdgeMenu) {
-  dockEdgeTrigger.addEventListener('click', (event) => {
-    event.stopPropagation();
-    setDockEdgeMenuOpen(dockEdgeMenu.hidden);
-  });
-  dockEdgeMenu.addEventListener('click', async (event) => {
-    const option = event.target.closest('.dock-edge-option');
-    if (!option) return;
-    event.stopPropagation();
-    const value = option.dataset.value || 'auto';
-    setDockEdgeMenuOpen(false);
-    syncDockEdgePicker(value);
-    const settings = await window.api.setSettings({
-      widgetDockEdge: value === 'auto' ? null : value,
-    });
-    applySettings(settings);
-  });
-  document.addEventListener('click', () => setDockEdgeMenuOpen(false));
 }
 
 // Card and flyout incident lines open that provider's status page.
@@ -1128,7 +1113,7 @@ function setIgnoreMouse(ignore) {
 
 function isOverInteractive(el) {
   if (!el) return false;
-  return !!el.closest('.notch, .flyout, .edge-peek-tab, #settings-panel');
+  return !!el.closest('.notch, .flyout, .edge-peek-tab');
 }
 
 function syncIgnoreMouseFromPoint(clientX, clientY) {
@@ -1145,7 +1130,7 @@ function refreshIgnoreMouse() {
 
 function isWidgetDragSource(target) {
   if (!target || !target.closest) return false;
-  if (target.closest('button, input, a, label, .dock-edge-picker, .flyout')) return false;
+  if (target.closest('button, input, a, label, .flyout')) return false;
   return !!target.closest('.notch');
 }
 
@@ -1199,9 +1184,6 @@ if (isWidgetMode) {
 }
 
 async function init() {
-  placeSettingsPanel();
-  document.getElementById('provider-toggles').addEventListener('change', onProviderToggleChange);
-
   const settings = await window.api.getSettings();
   applySettings(settings);
   if (isWidgetMode && settings.widgetEdgeHide) {

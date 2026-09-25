@@ -12,6 +12,7 @@ const PROVIDER_LABELS = {
   gemini: 'Gemini',
   windsurf: 'Windsurf',
   kiro: 'Kiro',
+  zai: 'z.ai',
 };
 
 // Per provider: { warning: 'below'|'notified', critical: 'below'|'notified' }.
@@ -29,6 +30,8 @@ function headlineUsage(providerId, usage) {
       return usage.session ? { percent: usage.session.percent, label: 'session' } : null;
     case 'codex':
       return usage.primary ? { percent: usage.primary.percent, label: 'session' } : null;
+    case 'zai':
+      return usage.primary ? { percent: usage.primary.percent, label: usage.primary.label } : null;
     case 'cursor':
       return { percent: usage.percent, label: 'total' };
     case 'antigravity': {

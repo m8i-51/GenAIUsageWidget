@@ -23,6 +23,7 @@ const PROVIDER_LABELS = {
   windsurf: 'Windsurf',
   kiro: 'Kiro',
   gemini: 'Gemini',
+  zai: 'z.ai',
 };
 
 /**
@@ -49,6 +50,8 @@ function knownLongMeters(providerId, usage) {
         : { secondary: 'weekly quota' };
     case 'kiro':
       return { primary: 'monthly credits' };
+    case 'zai':
+      return { secondary: 'weekly limit' };
     default:
       return {};
   }
