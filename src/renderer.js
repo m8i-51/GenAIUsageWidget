@@ -4,6 +4,8 @@ const PROVIDERS = [
   { id: 'copilot', label: 'Copilot' },
   { id: 'cursor', label: 'Cursor' },
   { id: 'antigravity', label: 'Antigravity' },
+  { id: 'windsurf', label: 'Windsurf' },
+  { id: 'kiro', label: 'Kiro' },
 ];
 
 let appSettings = {
@@ -233,6 +235,9 @@ function authHint(prefix, message) {
   if (prefix === 'antigravity' && (lower.includes('401') || lower.includes('cred'))) {
     return 'Run agy login to re-authenticate';
   }
+  if (prefix === 'kiro' && (lower.includes('401') || lower.includes('403') || lower.includes('expired'))) {
+    return 'Open Kiro (or run kiro-cli login) to sign in again';
+  }
   return null;
 }
 
@@ -275,7 +280,8 @@ function setDetail(prefix, rows) {
 
   detailEl.innerHTML = rows.map((row) => {
     const clamped = Math.max(0, Math.min(100, row.percent ?? 0));
-    const used = row.percent == null ? '–' : `${Math.round(clamped)}% Used`;
+    let used = row.percent == null ? '–' : `${Math.round(clamped)}% Used`;
+    if (row.amount) used += ` · ${row.amount}`;
     const reset = row.sub ? escapeHtml(row.sub) : '';
     const pace = formatPace(row.forecast);
     const paceHtml = pace
@@ -288,7 +294,7 @@ function setDetail(prefix, rows) {
           `<span class="detail-reset">${reset}</span>` +
         `</div>` +
         `<div class="meter ${severityClass(clamped)}"><span class="meter-fill" style="width:${clamped}%"></span></div>` +
-        `<div class="detail-used"><span>${used}</span>${paceHtml}</div>` +
+        `<div class="detail-used"><span>${escapeHtml(used)}</span>${paceHtml}</div>` +
       `</div>`
     );
   }).join('');
@@ -568,6 +574,101 @@ async function updateCopilotCard() {
   setDetail('copilot', rows);
 }
 
+function formatPlanPrefix(plan) {
+  if (!plan) return '';
+  const words = String(plan).toLowerCase().split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1));
+  return `${words.join(' ')} · `;
+}
+
+function formatCredits(window) {
+  if (window?.used == null || window?.limit == null) return '';
+  const fmt = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+  return `${fmt(window.used)} / ${fmt(window.limit)}`;
+}
+
+async function updateWindsurfCard() {
+  const result = await window.api.getWindsurfUsage();
+  if (!beginCard('windsurf', result)) return;
+  const resetEl = document.getElementById('windsurf-reset');
+
+  const { primary, secondary, kind, plan } = result.usage;
+  const planPrefix = formatPlanPrefix(plan);
+  if (!primary && !secondary) {
+    resetEl.textContent = `${planPrefix}No quota data`;
+    setDetail('windsurf', []);
+    return;
+  }
+
+  const headline = primary ?? secondary;
+  setMeter('windsurf', headline.percent);
+  applyStaleState('windsurf', result, resetEl, `${planPrefix}resets in ${formatCountdown(headline.resetsAt)}`);
+
+  const credits = kind === 'credits';
+  const forecasts = result.forecasts ?? {};
+  const rows = [];
+  if (primary) {
+    rows.push({
+      label: credits ? 'Prompt credits' : 'Daily',
+      amount: credits ? formatCredits(primary) : '',
+      percent: primary.percent,
+      sub: formatResetLabel(primary.resetsAt),
+      forecast: forecasts.primary,
+    });
+  }
+  if (secondary) {
+    rows.push({
+      label: credits ? 'Flow actions' : 'Weekly',
+      amount: credits ? formatCredits(secondary) : '',
+      percent: secondary.percent,
+      sub: formatResetLabel(secondary.resetsAt),
+      forecast: forecasts.secondary,
+    });
+  }
+  setDetail('windsurf', rows);
+}
+
+async function updateKiroCard() {
+  const result = await window.api.getKiroUsage();
+  if (!beginCard('kiro', result)) return;
+  const resetEl = document.getElementById('kiro-reset');
+
+  const { primary, secondary, secondaryKind, plan } = result.usage;
+  const planPrefix = formatPlanPrefix(plan);
+  if (!primary) {
+    resetEl.textContent = `${planPrefix}No credit data`;
+    setDetail('kiro', []);
+    return;
+  }
+
+  setMeter('kiro', primary.percent);
+  applyStaleState('kiro', result, resetEl, `${planPrefix}resets in ${formatCountdown(primary.resetsAt)}`);
+
+  const forecasts = result.forecasts ?? {};
+  const rows = [
+    {
+      label: 'Monthly credits',
+      amount: formatCredits(primary),
+      percent: primary.percent,
+      sub: formatResetLabel(primary.resetsAt),
+      forecast: forecasts.primary,
+    },
+  ];
+  if (secondary) {
+    const bonus = secondaryKind === 'bonus';
+    rows.push({
+      label: bonus ? 'Bonus credits' : 'Overage credits',
+      amount: formatCredits(secondary),
+      percent: secondary.percent,
+      // Bonus credits expire rather than reset.
+      sub: bonus && secondary.resetsAt
+        ? `Expires in ${formatCountdown(secondary.resetsAt)}`
+        : formatResetLabel(secondary.resetsAt),
+      forecast: forecasts.secondary,
+    });
+  }
+  setDetail('kiro', rows);
+}
+
 async function updateCursorCard() {
   const result = await window.api.getCursorUsage();
   if (!beginCard('cursor', result)) return;
@@ -648,6 +749,8 @@ async function updateAll() {
     updateCopilotCard(),
     updateCursorCard(),
     updateAntigravityCard(),
+    updateWindsurfCard(),
+    updateKiroCard(),
   ]);
 
   refreshEmptyState();

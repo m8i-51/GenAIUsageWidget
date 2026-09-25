@@ -12,6 +12,8 @@ const PROVIDER_LABELS = {
   cursor: 'Cursor',
   antigravity: 'Antigravity',
   copilot: 'Copilot',
+  windsurf: 'Windsurf',
+  kiro: 'Kiro',
 };
 
 // Same thresholds as the cards (renderer.js severityClass), on percent used.
@@ -71,6 +73,22 @@ function extractWindows(providerId, usage) {
         weekLabel: 'chat',
       };
     }
+    case 'windsurf': {
+      const top = usage.primary ?? usage.secondary;
+      if (!top) return null;
+      return {
+        session: clampPercent(top.percent),
+        week: usage.primary ? clampPercent(usage.secondary?.percent) : null,
+        weekLabel: usage.kind === 'credits' ? 'flow' : 'week',
+      };
+    }
+    case 'kiro':
+      if (!usage.primary) return null;
+      return {
+        session: clampPercent(usage.primary.percent),
+        week: clampPercent(usage.secondary?.percent),
+        weekLabel: usage.secondaryKind || 'bonus',
+      };
     default:
       return null;
   }

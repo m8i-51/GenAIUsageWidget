@@ -33,6 +33,8 @@ Shows usage / rate-limit info for the AI coding tools you're already signed into
 - **Copilot** — monthly Premium request and Chat quota usage (via your GitHub Copilot CLI sign-in)
 - **Cursor** — plan usage with Total / Auto / API breakdown, Grok Bot weekly allowance when available, and billing-cycle countdown
 - **Antigravity (Gemini Code Assist)** — weekly quota per model group
+- **Windsurf** — daily and weekly quota (or prompt credits / flow actions on older plans)
+- **Kiro** — monthly credits, plus bonus or overage credits when present
 
 It reads each provider's existing local session/credentials instead of asking
 you to log in again, and polls their usage APIs about once a minute.
@@ -117,6 +119,8 @@ tray icon's right-click menu (off by default).
 | Copilot | `COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN` env vars, then the OS keychain (service `copilot-cli`), then `~/.copilot/config.json` | Run `copilot login` with the GitHub Copilot CLI (`npm i -g @github/copilot`). On Windows the keychain is read via `src/providers/win-cred-read.py`, so Python must be on `PATH`; on Linux it uses `secret-tool` (libsecret) when installed. Uses GitHub's unofficial `copilot_internal/user` endpoint, the same one the VS Code extension uses. |
 | Cursor | Cursor app's `state.vscdb` (SQLite, via `sql.js`) | Requires the Cursor desktop app to be installed and signed in |
 | Antigravity | Windows Credential Manager (target `gemini:antigravity`) on Windows; `~/.gemini/antigravity-cli/antigravity-oauth-token` on Linux | Requires the `agy` CLI to have been used to sign in at least once (`winget install Google.AntigravityCLI` on Windows, or the official install script on Linux). On Windows the credential is read via a small Python helper script (`src/providers/win-cred-read.py`), so Python must be on `PATH`. On Linux it's a plain JSON file, no extra dependency needed. Not yet supported on macOS. |
+| Windsurf | Windsurf app's `state.vscdb` (key `windsurf.settings.cachedPlanInfo`) | Requires the Windsurf desktop app to be installed and signed in. This is the plan status Windsurf caches locally, so it only updates while Windsurf is running. |
+| Kiro | Kiro IDE's `~/.aws/sso/cache/kiro-auth-token.json`, then kiro-cli's `data.sqlite3` | Sign in to the Kiro IDE, or run `kiro-cli login`. Calls the same `GetUsageLimits` API Kiro itself uses. |
 
 If a provider isn't set up, its card is hidden. If a provider is set up but its
 API call fails, the card shows an error state (or, for Claude, the last
@@ -142,6 +146,8 @@ docs/screenshots/      README images (widget flyout + tray popup)
 ## Known limitations
 
 - Antigravity support covers Windows and Linux; macOS isn't implemented yet (Cursor/Claude/Codex are cross-platform including macOS).
+- Windsurf numbers come from Windsurf's local cache, so they can lag until the
+  Windsurf app is opened again.
 - No token-refresh handling yet — if a provider's token expires, its card shows
   an error until you re-authenticate with that provider's own CLI/app.
 - Installers are unsigned, so Windows SmartScreen / Linux package managers may
