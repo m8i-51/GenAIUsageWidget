@@ -137,6 +137,7 @@ function renderGeneral() {
   $('compactMode').checked = !!settings.compactMode;
   $('widgetDockEdge').value = settings.widgetDockEdge || 'auto';
   $('alertsEnabled').checked = settings.alertsEnabled !== false;
+  $('leftoverAlertsEnabled').checked = settings.leftoverAlertsEnabled !== false;
   $('serviceStatusEnabled').checked = settings.serviceStatusEnabled !== false;
 }
 
@@ -175,7 +176,7 @@ $('autostart').addEventListener('change', async (event) => {
   event.target.checked = await window.api.setAutostart(event.target.checked);
 });
 
-for (const id of ['compactMode', 'alertsEnabled', 'serviceStatusEnabled']) {
+for (const id of ['compactMode', 'alertsEnabled', 'leftoverAlertsEnabled', 'serviceStatusEnabled']) {
   $(id).addEventListener('change', (event) => save({ [id]: event.target.checked }));
 }
 

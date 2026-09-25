@@ -77,6 +77,12 @@ Windows の `.exe` は未署名です。SmartScreen が出たら「詳細情報�
   スナップショットでは通知しません。トレイアイコンの右クリックメニューの
   **Usage Alerts** か設定画面で ON/OFF できます(デフォルト ON)。Linux では通知デーモンが
   必要です(多くのデスクトップ環境では標準で動いています)。
+- **使い残し通知** — 週・月単位の枠(Claude/Codex の週枠、Copilot のプレミアム
+  リクエスト、Cursor、Windsurf、Kiro、z.ai の週枠、ほかリセットまで36時間以上あった枠)が
+  24時間以内にリセットされるとき、30%以上残っていて今のペースでは使い切れなければ、
+  「42% of weekly limit unused, resets in 5h」のように通知します。1つの枠につき
+  1回だけで、5時間のセッション枠や日次の枠は対象外です。トレイメニューの
+  **Unused Quota Reminders** か設定画面で ON/OFF できます(デフォルト ON)。
 - **ローカルのコスト推定** — Claude と Codex の詳細に Cost 欄を追加。今日と直近
   30日のトークン数と推定コスト、使用量の多いプロジェクトを表示します。Claude Code
   (`~/.claude/projects`)と Codex CLI(`~/.codex/sessions`)がディスクに残している
