@@ -67,6 +67,18 @@ function copilot() {
   });
 }
 
+function gemini() {
+  const tomorrow = new Date();
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  tomorrow.setUTCHours(7, 0, 0, 0);
+  const resetsAt = tomorrow.toISOString();
+  return ok({
+    primary: { percent: 44, resetsAt, model: 'gemini-2.5-pro' },
+    secondary: { percent: 6, resetsAt, model: 'gemini-2.5-flash' },
+    plan: 'Free',
+  });
+}
+
 // Percent gained over the last 40 minutes, so demo cards show a pace forecast
 // right away: Claude and Cursor run out before reset, the rest last.
 const PACE_GAIN = {
@@ -75,6 +87,7 @@ const PACE_GAIN = {
   cursor: { total: 4, grokBot: 0 },
   antigravity: { 'Gemini/Pro': 0, 'Gemini/Flash': 0 },
   copilot: { primary: 3, secondary: 0 },
+  gemini: { primary: 2, secondary: 0 },
 };
 
 function seedPace(providerId, result, seedSample) {
@@ -86,4 +99,4 @@ function seedPace(providerId, result, seedSample) {
   }
 }
 
-module.exports = { claude, codex, cursor, antigravity, copilot, seedPace };
+module.exports = { claude, codex, cursor, antigravity, copilot, gemini, seedPace };

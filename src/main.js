@@ -5,6 +5,7 @@ const { fetchCodexUsage } = require('./providers/codex');
 const { fetchCursorUsage } = require('./providers/cursor');
 const { fetchAntigravityUsage } = require('./providers/antigravity');
 const { fetchCopilotUsage } = require('./providers/copilot');
+const { fetchGeminiUsage } = require('./providers/gemini');
 const autostart = require('./autostart');
 const alerts = require('./alerts');
 const pace = require('./pace');
@@ -931,6 +932,7 @@ const USAGE_FETCHERS = {
   cursor: fetchCursorUsage,
   antigravity: fetchAntigravityUsage,
   copilot: fetchCopilotUsage,
+  gemini: fetchGeminiUsage,
 };
 
 const demoPaceSeeded = new Set();
@@ -1026,7 +1028,7 @@ app.whenReady().then(() => {
   if (process.platform === 'win32') {
     app.setAppUserModelId('com.github.m8i-51.genaiusagewidget');
   }
-  preloadLastGood(['claude', 'codex', 'cursor', 'antigravity', 'copilot']);
+  preloadLastGood(['claude', 'codex', 'cursor', 'antigravity', 'copilot', 'gemini']);
   loadSettings();
   createPopup();
   createWidget();

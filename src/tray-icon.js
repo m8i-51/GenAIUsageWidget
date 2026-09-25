@@ -12,6 +12,7 @@ const PROVIDER_LABELS = {
   cursor: 'Cursor',
   antigravity: 'Antigravity',
   copilot: 'Copilot',
+  gemini: 'Gemini',
 };
 
 // Same thresholds as the cards (renderer.js severityClass), on percent used.
@@ -69,6 +70,16 @@ function extractWindows(providerId, usage) {
         session: clampPercent(top.percent),
         week: usage.primary ? clampPercent(usage.secondary?.percent) : null,
         weekLabel: 'chat',
+      };
+    }
+    case 'gemini': {
+      // Pro on top, Flash below (both daily), matching the card.
+      const top = usage.primary ?? usage.secondary;
+      if (!top) return null;
+      return {
+        session: clampPercent(top.percent),
+        week: usage.primary ? clampPercent(usage.secondary?.percent) : null,
+        weekLabel: 'flash',
       };
     }
     default:
