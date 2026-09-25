@@ -1,4 +1,4 @@
-const { app, Tray, Menu, BrowserWindow, screen, ipcMain, nativeImage, Notification, shell } = require('electron');
+const { app, Tray, Menu, BrowserWindow, screen, ipcMain, nativeImage, nativeTheme, Notification, shell } = require('electron');
 const path = require('path');
 const { fetchClaudeUsage } = require('./providers/claude');
 const { fetchCodexUsage } = require('./providers/codex');
@@ -756,7 +756,8 @@ function openSettingsWindow() {
     title: 'GenAIUsageWidget Settings',
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     autoHideMenuBar: true,
-    backgroundColor: '#1c1c1e',
+    // Match settings.html's --bg so opening never flashes the other theme.
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#202020' : '#f3f3f3',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

@@ -36,6 +36,7 @@
   --critical: #ff453a;
   --accent: #30d158;
   --accent-soft: rgba(48, 209, 88, 0.16);
+  --on-accent: #0a0a0a;
   --focus-ring: rgba(255, 255, 255, 0.9);
 
   --shadow-flyout: 0 8px 24px rgba(0, 0, 0, 0.36), 0 0 1px rgba(0, 0, 0, 0.5);
@@ -69,6 +70,7 @@
     --critical: #e0372c;
     --accent: #1f9d47;
     --accent-soft: rgba(31, 157, 71, 0.13);
+    --on-accent: #ffffff;
     --focus-ring: rgba(0, 0, 0, 0.85);
 
     --shadow-flyout: 0 8px 24px rgba(0, 0, 0, 0.14), 0 0 1px rgba(0, 0, 0, 0.3);
