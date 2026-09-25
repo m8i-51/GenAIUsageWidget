@@ -22,6 +22,7 @@ const PROVIDER_LABELS = {
   copilot: 'Copilot',
   windsurf: 'Windsurf',
   kiro: 'Kiro',
+  gemini: 'Gemini',
 };
 
 /**
