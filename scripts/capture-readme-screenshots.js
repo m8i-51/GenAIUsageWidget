@@ -36,12 +36,14 @@ function installIpc() {
   });
   ipcMain.handle('get-claude-usage', () => demo.claude());
   ipcMain.handle('get-codex-usage', () => demo.codex());
+  ipcMain.handle('get-local-cost', () => demo.localCost());
   ipcMain.handle('get-cursor-usage', () => demo.cursor());
   ipcMain.handle('get-antigravity-usage', () => demo.antigravity());
   ipcMain.handle('get-copilot-usage', () => demo.copilot());
   ipcMain.handle('get-gemini-usage', () => demo.gemini());
   ipcMain.handle('get-windsurf-usage', () => demo.windsurf());
   ipcMain.handle('get-kiro-usage', () => demo.kiro());
+  ipcMain.handle('get-zai-usage', () => demo.zai());
   ipcMain.on('resize-to', () => {
     // Ignore renderer-driven resizes (they cap at 900px). The capture
     // script sizes the window from the measured .app box instead.
