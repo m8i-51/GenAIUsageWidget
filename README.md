@@ -130,6 +130,12 @@ you to log in again, and polls their usage APIs about once a minute.
   GNOME Keyring / KWallet on Linux) and is never passed back to the UI. On a
   Linux desktop with no keyring it is only obfuscated, and the settings window
   says so.
+- **Live refresh** — when a Claude Code or Codex reply finishes, the widget
+  sees the tool's local transcript change and refetches that meter right away
+  instead of waiting for the next minute poll. It only watches
+  `~/.claude/projects` and `~/.codex/sessions` for changes (no config is
+  written) and never refetches a provider more than every 30 s (Claude) or
+  15 s (Codex). Turn it off with **Live Refresh** in the tray menu or Settings.
 - The window auto-sizes to its content, so the transparent widget never blocks
   clicks on what's behind it.
 

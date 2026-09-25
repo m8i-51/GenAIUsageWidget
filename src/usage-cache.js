@@ -5,6 +5,10 @@ const { app } = require('electron');
 const DEFAULT_CACHE_TTL_MS = 60 * 1000;
 const CLAUDE_CACHE_TTL_MS = 150 * 1000;
 const DEFAULT_429_BACKOFF_MS = 10 * 60 * 1000;
+// Activity-triggered refreshes never hit a provider more often than this,
+// so a burst of short exchanges can't trip its rate limit.
+const DEFAULT_MIN_REFRESH_MS = 15 * 1000;
+const CLAUDE_MIN_REFRESH_MS = 30 * 1000;
 
 /** @type {Map<string, { at: number, ttl: number, payload: object }>} */
 const caches = new Map();
@@ -106,7 +110,7 @@ async function fetchWithCache(providerId, fetchUsage) {
       }
 
       if (generation === (generations.get(providerId) ?? 0)) {
-        caches.set(providerId, { at: Date.now(), ttl, payload });
+        caches.set(providerId, { at: Date.now(), ttl, payload, backoff: ttl !== getCacheTtl(providerId) });
         pending.delete(providerId);
       }
       return payload;
@@ -114,6 +118,25 @@ async function fetchWithCache(providerId, fetchUsage) {
   }
 
   return pending.get(providerId);
+}
+
+/**
+ * Drop a provider's cached result so the next read fetches fresh data.
+ * Returns 0 when the cache was dropped, or how many ms to wait before trying
+ * again (the last fetch is too recent, still in flight, or in 429 backoff).
+ * @param {string} providerId
+ * @returns {number}
+ */
+function requestRefresh(providerId) {
+  const minAge = providerId === 'claude' ? CLAUDE_MIN_REFRESH_MS : DEFAULT_MIN_REFRESH_MS;
+  if (pending.has(providerId)) return minAge;
+  const cache = caches.get(providerId);
+  if (!cache) return 0;
+  const age = Date.now() - cache.at;
+  if (cache.backoff) return Math.max(cache.ttl - age, 0) || minAge;
+  if (age < minAge) return minAge - age;
+  caches.delete(providerId);
+  return 0;
 }
 
 function preloadLastGood(providerIds) {
@@ -138,4 +161,4 @@ function invalidate(providerId) {
   }
 }
 
-module.exports = { fetchWithCache, preloadLastGood, invalidate };
+module.exports = { fetchWithCache, preloadLastGood, invalidate, requestRefresh };

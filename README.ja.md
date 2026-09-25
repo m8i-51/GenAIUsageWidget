@@ -100,6 +100,11 @@ Windows の `.exe` は未署名です。SmartScreen が出たら「詳細情報�
   (Electron `safeStorage`: Windows は DPAPI、Linux は GNOME Keyring / KWallet)
   で保存し、画面側には戻しません。キーリングのない Linux デスクトップでは難読化
   のみになり、設定画面にその旨を表示します。
+- **使った瞬間に更新** — Claude Code や Codex の返事が終わると、そのツールの
+  ローカルの会話ログの変化を見つけて、1分おきの取得を待たずにメーターを取り直します。
+  `~/.claude/projects` と `~/.codex/sessions` の変化を見ているだけで、設定には
+  何も書き込みません。取り直しは Claude で30秒、Codex で15秒に1回までです。
+  トレイメニューの **Live Refresh** か設定画面でオフにできます。
 - ウィンドウは中身の高さに自動でフィットするので、透明なウィジェットが背後への
   クリックを邪魔しません。
 

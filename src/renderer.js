@@ -1216,6 +1216,7 @@ async function init() {
   }
   window.api.onSettingsChanged((next) => applySettings(next));
   window.api.onServiceStatusChanged(() => updateAll());
+  window.api.onUsageActivity(() => updateAll());
   await updateAll();
   if (isWidgetMode && !selectedProvider && !isEdgeCollapsed()) {
     const first = firstVisibleProvider();

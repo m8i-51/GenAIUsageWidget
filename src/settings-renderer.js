@@ -139,6 +139,7 @@ function renderGeneral() {
   $('alertsEnabled').checked = settings.alertsEnabled !== false;
   $('leftoverAlertsEnabled').checked = settings.leftoverAlertsEnabled !== false;
   $('serviceStatusEnabled').checked = settings.serviceStatusEnabled !== false;
+  $('liveRefreshEnabled').checked = settings.liveRefreshEnabled !== false;
 }
 
 function renderProviders() {
@@ -176,7 +177,7 @@ $('autostart').addEventListener('change', async (event) => {
   event.target.checked = await window.api.setAutostart(event.target.checked);
 });
 
-for (const id of ['compactMode', 'alertsEnabled', 'leftoverAlertsEnabled', 'serviceStatusEnabled']) {
+for (const id of ['compactMode', 'alertsEnabled', 'leftoverAlertsEnabled', 'serviceStatusEnabled', 'liveRefreshEnabled']) {
   $(id).addEventListener('change', (event) => save({ [id]: event.target.checked }));
 }
 
