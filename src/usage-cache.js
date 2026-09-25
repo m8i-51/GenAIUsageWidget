@@ -12,6 +12,8 @@ const caches = new Map();
 const pending = new Map();
 /** @type {Map<string, { usage: object, at: number } | null>} */
 const lastGood = new Map();
+/** Bumped by invalidate() so a fetch that started before it can't cache its result. */
+const generations = new Map();
 
 function userDataPath() {
   return app.getPath('userData');
@@ -69,6 +71,7 @@ async function fetchWithCache(providerId, fetchUsage) {
   }
 
   if (!pending.has(providerId)) {
+    const generation = generations.get(providerId) ?? 0;
     pending.set(providerId, (async () => {
       let payload;
       let ttl = getCacheTtl(providerId);
@@ -77,7 +80,7 @@ async function fetchWithCache(providerId, fetchUsage) {
       try {
         const usage = await fetchUsage();
         const good = { usage, at: Date.now() };
-        saveLastGood(providerId, good);
+        if (generation === (generations.get(providerId) ?? 0)) saveLastGood(providerId, good);
         payload = { ok: true, usage };
       } catch (err) {
         if (err.status === 429) {
@@ -90,14 +93,22 @@ async function fetchWithCache(providerId, fetchUsage) {
             stale: true,
             staleAt: snapshot.at,
             staleError: err.message,
+            authExpired: !!err.authExpired,
           };
         } else {
-          payload = { ok: false, error: err.message, notConfigured: !!err.notConfigured };
+          payload = {
+            ok: false,
+            error: err.message,
+            notConfigured: !!err.notConfigured,
+            authExpired: !!err.authExpired,
+          };
         }
       }
 
-      caches.set(providerId, { at: Date.now(), ttl, payload });
-      pending.delete(providerId);
+      if (generation === (generations.get(providerId) ?? 0)) {
+        caches.set(providerId, { at: Date.now(), ttl, payload });
+        pending.delete(providerId);
+      }
       return payload;
     })());
   }
@@ -111,4 +122,20 @@ function preloadLastGood(providerIds) {
   }
 }
 
-module.exports = { fetchWithCache, preloadLastGood };
+/**
+ * Drop the cached result so the next read fetches again (after a provider's
+ * credentials change). The last-good snapshot belongs to the old account.
+ */
+function invalidate(providerId) {
+  generations.set(providerId, (generations.get(providerId) ?? 0) + 1);
+  caches.delete(providerId);
+  pending.delete(providerId);
+  lastGood.set(providerId, null);
+  try {
+    fs.rmSync(lastGoodPath(providerId), { force: true });
+  } catch (err) {
+    console.warn(`Failed to clear last-good snapshot for ${providerId}:`, err.message);
+  }
+}
+
+module.exports = { fetchWithCache, preloadLastGood, invalidate };

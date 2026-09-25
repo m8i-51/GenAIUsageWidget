@@ -3,6 +3,7 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { notConfigured } = require('./not-configured');
+const { authExpired } = require('./cli-refresh');
 
 const USAGE_URL = 'https://api.github.com/copilot_internal/user';
 const KEYCHAIN_SERVICE = 'copilot-cli';
@@ -161,6 +162,9 @@ async function fetchCopilotUsage() {
     },
   });
 
+  if (res.status === 401) {
+    throw authExpired('GitHub Copilot sign-in expired');
+  }
   if (!res.ok) {
     throw new Error(`Copilot usage request failed: ${res.status}`);
   }

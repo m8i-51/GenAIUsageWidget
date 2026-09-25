@@ -3,6 +3,7 @@ const os = require('os');
 const path = require('path');
 const initSqlJs = require('sql.js');
 const { notConfigured } = require('./not-configured');
+const { authExpired } = require('./cli-refresh');
 
 function getStateDbPath() {
   if (process.platform === 'win32') {
@@ -87,6 +88,9 @@ async function fetchCursorUsage() {
     fetch('https://cursor.com/api/usage-summary', {
       headers: { Cookie: cookie },
     }).then(async (res) => {
+      if (res.status === 401) {
+        throw authExpired('Cursor sign-in expired');
+      }
       if (!res.ok) {
         throw new Error(`Cursor usage request failed: ${res.status}`);
       }
