@@ -863,6 +863,71 @@
 
   .detail-pace.pace-limit { color: var(--warning); }
 
+  .cost-block {
+    padding-top: 12px;
+    border-top: 1px solid var(--hairline);
+  }
+
+  .cost-totals {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .cost-total {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .cost-value {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cost-caption {
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cost-projects {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .cost-project {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .cost-project-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cost-project-value {
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cost-more {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
   .tile-sub {
     margin-top: 8px;
     font-size: 12px;
@@ -967,6 +1032,7 @@
   body.compact-mode:not(.widget-mode) #cards-view { gap: 8px; }
   body.compact-mode:not(.widget-mode) .tile { padding: 10px 12px; }
   body.compact-mode:not(.widget-mode) .detail-reset { display: none; }
+  body.compact-mode:not(.widget-mode) .cost-projects { display: none; }
   body.compact-mode:not(.widget-mode) .flyout-head { margin-bottom: 10px; }
   body.compact-mode.widget-mode .ring-value { display: none; }
   body.compact-mode.widget-mode .ring,
