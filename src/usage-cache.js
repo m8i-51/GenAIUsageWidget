@@ -90,9 +90,15 @@ async function fetchWithCache(providerId, fetchUsage) {
             stale: true,
             staleAt: snapshot.at,
             staleError: err.message,
+            authExpired: !!err.authExpired,
           };
         } else {
-          payload = { ok: false, error: err.message, notConfigured: !!err.notConfigured };
+          payload = {
+            ok: false,
+            error: err.message,
+            notConfigured: !!err.notConfigured,
+            authExpired: !!err.authExpired,
+          };
         }
       }
 

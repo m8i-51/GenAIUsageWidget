@@ -69,6 +69,14 @@ you to log in again, and polls their usage APIs about once a minute.
   the popup and the widget, a 429 triggers a long backoff (honoring
   `Retry-After`), and the last good snapshot is shown (with its timestamp) while
   the API is unavailable — even across app restarts.
+- **Expired sign-ins recover on their own** — when a Claude or Codex sign-in
+  expires, the widget asks that provider's own CLI to refresh it (Claude:
+  `claude auth status`; Codex: `codex app-server`, which also returns the usage)
+  and reads the credentials the CLI saves. The widget never rewrites a CLI's
+  credential file itself, so your CLI login stays intact. A failed refresh is
+  retried at most every 5 minutes. If the CLI isn't installed or can't refresh, the
+  card keeps the last snapshot, says "sign-in expired", and tells you which
+  command signs you back in.
 - **Usage alerts** — a native OS notification when a provider's headline
   meter crosses 70% (warning) or 90% (critical). It fires once per crossing and
   again only after usage drops back below 65% / 85%. Hidden providers, errors,
@@ -168,7 +176,8 @@ docs/screenshots/      README images (widget flyout + tray popup)
 - Antigravity support covers Windows and Linux; macOS isn't implemented yet (Cursor/Claude/Codex are cross-platform including macOS).
 - Windsurf numbers come from Windsurf's local cache, so they can lag until the
   Windsurf app is opened again.
-- No token-refresh handling yet — if a provider's token expires, its card shows
-  an error until you re-authenticate with that provider's own CLI/app.
+- Claude and Codex sign-ins are refreshed through their CLIs (which must be
+  installed), and Gemini's in memory. For other providers, open the app/CLI to
+  refresh an expired sign-in; the card says so when it happens.
 - Installers are unsigned, so Windows SmartScreen / Linux package managers may
   warn on first run — click through ("More info" → "Run anyway" on Windows).
