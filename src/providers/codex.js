@@ -38,10 +38,11 @@ function readAccessToken() {
   return token;
 }
 
-function toWindow(percent, resetAtSeconds) {
+function toWindow(percent, resetAtSeconds, windowSeconds) {
   return {
     percent: percent ?? null,
     resetsAt: resetAtSeconds ? new Date(resetAtSeconds * 1000).toISOString() : null,
+    windowSeconds: windowSeconds ?? null,
   };
 }
 
@@ -63,8 +64,8 @@ async function fetchUsageDirect(token) {
   const secondary = data.rate_limit?.secondary_window;
 
   return {
-    primary: primary ? toWindow(primary.used_percent, primary.reset_at) : null,
-    secondary: secondary ? toWindow(secondary.used_percent, secondary.reset_at) : null,
+    primary: primary ? toWindow(primary.used_percent, primary.reset_at, primary.limit_window_seconds) : null,
+    secondary: secondary ? toWindow(secondary.used_percent, secondary.reset_at, secondary.limit_window_seconds) : null,
   };
 }
 
@@ -126,8 +127,8 @@ function fetchUsageViaCli(codexPath) {
       const result = await request('account/rateLimits/read');
       const limits = result?.rateLimits ?? {};
       finish(null, {
-        primary: limits.primary ? toWindow(limits.primary.usedPercent, limits.primary.resetsAt) : null,
-        secondary: limits.secondary ? toWindow(limits.secondary.usedPercent, limits.secondary.resetsAt) : null,
+        primary: limits.primary ? toWindow(limits.primary.usedPercent, limits.primary.resetsAt, limits.primary.windowDurationMins != null ? limits.primary.windowDurationMins * 60 : null) : null,
+        secondary: limits.secondary ? toWindow(limits.secondary.usedPercent, limits.secondary.resetsAt, limits.secondary.windowDurationMins != null ? limits.secondary.windowDurationMins * 60 : null) : null,
       });
     })().catch((err) => finish(err));
   });

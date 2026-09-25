@@ -14,6 +14,7 @@ const autostart = require('./autostart');
 const alerts = require('./alerts');
 const leftoverAlerts = require('./leftover-alerts');
 const pace = require('./pace');
+const promptsLeft = require('./prompts-left');
 const { getLocalCost } = require('./local-cost');
 const serviceStatus = require('./service-status');
 const { loadSettings, saveSettings } = require('./settings');
@@ -1074,10 +1075,12 @@ async function getUsage(providerId) {
       demoPaceSeeded.add(providerId);
       demo.seedPace(providerId, result, pace.seedSample);
     }
-    return withServiceStatus(providerId, pace.withForecasts(providerId, result));
+    const withPace = pace.withForecasts(providerId, result);
+    const withPrompts = await promptsLeft.withPromptsLeft(providerId, withPace, { countPrompts: demo.promptCount });
+    return withServiceStatus(providerId, withPrompts);
   }
   const result = pace.withForecasts(providerId, await fetchWithCache(providerId, USAGE_FETCHERS[providerId]));
-  return withServiceStatus(providerId, result);
+  return withServiceStatus(providerId, await promptsLeft.withPromptsLeft(providerId, result));
 }
 
 function broadcastServiceStatus() {

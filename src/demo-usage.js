@@ -132,6 +132,16 @@ function seedPace(providerId, result, seedSample) {
   }
 }
 
+// Prompts sent in each window, so demo cards show "about N more prompts".
+const PROMPT_COUNT = {
+  claude: { session: 18, week: 41 },
+  codex: { primary: 6, secondary: 14 },
+};
+
+function promptCount(providerId, key) {
+  return PROMPT_COUNT[providerId]?.[key] ?? 0;
+}
+
 function localCost() {
   return {
     claude: {
@@ -173,4 +183,4 @@ function serviceStatus(providerId) {
   return SERVICE_STATUS[providerId] ?? null;
 }
 
-module.exports = { claude, codex, cursor, antigravity, copilot, gemini, windsurf, kiro, zai, seedPace, serviceStatus, localCost };
+module.exports = { claude, codex, cursor, antigravity, copilot, gemini, windsurf, kiro, zai, seedPace, promptCount, serviceStatus, localCost };
