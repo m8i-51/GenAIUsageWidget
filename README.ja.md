@@ -75,7 +75,7 @@ Windows の `.exe` は未署名です。SmartScreen が出たら「詳細情報�
   超えたとき、OS のネイティブ通知でお知らせします。通知は超えた時に1回だけで、
   65% / 85% を下回るまでは再通知しません。非表示のプロバイダ、取得エラー、古い
   スナップショットでは通知しません。トレイアイコンの右クリックメニューの
-  **Usage Alerts** で ON/OFF できます(デフォルト ON)。Linux では通知デーモンが
+  **Usage Alerts** か設定画面で ON/OFF できます(デフォルト ON)。Linux では通知デーモンが
   必要です(多くのデスクトップ環境では標準で動いています)。
 - **ローカルのコスト推定** — Claude と Codex の詳細に Cost 欄を追加。今日と直近
   30日のトークン数と推定コスト、使用量の多いプロジェクトを表示します。Claude Code
@@ -83,6 +83,17 @@ Windows の `.exe` は未署名です。SmartScreen が出たら「詳細情報�
   ログを読むだけなので、データは外部に送信しません。コストは公開 API の定価で
   計算します。サブスクリプションの場合は「従量課金だったらいくらか」の目安で、
   実際の請求額ではありません。料金表にないモデルはトークン数のみ集計します。
+- **設定画面** — ウィジェットやポップアップの歯車ボタン、またはトレイメニューの
+  **Settings…** から開きます。ログイン時に起動、コンパクト表示、ウィジェットを
+  寄せる端、使用量アラート、サービス障害の表示、プロバイダごとの表示切り替え
+  (サインイン済みかどうかも表示)と、ローカルにログイン情報がないサービスの
+  APIキーを設定できます。
+- **APIキーで使うサービス** — z.ai(GLM Coding Plan)の5時間枠、プランにあれば
+  週間枠、MCPの枠を表示します。設定 → Providers でキーを貼り付け、Global か
+  China (BigModel) のリージョンを選んでください。キーは OS の暗号化機能
+  (Electron `safeStorage`: Windows は DPAPI、Linux は GNOME Keyring / KWallet)
+  で保存し、画面側には戻しません。キーリングのない Linux デスクトップでは難読化
+  のみになり、設定画面にその旨を表示します。
 - ウィンドウは中身の高さに自動でフィットするので、透明なウィジェットが背後への
   クリックを邪魔しません。
 
@@ -123,6 +134,7 @@ PC起動時の自動起動にも対応しています — トレイアイコン�
 | Copilot | 環境変数 `COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN` → OSのキーチェーン(サービス名 `copilot-cli`) → `~/.copilot/config.json` の順 | GitHub Copilot CLI(`npm i -g @github/copilot`)で `copilot login` してください。Windowsでは `src/providers/win-cred-read.py` でキーチェーンを読むため Python が `PATH` に必要です。Linuxでは `secret-tool`(libsecret)があれば使います。VS Code拡張と同じ非公開の `copilot_internal/user` エンドポイントを使います。 |
 | Cursor | Cursorアプリの `state.vscdb`(SQLite、`sql.js` 経由) | Cursorデスクトップアプリのインストールとサインインが必要です |
 | Gemini CLI | `~/.gemini/oauth_creds.json` | `gemini` を起動して **Sign in with Google** でサインインしてください(APIキーや Vertex AI のサインインには表示できるクォータがありません)。アクセストークンは1時間で切れますが、切れていればローカルの `@google/gemini-cli` から OAuth クライアントを見つけてメモリ上で更新します。CLI 自身のファイルは書き換えません。`GEMINI_FORCE_ENCRYPTED_FILE_STORAGE=true` で保存したサインインは読めません。CLI 自身が呼んでいるのと同じ非公開の `retrieveUserQuota` エンドポイントを使います。 |
+| z.ai | 設定 → Providers で保存したAPIキー(アプリのユーザーデータフォルダの `secrets.json` に暗号化して保存)、または環境変数 `Z_AI_API_KEY` | z.ai のアカウントでキーを作成してください(GLM Coding Plan)。`open.bigmodel.cn` のキーは China (BigModel) リージョンを選びます。チームのクォータには未対応です。 |
 | Antigravity | Windowsは資格情報マネージャー(ターゲット `gemini:antigravity`)、Linuxは `~/.gemini/antigravity-cli/antigravity-oauth-token` | `agy` CLI で一度サインインしている必要があります(Windowsは `winget install Google.AntigravityCLI`、Linuxは公式インストールスクリプト)。Windowsでは小さなPythonヘルパースクリプト(`src/providers/win-cred-read.py`)で資格情報を読むため、Pythonが `PATH` にある必要があります。LinuxはプレーンなJSONファイルを直接読むだけで追加の依存はありません。macOSは未対応です。 |
 
 プロバイダが未セットアップの場合、そのカードは非表示になります。セットアップ済み
@@ -138,6 +150,9 @@ src/
   widget-edge-hide.js  画面端Hideの幾何計算（吸着判定・展開/折りたたみ座標）
   preload.js           get-*-usage のIPC呼び出しとウィンドウリサイズを公開
   index.html / renderer.js   ポップアップとウィジェットで共有するUI
+  settings.html / settings-renderer.js   設定画面
+  settings.js          設定ファイル(ユーザーデータフォルダの settings.json)
+  secrets.js           APIキー(Electron safeStorage で暗号化)
   providers/           プロバイダごとに1モジュール(fetchXUsage() をエクスポート)。
                        not-configured.js は「未セットアップ」エラーの目印
   demo-usage.js        GENAI_USAGE_DEMO=1 用のサンプル使用量

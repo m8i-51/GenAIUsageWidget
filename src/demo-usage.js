@@ -100,6 +100,15 @@ function kiro() {
   });
 }
 
+function zai() {
+  return ok({
+    plan: 'GLM Coding Pro',
+    primary: { percent: 44, resetsAt: minutesFromNow(2 * 60 + 35), label: '5-hour' },
+    secondary: { percent: 18, resetsAt: nextWeekdayMidnight(1), label: 'Weekly' },
+    mcp: { percent: 6, resetsAt: nextWeekdayMidnight(1), label: 'MCP' },
+  });
+}
+
 // Percent gained over the last 40 minutes, so demo cards show a pace forecast
 // right away: Claude and Cursor run out before reset, the rest last.
 const PACE_GAIN = {
@@ -111,6 +120,7 @@ const PACE_GAIN = {
   windsurf: { primary: 5, secondary: 0 },
   kiro: { primary: 1, secondary: 0 },
   gemini: { primary: 2, secondary: 0 },
+  zai: { primary: 6, secondary: 0, mcp: 0 },
 };
 
 function seedPace(providerId, result, seedSample) {
@@ -163,4 +173,4 @@ function serviceStatus(providerId) {
   return SERVICE_STATUS[providerId] ?? null;
 }
 
-module.exports = { claude, codex, cursor, antigravity, copilot, gemini, windsurf, kiro, seedPace, serviceStatus, localCost };
+module.exports = { claude, codex, cursor, antigravity, copilot, gemini, windsurf, kiro, zai, seedPace, serviceStatus, localCost };

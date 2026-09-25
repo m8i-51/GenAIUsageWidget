@@ -269,14 +269,6 @@
     gap: 10px;
   }
 
-  body:not(.widget-mode) #settings-panel.flyout {
-    width: auto;
-    padding: 4px 2px 0;
-    background: transparent;
-    border: none;
-    box-shadow: none;
-  }
-
   body:not(.widget-mode) .tile:not(.error-state) .tile-sub {
     display: none;
   }
@@ -484,156 +476,11 @@
     display: none;
   }
 
-  #settings-panel[hidden],
   #flyout[hidden],
   #cards-view[hidden],
   .tile[hidden],
   .tile-empty[hidden] {
     display: none !important;
-  }
-
-  .settings-section + .settings-section {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid var(--hairline);
-  }
-
-  .settings-heading {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-
-  .settings-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    font-size: 13px;
-    color: var(--text-primary);
-    cursor: pointer;
-  }
-
-  .settings-row input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--ok);
-    flex-shrink: 0;
-  }
-
-  .dock-edge-picker {
-    position: relative;
-    margin-top: 4px;
-  }
-
-  .dock-edge-trigger {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    width: 100%;
-    padding: 8px 10px;
-    border-radius: 10px;
-    border: 1px solid var(--hairline);
-    background: rgba(255, 255, 255, 0.04);
-    color: var(--text-primary);
-    font-size: 13px;
-    text-align: left;
-    cursor: pointer;
-  }
-
-  .dock-edge-trigger:hover {
-    background: rgba(255, 255, 255, 0.07);
-  }
-
-  .dock-edge-trigger:focus {
-    outline: none;
-    border-color: rgba(61, 255, 138, 0.35);
-  }
-
-  .dock-edge-trigger svg {
-    width: 12px;
-    height: 12px;
-    flex-shrink: 0;
-    color: var(--text-muted);
-  }
-
-  .dock-edge-menu {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: calc(100% + 4px);
-    z-index: 20;
-    margin: 0;
-    padding: 4px;
-    list-style: none;
-    border-radius: 12px;
-    border: 1px solid var(--hairline);
-    background: #1a1a1a;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
-  }
-
-  .dock-edge-menu[hidden] {
-    display: none !important;
-  }
-
-  .dock-edge-option {
-    display: block;
-    width: 100%;
-    padding: 8px 10px;
-    border: none;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--text-primary);
-    font-size: 13px;
-    text-align: left;
-    cursor: pointer;
-  }
-
-  .dock-edge-option:hover,
-  .dock-edge-option:focus {
-    outline: none;
-    background: rgba(255, 255, 255, 0.08);
-  }
-
-  .dock-edge-option[aria-selected="true"] {
-    background: rgba(61, 255, 138, 0.14);
-    color: #fff;
-  }
-
-  .provider-toggle + .provider-toggle { margin-top: 8px; }
-
-  .provider-toggle.disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
-
-  .provider-toggle-note {
-    display: block;
-    margin-top: 2px;
-    font-size: 11px;
-    color: var(--text-muted);
-  }
-
-  .settings-back {
-    margin-top: 14px;
-    align-self: flex-start;
-    padding: 6px 12px;
-    border: 1px solid var(--hairline);
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.04);
-    color: var(--text-secondary);
-    font-size: 12px;
-    cursor: pointer;
-    -webkit-app-region: no-drag;
-  }
-
-  .settings-back:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text-primary);
   }
 
   #cards-view {
@@ -1056,36 +903,6 @@
           <span class="pointer" aria-hidden="true"></span>
           <div id="flyout-content"></div>
         </div>
-        <div class="flyout settings-flyout" id="settings-panel" hidden>
-          <div class="flyout-head">Settings</div>
-          <div class="settings-section">
-            <label class="settings-row">
-              <span>Compact mode</span>
-              <input type="checkbox" id="compact-mode-toggle" />
-            </label>
-          </div>
-          <div class="settings-section">
-            <div class="settings-heading">Widget dock side</div>
-            <div class="dock-edge-picker" id="dock-edge-picker">
-              <button type="button" class="dock-edge-trigger" id="dock-edge-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Widget dock side">
-                <span id="dock-edge-label">Auto (nearest edge)</span>
-                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 4.5 6 8 9.5 4.5"/></svg>
-              </button>
-              <ul class="dock-edge-menu" id="dock-edge-menu" role="listbox" hidden>
-                <li><button type="button" class="dock-edge-option" role="option" data-value="auto" aria-selected="true">Auto (nearest edge)</button></li>
-                <li><button type="button" class="dock-edge-option" role="option" data-value="top" aria-selected="false">Top</button></li>
-                <li><button type="button" class="dock-edge-option" role="option" data-value="bottom" aria-selected="false">Bottom</button></li>
-                <li><button type="button" class="dock-edge-option" role="option" data-value="left" aria-selected="false">Left</button></li>
-                <li><button type="button" class="dock-edge-option" role="option" data-value="right" aria-selected="false">Right</button></li>
-              </ul>
-            </div>
-          </div>
-          <div class="settings-section">
-            <div class="settings-heading">Providers</div>
-            <div id="provider-toggles"></div>
-          </div>
-          <button type="button" id="settings-back-btn" class="settings-back">Back</button>
-        </div>
       </div>
 
       <div class="notch" id="notch">
@@ -1096,7 +913,7 @@
             <button type="button" id="hide-edge-btn" class="icon-btn hide-edge-btn" aria-label="Hide to nearest edge" title="Hide to nearest edge">
               <svg id="hide-edge-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 10.5 8 5.5 13 10.5"/></svg>
             </button>
-            <button type="button" id="settings-btn" class="icon-btn settings-btn" aria-label="Settings">
+            <button type="button" id="settings-btn" class="icon-btn settings-btn" aria-label="Settings" title="Settings">
               <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 5.4A2.6 2.6 0 1 0 8 10.6 2.6 2.6 0 0 0 8 5.4Zm6.2 2.1-.9-.2a5 5 0 0 0-.4-1l.6-.7a.6.6 0 0 0 0-.8l-.8-.8a.6.6 0 0 0-.8 0l-.7.6a5 5 0 0 0-1-.4l-.2-.9A.6.6 0 0 0 9.4 2H6.6a.6.6 0 0 0-.6.5l-.2.9a5 5 0 0 0-1 .4l-.7-.6a.6.6 0 0 0-.8 0l-.8.8a.6.6 0 0 0 0 .8l.6.7a5 5 0 0 0-.4 1l-.9.2A.6.6 0 0 0 2 6.6v2.8a.6.6 0 0 0 .5.6l.9.2a5 5 0 0 0 .4 1l-.6.7a.6.6 0 0 0 0 .8l.8.8a.6.6 0 0 0 .8 0l.7-.6a5 5 0 0 0 1 .4l.2.9a.6.6 0 0 0 .6.5h2.8a.6.6 0 0 0 .6-.5l.2-.9a5 5 0 0 0 1-.4l.7.6a.6.6 0 0 0 .8 0l.8-.8a.6.6 0 0 0 0-.8l-.6-.7a5 5 0 0 0 .4-1l.9-.2a.6.6 0 0 0 .5-.6V6.6a.6.6 0 0 0-.5-.6Z"/></svg>
             </button>
           </div>
@@ -1324,6 +1141,34 @@
               <div class="tile-sub" id="kiro-reset">Loading…</div>
               <div class="tile-hint" id="kiro-hint" hidden></div>
               <button type="button" class="tile-incident" id="kiro-incident" data-status-provider="kiro" hidden></button>
+            </div>
+          </div>
+
+          <div class="tile" id="zai-provider" data-provider="zai">
+            <div class="ring-item">
+              <div class="ring">
+                <svg class="ring-svg" viewBox="0 0 64 64" aria-hidden="true">
+                  <circle class="ring-track" cx="32" cy="32" r="26" pathLength="100" />
+                  <circle class="ring-fill" id="zai-bar" cx="32" cy="32" r="26" pathLength="100" transform="rotate(-90 32 32)" />
+                </svg>
+                <span class="ring-icon">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5.2 3.6h13.6c.7 0 1.1.8.7 1.4L9.6 17.6h9.2a1.4 1.4 0 0 1 0 2.8H5.2c-.7 0-1.1-.8-.7-1.4l9.9-12.6H5.2a1.4 1.4 0 0 1 0-2.8Z"/></svg>
+                </span>
+              </div>
+              <span class="ring-value" id="zai-value">–</span>
+              <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
+              <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <span class="status-dot" aria-hidden="true"></span>
+            </div>
+            <div class="tile-body">
+              <div class="flyout-head">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5.2 3.6h13.6c.7 0 1.1.8.7 1.4L9.6 17.6h9.2a1.4 1.4 0 0 1 0 2.8H5.2c-.7 0-1.1-.8-.7-1.4l9.9-12.6H5.2a1.4 1.4 0 0 1 0-2.8Z"/></svg>
+                <span>z.ai Usage</span>
+              </div>
+              <div class="tile-detail" id="zai-detail"></div>
+              <div class="tile-sub" id="zai-reset">Loading…</div>
+              <div class="tile-hint" id="zai-hint" hidden></div>
+              <button type="button" class="tile-incident" id="zai-incident" data-status-provider="zai" hidden></button>
             </div>
           </div>
 
