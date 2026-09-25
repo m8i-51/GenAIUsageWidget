@@ -22,6 +22,8 @@ const isWidgetMode = document.body.classList.contains('widget-mode');
 const configuredProviders = Object.fromEntries(PROVIDERS.map((p) => [p.id, false]));
 
 let selectedProvider = null;
+/** Local log totals from main's local-cost.js ({ claude, codex } or null). */
+let localCost = null;
 let settingsOpen = false;
 let suppressTileClick = false;
 
@@ -293,7 +295,82 @@ function setDetail(prefix, rows) {
     );
   }).join('');
 
+  detailEl.insertAdjacentHTML('beforeend', costHtml(prefix));
+
   if (prefix === selectedProvider) syncFlyout();
+}
+
+const COST_SOURCES = {
+  claude: 'Claude Code',
+  codex: 'Codex CLI',
+};
+
+function formatUsd(value) {
+  if (value >= 1000) return `$${Math.round(value).toLocaleString('en-US')}`;
+  if (value >= 100) return `$${value.toFixed(0)}`;
+  return `$${value.toFixed(2)}`;
+}
+
+function formatTokens(count) {
+  if (count >= 1e9) return `${(count / 1e9).toFixed(1)}B`;
+  if (count >= 1e6) return `${(count / 1e6).toFixed(count >= 1e8 ? 0 : 1)}M`;
+  if (count >= 1e3) return `${Math.round(count / 1e3)}K`;
+  return String(count);
+}
+
+/** Today / last-30-days cost block for providers whose CLI keeps local logs. */
+function costHtml(prefix) {
+  const summary = localCost?.[prefix];
+  if (!COST_SOURCES[prefix] || !summary) return '';
+  const unpriced = summary.unpricedModels?.length
+    ? ` Not priced: ${summary.unpricedModels.join(', ')}.`
+    : '';
+  const title = `Estimated from local ${COST_SOURCES[prefix]} logs at API list prices. ` +
+    `Subscription plans are not billed per token.${unpriced}`;
+  const totals = [
+    ['Today', summary.today],
+    ['30 days', summary.last30Days],
+  ].map(([label, t]) => (
+    `<div class="cost-total">` +
+      `<span class="cost-value">${formatUsd(t.cost)}</span>` +
+      `<span class="cost-caption">${label}</span>` +
+      `<span class="cost-caption">${formatTokens(t.tokens)} tokens</span>` +
+    `</div>`
+  )).join('');
+  const projects = summary.projects.map((p) => (
+    `<div class="cost-project">` +
+      `<span class="cost-project-name">${escapeHtml(p.name)}</span>` +
+      `<span class="cost-project-value">${formatUsd(p.cost)}</span>` +
+    `</div>`
+  )).join('');
+  const more = summary.projectCount > summary.projects.length
+    ? `<div class="cost-more">+${summary.projectCount - summary.projects.length} more projects</div>`
+    : '';
+  return (
+    `<div class="detail-row cost-block" title="${escapeHtml(title)}">` +
+      `<div class="detail-head">` +
+        `<span class="detail-label">Cost</span>` +
+        `<span class="detail-reset">${unpriced ? 'Partial estimate' : 'API-price estimate'}</span>` +
+      `</div>` +
+      `<div class="cost-totals">${totals}</div>` +
+      (projects ? `<div class="cost-projects">${projects}${more}</div>` : '') +
+    `</div>`
+  );
+}
+
+async function updateLocalCost() {
+  try {
+    localCost = await window.api.getLocalCost();
+  } catch {
+    localCost = null;
+  }
+  for (const prefix of Object.keys(COST_SOURCES)) {
+    const detailEl = document.getElementById(`${prefix}-detail`);
+    if (!detailEl) continue;
+    detailEl.querySelector('.cost-block')?.remove();
+    detailEl.insertAdjacentHTML('beforeend', costHtml(prefix));
+  }
+  syncFlyout();
 }
 
 function setMeter(prefix, percent) {
@@ -642,6 +719,8 @@ async function updateAntigravityCard() {
 }
 
 async function updateAll() {
+  // Log scanning can take a moment on first run; cards do not wait for it.
+  updateLocalCost();
   await Promise.all([
     updateClaudeCard(),
     updateCodexCard(),
