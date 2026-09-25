@@ -67,4 +67,23 @@ function copilot() {
   });
 }
 
-module.exports = { claude, codex, cursor, antigravity, copilot };
+// Percent gained over the last 40 minutes, so demo cards show a pace forecast
+// right away: Claude and Cursor run out before reset, the rest last.
+const PACE_GAIN = {
+  claude: { session: 30, week: 0 },
+  codex: { primary: 2, secondary: 0 },
+  cursor: { total: 4, grokBot: 0 },
+  antigravity: { 'Gemini/Pro': 0, 'Gemini/Flash': 0 },
+  copilot: { primary: 3, secondary: 0 },
+};
+
+function seedPace(providerId, result, seedSample) {
+  const { meters } = require('./pace');
+  const gains = PACE_GAIN[providerId] ?? {};
+  const at = Date.now() - 40 * 60 * 1000;
+  for (const { key, percent, resetsAt } of meters(providerId, result.usage)) {
+    if (key in gains) seedSample(providerId, key, percent - gains[key], resetsAt, at);
+  }
+}
+
+module.exports = { claude, codex, cursor, antigravity, copilot, seedPace };

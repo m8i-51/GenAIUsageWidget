@@ -72,6 +72,11 @@ you to log in again, and polls their usage APIs about once a minute.
   and stale snapshots never alert. Toggle **Usage Alerts** in the tray icon's
   right-click menu (on by default). On Linux this needs a notification daemon,
   which most desktop environments already run.
+- **Pace forecast** — under each meter, a line predicts when you'll hit the
+  limit at your recent rate ("At this pace, limit in 36m"), or says you're on
+  pace to last until the reset. The rate comes from the last hour of samples
+  (six hours for weekly/monthly windows) and needs about 10 minutes of
+  observation after launch before it appears.
 - The window auto-sizes to its content, so the transparent widget never blocks
   clicks on what's behind it.
 
