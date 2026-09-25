@@ -9,6 +9,7 @@ const DEFAULTS = {
   widgetEdgeHide: null,
   widgetDockEdge: null,
   alertsEnabled: true,
+  serviceStatusEnabled: true,
 };
 
 let settingsPath = null;
@@ -28,6 +29,9 @@ function mergeWithDefaults(raw) {
   }
   if (merged.alertsEnabled !== false) {
     merged.alertsEnabled = true;
+  }
+  if (merged.serviceStatusEnabled !== false) {
+    merged.serviceStatusEnabled = true;
   }
   if (merged.compactMode !== true) {
     merged.compactMode = false;

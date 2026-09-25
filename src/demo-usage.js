@@ -86,4 +86,18 @@ function seedPace(providerId, result, seedSample) {
   }
 }
 
-module.exports = { claude, codex, cursor, antigravity, copilot, seedPace };
+// One provider mid-incident so the card badge, flyout line and tray dot all show.
+const SERVICE_STATUS = {
+  codex: {
+    level: 'major',
+    label: 'Partial outage',
+    title: 'Elevated error rates for Codex CLI',
+    url: 'https://status.openai.com',
+  },
+};
+
+function serviceStatus(providerId) {
+  return SERVICE_STATUS[providerId] ?? null;
+}
+
+module.exports = { claude, codex, cursor, antigravity, copilot, seedPace, serviceStatus };

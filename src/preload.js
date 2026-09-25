@@ -13,6 +13,12 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('settings-changed', listener);
     return () => ipcRenderer.removeListener('settings-changed', listener);
   },
+  openStatusPage: (providerId) => ipcRenderer.send('open-status-page', providerId),
+  onServiceStatusChanged: (cb) => {
+    const listener = () => cb();
+    ipcRenderer.on('service-status-changed', listener);
+    return () => ipcRenderer.removeListener('service-status-changed', listener);
+  },
   saveWidgetBounds: (bounds) => ipcRenderer.send('save-widget-bounds', bounds),
   resizeTo: (size) => ipcRenderer.send('resize-to', size),
   hideWidgetToEdge: () => ipcRenderer.send('widget-hide-to-edge'),
