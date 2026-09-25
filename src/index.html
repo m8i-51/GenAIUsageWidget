@@ -884,6 +884,70 @@
 
   .tile-hint[hidden] { display: none !important; }
 
+  /* Provider status page reports an incident (service-status.js). */
+  .ring-item { position: relative; }
+
+  .status-dot {
+    display: none;
+    position: absolute;
+    top: 1px;
+    left: calc(50% + 16px);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid var(--flyout);
+    box-sizing: border-box;
+    pointer-events: none;
+  }
+
+  .tile[data-status="minor"] .status-dot,
+  .tile[data-status="major"] .status-dot,
+  .tile[data-status="critical"] .status-dot,
+  .tile[data-status="maintenance"] .status-dot { display: block; }
+
+  .tile[data-status="minor"] .status-dot { background: var(--warning); }
+  .tile[data-status="major"] .status-dot,
+  .tile[data-status="critical"] .status-dot { background: var(--critical); }
+  .tile[data-status="maintenance"] .status-dot { background: var(--text-muted); }
+
+  .tile-incident {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    width: 100%;
+    margin-top: 8px;
+    padding: 6px 8px;
+    border: none;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--status-color, var(--warning)) 14%, transparent);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 11px;
+    line-height: 1.4;
+    text-align: left;
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+  }
+
+  .tile-incident[hidden] { display: none !important; }
+  .tile-incident:hover { background: color-mix(in srgb, var(--status-color, var(--warning)) 24%, transparent); }
+  .tile-incident.status-minor { --status-color: var(--warning); }
+  .tile-incident.status-major,
+  .tile-incident.status-critical { --status-color: var(--critical); }
+  .tile-incident.status-maintenance { --status-color: var(--text-muted); }
+
+  .tile-incident .incident-mark {
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin-top: 4px;
+    border-radius: 50%;
+    background: var(--status-color, var(--warning));
+  }
+
+  .tile-incident .incident-label { font-weight: 600; }
+  .tile-incident .incident-title { color: var(--text-secondary); }
+
   .tile-empty {
     padding: 8px 4px;
     text-align: center;
@@ -987,6 +1051,7 @@
               <span class="ring-value" id="claude-value">–</span>
               <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
               <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <span class="status-dot" aria-hidden="true"></span>
             </div>
             <div class="tile-body">
               <div class="flyout-head">
@@ -996,6 +1061,7 @@
               <div class="tile-detail" id="claude-detail"></div>
               <div class="tile-sub" id="claude-reset">Loading…</div>
               <div class="tile-hint" id="claude-hint" hidden></div>
+              <button type="button" class="tile-incident" id="claude-incident" data-status-provider="claude" hidden></button>
             </div>
           </div>
 
@@ -1013,6 +1079,7 @@
               <span class="ring-value" id="codex-value">–</span>
               <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
               <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <span class="status-dot" aria-hidden="true"></span>
             </div>
             <div class="tile-body">
               <div class="flyout-head">
@@ -1022,6 +1089,7 @@
               <div class="tile-detail" id="codex-detail"></div>
               <div class="tile-sub" id="codex-reset">Loading…</div>
               <div class="tile-hint" id="codex-hint" hidden></div>
+              <button type="button" class="tile-incident" id="codex-incident" data-status-provider="codex" hidden></button>
             </div>
           </div>
 
@@ -1039,6 +1107,7 @@
               <span class="ring-value" id="copilot-value">–</span>
               <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
               <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <span class="status-dot" aria-hidden="true"></span>
             </div>
             <div class="tile-body">
               <div class="flyout-head">
@@ -1048,6 +1117,7 @@
               <div class="tile-detail" id="copilot-detail"></div>
               <div class="tile-sub" id="copilot-reset">Loading…</div>
               <div class="tile-hint" id="copilot-hint" hidden></div>
+              <button type="button" class="tile-incident" id="copilot-incident" data-status-provider="copilot" hidden></button>
             </div>
           </div>
 
@@ -1065,6 +1135,7 @@
               <span class="ring-value" id="antigravity-value">–</span>
               <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
               <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <span class="status-dot" aria-hidden="true"></span>
             </div>
             <div class="tile-body">
               <div class="flyout-head">
@@ -1074,6 +1145,7 @@
               <div class="tile-detail" id="antigravity-detail"></div>
               <div class="tile-sub" id="antigravity-reset">Loading…</div>
               <div class="tile-hint" id="antigravity-hint" hidden></div>
+              <button type="button" class="tile-incident" id="antigravity-incident" data-status-provider="antigravity" hidden></button>
             </div>
           </div>
 
@@ -1091,6 +1163,7 @@
               <span class="ring-value" id="cursor-value">–</span>
               <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
               <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <span class="status-dot" aria-hidden="true"></span>
             </div>
             <div class="tile-body">
               <div class="flyout-head">
@@ -1100,6 +1173,7 @@
               <div class="tile-detail" id="cursor-detail"></div>
               <div class="tile-sub" id="cursor-reset">Loading…</div>
               <div class="tile-hint" id="cursor-hint" hidden></div>
+              <button type="button" class="tile-incident" id="cursor-incident" data-status-provider="cursor" hidden></button>
             </div>
           </div>
 
@@ -1117,6 +1191,7 @@
               <span class="ring-value" id="windsurf-value">–</span>
               <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
               <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <span class="status-dot" aria-hidden="true"></span>
             </div>
             <div class="tile-body">
               <div class="flyout-head">
@@ -1126,6 +1201,7 @@
               <div class="tile-detail" id="windsurf-detail"></div>
               <div class="tile-sub" id="windsurf-reset">Loading…</div>
               <div class="tile-hint" id="windsurf-hint" hidden></div>
+              <button type="button" class="tile-incident" id="windsurf-incident" data-status-provider="windsurf" hidden></button>
             </div>
           </div>
 
@@ -1143,6 +1219,7 @@
               <span class="ring-value" id="kiro-value">–</span>
               <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
               <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <span class="status-dot" aria-hidden="true"></span>
             </div>
             <div class="tile-body">
               <div class="flyout-head">
@@ -1152,6 +1229,7 @@
               <div class="tile-detail" id="kiro-detail"></div>
               <div class="tile-sub" id="kiro-reset">Loading…</div>
               <div class="tile-hint" id="kiro-hint" hidden></div>
+              <button type="button" class="tile-incident" id="kiro-incident" data-status-provider="kiro" hidden></button>
             </div>
           </div>
 

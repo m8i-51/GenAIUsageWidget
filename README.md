@@ -79,6 +79,16 @@ you to log in again, and polls their usage APIs about once a minute.
   pace to last until the reset. The rate comes from the last hour of samples
   (six hours for weekly/monthly windows) and needs about 10 minutes of
   observation after launch before it appears.
+- **Service status** — every 5 minutes the app reads each provider's public
+  status page (status.claude.com, status.openai.com, status.cursor.com,
+  githubstatus.com) and, during an incident, puts a colored dot on that
+  provider's ring, a "Partial outage: …" line on its card (click it to open the
+  status page), a dot on the tray icon, and a note in the tray tooltip. Claude,
+  Codex and Copilot only count the components those tools use (for example
+  Copilot on GitHub's page). A notification fires when a provider goes into a
+  partial or major outage (uses the **Usage Alerts** toggle). Turn checks off
+  with **Service Status** in the tray menu. Antigravity has no public status
+  page, so it is not checked. Only signed-in providers are checked.
 - The window auto-sizes to its content, so the transparent widget never blocks
   clicks on what's behind it.
 
@@ -137,6 +147,7 @@ src/
   index.html / renderer.js   Shared UI for both the popup and the widget
   providers/           One module per provider, each exporting a fetchXUsage()
                        function; not-configured.js marks "not set up" errors
+  service-status.js    Polls provider status pages for outages
   demo-usage.js        Sample usage payloads for GENAI_USAGE_DEMO=1
 scripts/capture-readme-screenshots.js  Regenerates README screenshots (`npm run screenshots`)
 assets/icon.png        Tray icon

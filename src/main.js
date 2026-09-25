@@ -1,4 +1,4 @@
-const { app, Tray, Menu, BrowserWindow, screen, ipcMain, nativeImage, Notification } = require('electron');
+const { app, Tray, Menu, BrowserWindow, screen, ipcMain, nativeImage, Notification, shell } = require('electron');
 const path = require('path');
 const { fetchClaudeUsage } = require('./providers/claude');
 const { fetchCodexUsage } = require('./providers/codex');
@@ -10,9 +10,10 @@ const { fetchKiroUsage } = require('./providers/kiro');
 const autostart = require('./autostart');
 const alerts = require('./alerts');
 const pace = require('./pace');
+const serviceStatus = require('./service-status');
 const { loadSettings, saveSettings } = require('./settings');
 const { fetchWithCache, preloadLastGood } = require('./usage-cache');
-const { summarizeForTray, formatTooltip, renderTrayPng } = require('./tray-icon');
+const { summarizeForTray, formatTooltip, renderTrayPng, PROVIDER_LABELS } = require('./tray-icon');
 const {
   detectSnapEdge,
   preferDockEdge,
@@ -758,11 +759,11 @@ async function refreshTrayIcon() {
   const summary = summarizeForTray(results, loadSettings().hiddenProviders);
   const { primary } = summary;
   const key = primary
-    ? `${primary.id}:${Math.round(primary.session)}:${primary.week == null ? '-' : Math.round(primary.week)}:${primary.stale}`
+    ? `${primary.id}:${Math.round(primary.session)}:${primary.week == null ? '-' : Math.round(primary.week)}:${primary.stale}:${summary.incident ?? '-'}`
     : 'static';
   if (key !== trayIconKey) {
     trayIconKey = key;
-    tray.setImage(primary ? buildTrayImage(primary) : STATIC_TRAY_ICON);
+    tray.setImage(primary ? buildTrayImage({ ...primary, incident: summary.incident }) : STATIC_TRAY_ICON);
   }
   tray.setToolTip(formatTooltip(summary));
 }
@@ -820,6 +821,15 @@ function createTray() {
         type: 'checkbox',
         checked: loadSettings().alertsEnabled,
         click: (menuItem) => broadcastSettings(saveSettings({ alertsEnabled: menuItem.checked })),
+      },
+      {
+        label: 'Service Status',
+        type: 'checkbox',
+        checked: loadSettings().serviceStatusEnabled,
+        click: (menuItem) => {
+          broadcastSettings(saveSettings({ serviceStatusEnabled: menuItem.checked }));
+          broadcastServiceStatus();
+        },
       },
       {
         label: 'Start at Login',
@@ -938,19 +948,65 @@ const USAGE_FETCHERS = {
 };
 
 const demoPaceSeeded = new Set();
+const isDemo = process.env.GENAI_USAGE_DEMO === '1';
+
+function currentServiceStatus(providerId) {
+  if (!loadSettings().serviceStatusEnabled) return null;
+  if (isDemo) return require('./demo-usage').serviceStatus(providerId);
+  return serviceStatus.get(providerId);
+}
+
+function withServiceStatus(providerId, result) {
+  // Skip providers that are not signed in so we never poll their status pages.
+  if (!result.ok && result.notConfigured) return result;
+  const status = currentServiceStatus(providerId);
+  return status ? { ...result, serviceStatus: status } : result;
+}
 
 async function getUsage(providerId) {
-  if (process.env.GENAI_USAGE_DEMO === '1') {
+  if (isDemo) {
     const demo = require('./demo-usage');
     const result = demo[providerId]();
     if (!demoPaceSeeded.has(providerId)) {
       demoPaceSeeded.add(providerId);
       demo.seedPace(providerId, result, pace.seedSample);
     }
-    return pace.withForecasts(providerId, result);
+    return withServiceStatus(providerId, pace.withForecasts(providerId, result));
   }
-  return pace.withForecasts(providerId, await fetchWithCache(providerId, USAGE_FETCHERS[providerId]));
+  const result = pace.withForecasts(providerId, await fetchWithCache(providerId, USAGE_FETCHERS[providerId]));
+  return withServiceStatus(providerId, result);
 }
+
+function broadcastServiceStatus() {
+  for (const win of [popup, widget]) {
+    if (win && !win.isDestroyed()) win.webContents.send('service-status-changed');
+  }
+  refreshTrayIcon();
+}
+
+// Status pages change on their own schedule; push changes instead of waiting
+// for the next usage poll, and notify once when a provider goes down.
+serviceStatus.onChange((providerId, status, before) => {
+  if (status.level === before?.level && status.title === before?.title) return;
+  broadcastServiceStatus();
+  const settings = loadSettings();
+  const serious = status.level === 'major' || status.level === 'critical';
+  const wasSerious = before?.level === 'major' || before?.level === 'critical';
+  if (
+    serious && !wasSerious && before
+    && settings.alertsEnabled && settings.serviceStatusEnabled
+    && !settings.hiddenProviders.includes(providerId)
+  ) {
+    const label = PROVIDER_LABELS[providerId] || providerId;
+    showUsageNotification(`${label}: ${status.label}`, status.title || `Check ${status.url} for details.`);
+  }
+});
+
+ipcMain.on('open-status-page', (_event, providerId) => {
+  // Only open the fixed status page for a known provider, never a renderer-supplied URL.
+  const url = serviceStatus.pageUrl(providerId);
+  if (url) shell.openExternal(url);
+});
 
 function showUsageNotification(title, body) {
   if (!Notification.isSupported()) return;

@@ -316,6 +316,41 @@ function setMeter(prefix, percent) {
   if (valueEl) valueEl.textContent = `${Math.round(clamped)}%`;
 }
 
+/**
+ * Status-page incident for this provider (attached by main as
+ * result.serviceStatus): a dot on the ring and a clickable line in the card.
+ */
+function applyServiceStatus(prefix, result) {
+  const tileEl = document.getElementById(`${prefix}-provider`);
+  const incidentEl = document.getElementById(`${prefix}-incident`);
+  const ringEl = tileEl.querySelector('.ring-item');
+  const status = result.serviceStatus;
+
+  if (!status || status.level === 'none') {
+    delete tileEl.dataset.status;
+    if (ringEl) ringEl.removeAttribute('title');
+    if (incidentEl) {
+      incidentEl.hidden = true;
+      incidentEl.innerHTML = '';
+    }
+    return;
+  }
+
+  tileEl.dataset.status = status.level;
+  const summary = status.title ? `${status.label}: ${status.title}` : status.label;
+  if (ringEl) ringEl.title = summary;
+  if (incidentEl) {
+    incidentEl.className = `tile-incident status-${status.level}`;
+    incidentEl.title = `Open ${status.url}`;
+    incidentEl.innerHTML =
+      `<span class="incident-mark"></span>` +
+      `<span><span class="incident-label">${escapeHtml(status.label)}</span>` +
+      (status.title ? ` <span class="incident-title">${escapeHtml(status.title)}</span>` : '') +
+      `</span>`;
+    incidentEl.hidden = false;
+  }
+}
+
 function beginCard(prefix, result) {
   const tileEl = document.getElementById(`${prefix}-provider`);
   const resetEl = document.getElementById(`${prefix}-reset`);
@@ -330,6 +365,8 @@ function beginCard(prefix, result) {
     return false;
   }
 
+  // Before the error check: an outage is most useful exactly when usage fails.
+  applyServiceStatus(prefix, result);
   configuredProviders[prefix] = true;
   tileEl.dataset.notConfigured = 'false';
   tileEl.hidden = isProviderHidden(prefix);
@@ -428,6 +465,10 @@ function syncFlyout() {
   const updated = document.getElementById('last-updated')?.textContent ?? '';
   const isError = tile.classList.contains('error-state');
   const isStale = tile.classList.contains('stale');
+  const incidentEl = document.getElementById(`${selectedProvider}-incident`);
+  const incident = incidentEl && !incidentEl.hidden
+    ? incidentEl.outerHTML.replace(/\sid="[^"]*"/, '')
+    : '';
 
   let body;
   if (isError) {
@@ -447,6 +488,7 @@ function syncFlyout() {
   content.innerHTML =
     `<div class="flyout-head">${icon}<span>${escapeHtml(provider.label)} Usage</span></div>` +
     body +
+    incident +
     (updated ? `<div class="flyout-updated">${escapeHtml(updated)}</div>` : '');
 
   flyout.hidden = false;
@@ -893,6 +935,14 @@ if (dockEdgeTrigger && dockEdgeMenu) {
   document.addEventListener('click', () => setDockEdgeMenuOpen(false));
 }
 
+// Card and flyout incident lines open that provider's status page.
+document.addEventListener('click', (event) => {
+  const target = event.target.closest?.('[data-status-provider]');
+  if (!target) return;
+  event.stopPropagation();
+  window.api.openStatusPage(target.dataset.statusProvider);
+}, true);
+
 document.querySelectorAll('.tile').forEach((tile) => {
   tile.addEventListener('click', () => {
     if (suppressTileClick) {
@@ -1125,6 +1175,7 @@ async function init() {
     applyEdgeHideUi({ edge: settings.widgetEdgeHide, expanded: false });
   }
   window.api.onSettingsChanged((next) => applySettings(next));
+  window.api.onServiceStatusChanged(() => updateAll());
   await updateAll();
   if (isWidgetMode && !selectedProvider && !isEdgeCollapsed()) {
     const first = firstVisibleProvider();
