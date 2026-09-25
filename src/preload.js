@@ -6,12 +6,22 @@ contextBridge.exposeInMainWorld('api', {
   getCursorUsage: () => ipcRenderer.invoke('get-cursor-usage'),
   getAntigravityUsage: () => ipcRenderer.invoke('get-antigravity-usage'),
   getCopilotUsage: () => ipcRenderer.invoke('get-copilot-usage'),
+  getLocalCost: () => ipcRenderer.invoke('get-local-cost'),
+  getGeminiUsage: () => ipcRenderer.invoke('get-gemini-usage'),
+  getWindsurfUsage: () => ipcRenderer.invoke('get-windsurf-usage'),
+  getKiroUsage: () => ipcRenderer.invoke('get-kiro-usage'),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   setSettings: (partial) => ipcRenderer.invoke('set-settings', partial),
   onSettingsChanged: (cb) => {
     const listener = (_event, settings) => cb(settings);
     ipcRenderer.on('settings-changed', listener);
     return () => ipcRenderer.removeListener('settings-changed', listener);
+  },
+  openStatusPage: (providerId) => ipcRenderer.send('open-status-page', providerId),
+  onServiceStatusChanged: (cb) => {
+    const listener = () => cb();
+    ipcRenderer.on('service-status-changed', listener);
+    return () => ipcRenderer.removeListener('service-status-changed', listener);
   },
   saveWidgetBounds: (bounds) => ipcRenderer.send('save-widget-bounds', bounds),
   resizeTo: (size) => ipcRenderer.send('resize-to', size),

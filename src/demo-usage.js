@@ -67,6 +67,39 @@ function copilot() {
   });
 }
 
+function gemini() {
+  const tomorrow = new Date();
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  tomorrow.setUTCHours(7, 0, 0, 0);
+  const resetsAt = tomorrow.toISOString();
+  return ok({
+    primary: { percent: 44, resetsAt, model: 'gemini-2.5-pro' },
+    secondary: { percent: 6, resetsAt, model: 'gemini-2.5-flash' },
+    plan: 'Free',
+  });
+}
+
+function windsurf() {
+  return ok({
+    primary: { percent: 64, resetsAt: minutesFromNow(9 * 60 + 20) },
+    secondary: { percent: 41, resetsAt: nextWeekdayMidnight(1) },
+    kind: 'quota',
+    plan: 'Pro',
+  });
+}
+
+function kiro() {
+  const firstOfNextMonth = new Date();
+  firstOfNextMonth.setUTCMonth(firstOfNextMonth.getUTCMonth() + 1, 1);
+  firstOfNextMonth.setUTCHours(0, 0, 0, 0);
+  return ok({
+    primary: { percent: 27.5, used: 275, limit: 1000, resetsAt: firstOfNextMonth.toISOString() },
+    secondary: { percent: 12, used: 60, limit: 500, resetsAt: minutesFromNow(12 * 24 * 60) },
+    secondaryKind: 'bonus',
+    plan: 'KIRO PRO',
+  });
+}
+
 // Percent gained over the last 40 minutes, so demo cards show a pace forecast
 // right away: Claude and Cursor run out before reset, the rest last.
 const PACE_GAIN = {
@@ -75,6 +108,9 @@ const PACE_GAIN = {
   cursor: { total: 4, grokBot: 0 },
   antigravity: { 'Gemini/Pro': 0, 'Gemini/Flash': 0 },
   copilot: { primary: 3, secondary: 0 },
+  windsurf: { primary: 5, secondary: 0 },
+  kiro: { primary: 1, secondary: 0 },
+  gemini: { primary: 2, secondary: 0 },
 };
 
 function seedPace(providerId, result, seedSample) {
@@ -86,4 +122,45 @@ function seedPace(providerId, result, seedSample) {
   }
 }
 
-module.exports = { claude, codex, cursor, antigravity, copilot, seedPace };
+function localCost() {
+  return {
+    claude: {
+      today: { cost: 18.42, tokens: 21_870_000 },
+      last30Days: { cost: 412.9, tokens: 486_300_000 },
+      projects: [
+        { name: 'GenAIUsageWidget', cost: 203.1, tokens: 241_500_000 },
+        { name: 'dotfiles', cost: 96.4, tokens: 112_800_000 },
+        { name: 'blog', cost: 71.25, tokens: 84_100_000 },
+      ],
+      projectCount: 6,
+      unpricedModels: [],
+    },
+    codex: {
+      today: { cost: 3.08, tokens: 4_120_000 },
+      last30Days: { cost: 57.6, tokens: 70_900_000 },
+      projects: [
+        { name: 'GenAIUsageWidget', cost: 38.2, tokens: 47_300_000 },
+        { name: 'scripts', cost: 19.4, tokens: 23_600_000 },
+      ],
+      projectCount: 2,
+      unpricedModels: [],
+    },
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+// One provider mid-incident so the card badge, flyout line and tray dot all show.
+const SERVICE_STATUS = {
+  codex: {
+    level: 'major',
+    label: 'Partial outage',
+    title: 'Elevated error rates for Codex CLI',
+    url: 'https://status.openai.com',
+  },
+};
+
+function serviceStatus(providerId) {
+  return SERVICE_STATUS[providerId] ?? null;
+}
+
+module.exports = { claude, codex, cursor, antigravity, copilot, gemini, windsurf, kiro, seedPace, serviceStatus, localCost };

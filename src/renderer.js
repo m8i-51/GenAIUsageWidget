@@ -4,6 +4,9 @@ const PROVIDERS = [
   { id: 'copilot', label: 'Copilot' },
   { id: 'cursor', label: 'Cursor' },
   { id: 'antigravity', label: 'Antigravity' },
+  { id: 'gemini', label: 'Gemini' },
+  { id: 'windsurf', label: 'Windsurf' },
+  { id: 'kiro', label: 'Kiro' },
 ];
 
 let appSettings = {
@@ -22,6 +25,8 @@ const isWidgetMode = document.body.classList.contains('widget-mode');
 const configuredProviders = Object.fromEntries(PROVIDERS.map((p) => [p.id, false]));
 
 let selectedProvider = null;
+/** Local log totals from main's local-cost.js ({ claude, codex } or null). */
+let localCost = null;
 let settingsOpen = false;
 let suppressTileClick = false;
 
@@ -233,6 +238,12 @@ function authHint(prefix, message, expired = false) {
   if (prefix === 'antigravity' && (expired || lower.includes('401') || lower.includes('cred'))) {
     return 'Run agy login to re-authenticate';
   }
+  if (prefix === 'gemini' && (expired || lower.includes('401') || lower.includes('expired') || lower.includes('refresh'))) {
+    return 'Run gemini and sign in with Google again';
+  }
+  if (prefix === 'kiro' && (expired || lower.includes('401') || lower.includes('403') || lower.includes('expired'))) {
+    return 'Open Kiro (or run kiro-cli login) to sign in again';
+  }
   return null;
 }
 
@@ -279,7 +290,8 @@ function setDetail(prefix, rows) {
 
   detailEl.innerHTML = rows.map((row) => {
     const clamped = Math.max(0, Math.min(100, row.percent ?? 0));
-    const used = row.percent == null ? '–' : `${Math.round(clamped)}% Used`;
+    let used = row.percent == null ? '–' : `${Math.round(clamped)}% Used`;
+    if (row.amount) used += ` · ${row.amount}`;
     const reset = row.sub ? escapeHtml(row.sub) : '';
     const pace = formatPace(row.forecast);
     const paceHtml = pace
@@ -292,12 +304,87 @@ function setDetail(prefix, rows) {
           `<span class="detail-reset">${reset}</span>` +
         `</div>` +
         `<div class="meter ${severityClass(clamped)}"><span class="meter-fill" style="width:${clamped}%"></span></div>` +
-        `<div class="detail-used"><span>${used}</span>${paceHtml}</div>` +
+        `<div class="detail-used"><span>${escapeHtml(used)}</span>${paceHtml}</div>` +
       `</div>`
     );
   }).join('');
 
+  detailEl.insertAdjacentHTML('beforeend', costHtml(prefix));
+
   if (prefix === selectedProvider) syncFlyout();
+}
+
+const COST_SOURCES = {
+  claude: 'Claude Code',
+  codex: 'Codex CLI',
+};
+
+function formatUsd(value) {
+  if (value >= 1000) return `$${Math.round(value).toLocaleString('en-US')}`;
+  if (value >= 100) return `$${value.toFixed(0)}`;
+  return `$${value.toFixed(2)}`;
+}
+
+function formatTokens(count) {
+  if (count >= 1e9) return `${(count / 1e9).toFixed(1)}B`;
+  if (count >= 1e6) return `${(count / 1e6).toFixed(count >= 1e8 ? 0 : 1)}M`;
+  if (count >= 1e3) return `${Math.round(count / 1e3)}K`;
+  return String(count);
+}
+
+/** Today / last-30-days cost block for providers whose CLI keeps local logs. */
+function costHtml(prefix) {
+  const summary = localCost?.[prefix];
+  if (!COST_SOURCES[prefix] || !summary) return '';
+  const unpriced = summary.unpricedModels?.length
+    ? ` Not priced: ${summary.unpricedModels.join(', ')}.`
+    : '';
+  const title = `Estimated from local ${COST_SOURCES[prefix]} logs at API list prices. ` +
+    `Subscription plans are not billed per token.${unpriced}`;
+  const totals = [
+    ['Today', summary.today],
+    ['30 days', summary.last30Days],
+  ].map(([label, t]) => (
+    `<div class="cost-total">` +
+      `<span class="cost-value">${formatUsd(t.cost)}</span>` +
+      `<span class="cost-caption">${label}</span>` +
+      `<span class="cost-caption">${formatTokens(t.tokens)} tokens</span>` +
+    `</div>`
+  )).join('');
+  const projects = summary.projects.map((p) => (
+    `<div class="cost-project">` +
+      `<span class="cost-project-name">${escapeHtml(p.name)}</span>` +
+      `<span class="cost-project-value">${formatUsd(p.cost)}</span>` +
+    `</div>`
+  )).join('');
+  const more = summary.projectCount > summary.projects.length
+    ? `<div class="cost-more">+${summary.projectCount - summary.projects.length} more projects</div>`
+    : '';
+  return (
+    `<div class="detail-row cost-block" title="${escapeHtml(title)}">` +
+      `<div class="detail-head">` +
+        `<span class="detail-label">Cost</span>` +
+        `<span class="detail-reset">${unpriced ? 'Partial estimate' : 'API-price estimate'}</span>` +
+      `</div>` +
+      `<div class="cost-totals">${totals}</div>` +
+      (projects ? `<div class="cost-projects">${projects}${more}</div>` : '') +
+    `</div>`
+  );
+}
+
+async function updateLocalCost() {
+  try {
+    localCost = await window.api.getLocalCost();
+  } catch {
+    localCost = null;
+  }
+  for (const prefix of Object.keys(COST_SOURCES)) {
+    const detailEl = document.getElementById(`${prefix}-detail`);
+    if (!detailEl) continue;
+    detailEl.querySelector('.cost-block')?.remove();
+    detailEl.insertAdjacentHTML('beforeend', costHtml(prefix));
+  }
+  syncFlyout();
 }
 
 function setMeter(prefix, percent) {
@@ -314,6 +401,41 @@ function setMeter(prefix, percent) {
   if (valueEl) valueEl.textContent = `${Math.round(clamped)}%`;
 }
 
+/**
+ * Status-page incident for this provider (attached by main as
+ * result.serviceStatus): a dot on the ring and a clickable line in the card.
+ */
+function applyServiceStatus(prefix, result) {
+  const tileEl = document.getElementById(`${prefix}-provider`);
+  const incidentEl = document.getElementById(`${prefix}-incident`);
+  const ringEl = tileEl.querySelector('.ring-item');
+  const status = result.serviceStatus;
+
+  if (!status || status.level === 'none') {
+    delete tileEl.dataset.status;
+    if (ringEl) ringEl.removeAttribute('title');
+    if (incidentEl) {
+      incidentEl.hidden = true;
+      incidentEl.innerHTML = '';
+    }
+    return;
+  }
+
+  tileEl.dataset.status = status.level;
+  const summary = status.title ? `${status.label}: ${status.title}` : status.label;
+  if (ringEl) ringEl.title = summary;
+  if (incidentEl) {
+    incidentEl.className = `tile-incident status-${status.level}`;
+    incidentEl.title = `Open ${status.url}`;
+    incidentEl.innerHTML =
+      `<span class="incident-mark"></span>` +
+      `<span><span class="incident-label">${escapeHtml(status.label)}</span>` +
+      (status.title ? ` <span class="incident-title">${escapeHtml(status.title)}</span>` : '') +
+      `</span>`;
+    incidentEl.hidden = false;
+  }
+}
+
 function beginCard(prefix, result) {
   const tileEl = document.getElementById(`${prefix}-provider`);
   const resetEl = document.getElementById(`${prefix}-reset`);
@@ -328,6 +450,8 @@ function beginCard(prefix, result) {
     return false;
   }
 
+  // Before the error check: an outage is most useful exactly when usage fails.
+  applyServiceStatus(prefix, result);
   configuredProviders[prefix] = true;
   tileEl.dataset.notConfigured = 'false';
   tileEl.hidden = isProviderHidden(prefix);
@@ -426,6 +550,10 @@ function syncFlyout() {
   const updated = document.getElementById('last-updated')?.textContent ?? '';
   const isError = tile.classList.contains('error-state');
   const isStale = tile.classList.contains('stale');
+  const incidentEl = document.getElementById(`${selectedProvider}-incident`);
+  const incident = incidentEl && !incidentEl.hidden
+    ? incidentEl.outerHTML.replace(/\sid="[^"]*"/, '')
+    : '';
 
   let body;
   if (isError) {
@@ -448,6 +576,7 @@ function syncFlyout() {
   content.innerHTML =
     `<div class="flyout-head">${icon}<span>${escapeHtml(provider.label)} Usage</span></div>` +
     body +
+    incident +
     (updated ? `<div class="flyout-updated">${escapeHtml(updated)}</div>` : '');
 
   flyout.hidden = false;
@@ -575,6 +704,101 @@ async function updateCopilotCard() {
   setDetail('copilot', rows);
 }
 
+function formatPlanPrefix(plan) {
+  if (!plan) return '';
+  const words = String(plan).toLowerCase().split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1));
+  return `${words.join(' ')} · `;
+}
+
+function formatCredits(window) {
+  if (window?.used == null || window?.limit == null) return '';
+  const fmt = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+  return `${fmt(window.used)} / ${fmt(window.limit)}`;
+}
+
+async function updateWindsurfCard() {
+  const result = await window.api.getWindsurfUsage();
+  if (!beginCard('windsurf', result)) return;
+  const resetEl = document.getElementById('windsurf-reset');
+
+  const { primary, secondary, kind, plan } = result.usage;
+  const planPrefix = formatPlanPrefix(plan);
+  if (!primary && !secondary) {
+    resetEl.textContent = `${planPrefix}No quota data`;
+    setDetail('windsurf', []);
+    return;
+  }
+
+  const headline = primary ?? secondary;
+  setMeter('windsurf', headline.percent);
+  applyStaleState('windsurf', result, resetEl, `${planPrefix}resets in ${formatCountdown(headline.resetsAt)}`);
+
+  const credits = kind === 'credits';
+  const forecasts = result.forecasts ?? {};
+  const rows = [];
+  if (primary) {
+    rows.push({
+      label: credits ? 'Prompt credits' : 'Daily',
+      amount: credits ? formatCredits(primary) : '',
+      percent: primary.percent,
+      sub: formatResetLabel(primary.resetsAt),
+      forecast: forecasts.primary,
+    });
+  }
+  if (secondary) {
+    rows.push({
+      label: credits ? 'Flow actions' : 'Weekly',
+      amount: credits ? formatCredits(secondary) : '',
+      percent: secondary.percent,
+      sub: formatResetLabel(secondary.resetsAt),
+      forecast: forecasts.secondary,
+    });
+  }
+  setDetail('windsurf', rows);
+}
+
+async function updateKiroCard() {
+  const result = await window.api.getKiroUsage();
+  if (!beginCard('kiro', result)) return;
+  const resetEl = document.getElementById('kiro-reset');
+
+  const { primary, secondary, secondaryKind, plan } = result.usage;
+  const planPrefix = formatPlanPrefix(plan);
+  if (!primary) {
+    resetEl.textContent = `${planPrefix}No credit data`;
+    setDetail('kiro', []);
+    return;
+  }
+
+  setMeter('kiro', primary.percent);
+  applyStaleState('kiro', result, resetEl, `${planPrefix}resets in ${formatCountdown(primary.resetsAt)}`);
+
+  const forecasts = result.forecasts ?? {};
+  const rows = [
+    {
+      label: 'Monthly credits',
+      amount: formatCredits(primary),
+      percent: primary.percent,
+      sub: formatResetLabel(primary.resetsAt),
+      forecast: forecasts.primary,
+    },
+  ];
+  if (secondary) {
+    const bonus = secondaryKind === 'bonus';
+    rows.push({
+      label: bonus ? 'Bonus credits' : 'Overage credits',
+      amount: formatCredits(secondary),
+      percent: secondary.percent,
+      // Bonus credits expire rather than reset.
+      sub: bonus && secondary.resetsAt
+        ? `Expires in ${formatCountdown(secondary.resetsAt)}`
+        : formatResetLabel(secondary.resetsAt),
+      forecast: forecasts.secondary,
+    });
+  }
+  setDetail('kiro', rows);
+}
+
 async function updateCursorCard() {
   const result = await window.api.getCursorUsage();
   if (!beginCard('cursor', result)) return;
@@ -648,13 +872,46 @@ async function updateAntigravityCard() {
   setDetail('antigravity', detailRows);
 }
 
+async function updateGeminiCard() {
+  const result = await window.api.getGeminiUsage();
+  if (!beginCard('gemini', result)) return;
+  const resetEl = document.getElementById('gemini-reset');
+
+  const { primary, secondary, plan } = result.usage;
+  const planPrefix = formatPlanPrefix(plan);
+  if (!primary && !secondary) {
+    resetEl.textContent = `${planPrefix}No quota data`;
+    setDetail('gemini', []);
+    return;
+  }
+
+  const headline = primary ?? secondary;
+  setMeter('gemini', headline.percent);
+  applyStaleState('gemini', result, resetEl, `${planPrefix}resets in ${formatCountdown(headline.resetsAt)}`);
+
+  const forecasts = result.forecasts ?? {};
+  const rows = [];
+  if (primary) {
+    rows.push({ label: 'Pro', percent: primary.percent, sub: formatResetLabel(primary.resetsAt), forecast: forecasts.primary });
+  }
+  if (secondary) {
+    rows.push({ label: 'Flash', percent: secondary.percent, sub: formatResetLabel(secondary.resetsAt), forecast: forecasts.secondary });
+  }
+  setDetail('gemini', rows);
+}
+
 async function updateAll() {
+  // Log scanning can take a moment on first run; cards do not wait for it.
+  updateLocalCost();
   await Promise.all([
     updateClaudeCard(),
     updateCodexCard(),
     updateCopilotCard(),
     updateCursorCard(),
     updateAntigravityCard(),
+    updateGeminiCard(),
+    updateWindsurfCard(),
+    updateKiroCard(),
   ]);
 
   refreshEmptyState();
@@ -796,6 +1053,14 @@ if (dockEdgeTrigger && dockEdgeMenu) {
   });
   document.addEventListener('click', () => setDockEdgeMenuOpen(false));
 }
+
+// Card and flyout incident lines open that provider's status page.
+document.addEventListener('click', (event) => {
+  const target = event.target.closest?.('[data-status-provider]');
+  if (!target) return;
+  event.stopPropagation();
+  window.api.openStatusPage(target.dataset.statusProvider);
+}, true);
 
 document.querySelectorAll('.tile').forEach((tile) => {
   tile.addEventListener('click', () => {
@@ -1029,6 +1294,7 @@ async function init() {
     applyEdgeHideUi({ edge: settings.widgetEdgeHide, expanded: false });
   }
   window.api.onSettingsChanged((next) => applySettings(next));
+  window.api.onServiceStatusChanged(() => updateAll());
   await updateAll();
   if (isWidgetMode && !selectedProvider && !isEdgeCollapsed()) {
     const first = firstVisibleProvider();
