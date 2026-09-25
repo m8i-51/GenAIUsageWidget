@@ -738,9 +738,29 @@ const STATIC_TRAY_ICON = path.join(__dirname, '..', 'assets', 'icon.png');
 const TRAY_REFRESH_MS = 60 * 1000;
 let trayIconKey = 'static';
 
+// Every Windows display scale (100–300%) plus Linux HiDPI, so the OS picks
+// an exact-size bitmap instead of blurring a neighbouring one.
+const TRAY_SCALE_FACTORS = [1, 1.25, 1.5, 1.75, 2, 2.5, 3];
+let staticTrayImage = null;
+
+/** The 256px app icon pre-shrunk per scale; a raw 256px tray icon aliases badly on Windows. */
+function getStaticTrayImage() {
+  if (staticTrayImage) return staticTrayImage;
+  const source = nativeImage.createFromPath(STATIC_TRAY_ICON);
+  if (source.isEmpty()) return STATIC_TRAY_ICON;
+  const image = nativeImage.createEmpty();
+  for (const scaleFactor of TRAY_SCALE_FACTORS) {
+    const size = Math.round(16 * scaleFactor);
+    const bitmap = source.resize({ width: size, height: size, quality: 'best' });
+    image.addRepresentation({ scaleFactor, buffer: bitmap.toPNG() });
+  }
+  staticTrayImage = image;
+  return image;
+}
+
 function buildTrayImage(entry) {
   const image = nativeImage.createEmpty();
-  for (const scaleFactor of [1, 1.5, 2]) {
+  for (const scaleFactor of TRAY_SCALE_FACTORS) {
     image.addRepresentation({ scaleFactor, buffer: renderTrayPng(entry, Math.round(16 * scaleFactor)) });
   }
   return image;
@@ -764,13 +784,13 @@ async function refreshTrayIcon() {
     : 'static';
   if (key !== trayIconKey) {
     trayIconKey = key;
-    tray.setImage(primary ? buildTrayImage({ ...primary, incident: summary.incident }) : STATIC_TRAY_ICON);
+    tray.setImage(primary ? buildTrayImage({ ...primary, incident: summary.incident }) : getStaticTrayImage());
   }
   tray.setToolTip(formatTooltip(summary));
 }
 
 function createTray() {
-  tray = new Tray(STATIC_TRAY_ICON);
+  tray = new Tray(getStaticTrayImage());
   tray.setToolTip('GenAIUsageWidget');
   refreshTrayIcon();
   setInterval(refreshTrayIcon, TRAY_REFRESH_MS);
