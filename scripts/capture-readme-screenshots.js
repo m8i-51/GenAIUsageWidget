@@ -4,13 +4,15 @@
  *
  * Writes docs/screenshots/*.png
  */
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeTheme } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const demo = require('../src/demo-usage');
 
 app.commandLine.appendSwitch('force-device-scale-factor', '2');
 app.disableHardwareAcceleration();
+// README shots are dark; SCREENSHOT_THEME=light captures the light theme.
+nativeTheme.themeSource = process.env.SCREENSHOT_THEME === 'light' ? 'light' : 'dark';
 
 const OUT_DIR = process.env.SCREENSHOT_OUT_DIR
   || path.join(__dirname, '..', 'docs', 'screenshots');

@@ -276,10 +276,20 @@ function applyStaleState(prefix, result, resetEl, baseText) {
   if (prefix === selectedProvider) syncFlyout();
 }
 
+// Last drawn width per meter, so a refresh slides each bar from where it was
+// (and the first paint fills in from empty) instead of snapping.
+const lastMeterWidths = new Map();
+
+function settleMeters(root) {
+  root?.querySelectorAll('.meter-fill[data-width]').forEach((fill) => {
+    fill.style.width = `${fill.dataset.width}%`;
+  });
+}
+
 function setDetail(prefix, rows) {
   const detailEl = document.getElementById(`${prefix}-detail`);
 
-  detailEl.innerHTML = rows.map((row) => {
+  detailEl.innerHTML = rows.map((row, index) => {
     const clamped = Math.max(0, Math.min(100, row.percent ?? 0));
     let used = row.percent == null ? '–' : `${Math.round(clamped)}% Used`;
     if (row.amount) used += ` · ${row.amount}`;
@@ -298,16 +308,23 @@ function setDetail(prefix, rows) {
           `<span class="detail-label">${escapeHtml(row.label)}</span>` +
           `<span class="detail-reset">${reset}</span>` +
         `</div>` +
-        `<div class="meter ${severityClass(clamped)}"><span class="meter-fill" style="width:${clamped}%"></span></div>` +
+        `<div class="meter ${severityClass(clamped)}"><span class="meter-fill" data-width="${clamped}" style="width:${lastMeterWidths.get(`${prefix}:${index}`) ?? 0}%"></span></div>` +
         `<div class="detail-used"><span>${escapeHtml(used)}</span>${paceHtml}</div>` +
         promptsHtml +
       `</div>`
     );
   }).join('');
+  rows.forEach((row, index) => {
+    lastMeterWidths.set(`${prefix}:${index}`, Math.max(0, Math.min(100, row.percent ?? 0)));
+  });
 
   detailEl.insertAdjacentHTML('beforeend', costHtml(prefix));
 
   if (prefix === selectedProvider) syncFlyout();
+  // Force a style flush so the start width is committed, then transition.
+  void detailEl.offsetWidth;
+  settleMeters(detailEl);
+  if (prefix === selectedProvider) settleMeters(document.getElementById('flyout-content'));
 }
 
 const COST_SOURCES = {
@@ -389,12 +406,38 @@ function setMeter(prefix, percent) {
   const ring = barEl?.closest('.ring');
   const clamped = Math.max(0, Math.min(100, percent ?? 0));
 
-  if (barEl) barEl.style.strokeDasharray = `${clamped} 100`;
+  if (barEl) {
+    barEl.style.strokeDasharray = `${clamped} 100`;
+    // A round cap draws a dot even at 0%; hide the arc until there is usage.
+    barEl.style.opacity = clamped > 0 ? '1' : '0';
+  }
   if (ring) {
     ring.classList.remove('ok', 'warning', 'critical');
     ring.classList.add(severityClass(clamped));
   }
-  if (valueEl) valueEl.textContent = `${Math.round(clamped)}%`;
+  if (valueEl) countTo(valueEl, Math.round(clamped));
+}
+
+const RING_ANIM_MS = 800;
+
+/** Count the ring label up/down in step with the ring's CSS transition. */
+function countTo(el, target) {
+  const from = el.dataset.value === undefined ? 0 : Number(el.dataset.value);
+  el.dataset.value = String(target);
+  cancelAnimationFrame(Number(el.dataset.anim) || 0);
+  if (!Number.isFinite(from) || from === target
+    || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    el.textContent = `${target}%`;
+    return;
+  }
+  const start = performance.now();
+  const step = (now) => {
+    const t = Math.min(1, (now - start) / RING_ANIM_MS);
+    const eased = 1 - (1 - t) ** 4;
+    el.textContent = `${Math.round(from + (target - from) * eased)}%`;
+    if (t < 1) el.dataset.anim = String(requestAnimationFrame(step));
+  };
+  el.dataset.anim = String(requestAnimationFrame(step));
 }
 
 /**

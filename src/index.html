@@ -3,20 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <title>GenAIUsageWidget</title>
+<link rel="stylesheet" href="theme.css" />
 <style>
   :root {
-    color-scheme: dark;
-    --notch: #0a0a0a;
-    --flyout: #141414;
-    --text-primary: #f5f5f5;
-    --text-secondary: #a3a3a3;
-    --text-muted: #737373;
-    --track: #2a2a2a;
-    --hairline: rgba(255, 255, 255, 0.08);
-    --ok: #3dff8a;
-    --warning: #f0d44a;
-    --critical: #ff5c33;
-    --accent: #3dff8a;
     --pointer-offset: 40px;
   }
 
@@ -26,8 +15,9 @@
     margin: 0;
     background: transparent;
     color: var(--text-primary);
-    font-family: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-family: var(--font-ui);
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
     overflow: hidden;
   }
 
@@ -127,12 +117,10 @@
     position: relative;
     width: 268px;
     padding: 16px 18px 14px;
-    border-radius: 22px;
+    border-radius: 16px;
     background: var(--flyout);
-    border: 1px solid var(--hairline);
-    box-shadow:
-      0 18px 40px rgba(0, 0, 0, 0.45),
-      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--flyout-stroke);
+    box-shadow: var(--shadow-flyout);
   }
 
   .flyout .pointer {
@@ -140,14 +128,13 @@
     width: 12px;
     height: 12px;
     background: var(--flyout);
-    border: 1px solid var(--hairline);
+    border: 1px solid var(--flyout-stroke);
     border-left: none;
     border-bottom: none;
     transform: rotate(45deg);
     right: -6px;
     top: var(--pointer-offset);
     margin-top: -6px;
-    box-shadow: 4px -4px 12px rgba(0, 0, 0, 0.12);
   }
 
   body.widget-mode.edge-left .flyout .pointer {
@@ -181,9 +168,10 @@
     gap: 8px;
     margin-bottom: 16px;
     color: var(--text-primary);
+    font-family: var(--font-display);
     font-size: 14px;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
   }
 
   .flyout-head svg {
@@ -210,10 +198,8 @@
   .notch {
     position: relative;
     background: var(--notch);
-    border: 1px solid var(--hairline);
-    box-shadow:
-      0 16px 40px rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--notch-stroke);
+    box-shadow: var(--shadow-flyout);
   }
 
   /* Transparent Electron windows cannot use outer box-shadow / filter /
@@ -223,7 +209,9 @@
     padding: 14px 10px;
     border-radius: 42px;
     border: none !important;
-    box-shadow: none !important;
+    /* An inset stroke stays inside clip-path, so it is safe here and keeps
+       the pill visible on a light wallpaper. */
+    box-shadow: inset 0 0 0 1px var(--notch-stroke) !important;
     filter: none !important;
     outline: none;
     display: flex;
@@ -235,7 +223,7 @@
     clip-path: inset(0 round 42px);
     -webkit-app-region: no-drag;
     cursor: grab;
-    background: #0a0a0a;
+    background: var(--notch);
   }
 
   body.widget-mode .notch:active {
@@ -263,7 +251,7 @@
   body:not(.widget-mode) .notch {
     width: 300px;
     padding: 12px;
-    border-radius: 24px;
+    border-radius: 14px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -333,11 +321,10 @@
   }
 
   .app-title {
-    font-size: 11px;
+    font-family: var(--font-display);
+    font-size: 13px;
     font-weight: 600;
-    color: var(--text-secondary);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    color: var(--text-primary);
   }
 
   .app-header-actions {
@@ -360,11 +347,12 @@
     height: 24px;
     padding: 0;
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
     background: transparent;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     cursor: pointer;
     -webkit-app-region: no-drag;
+    transition: background-color 0.12s ease, color 0.12s ease;
   }
 
   .icon-btn svg {
@@ -373,8 +361,15 @@
   }
 
   .icon-btn:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--control-hover);
     color: var(--text-primary);
+  }
+
+  .icon-btn:active { background: var(--control-pressed); }
+
+  button:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
   }
 
   .hide-edge-btn { display: none; }
@@ -450,7 +445,7 @@
     overflow: hidden;
     justify-content: flex-start;
     border: none !important;
-    box-shadow: none !important;
+    box-shadow: inset 0 0 0 1px var(--notch-stroke) !important;
     filter: none !important;
   }
 
@@ -534,17 +529,17 @@
     cursor: pointer;
   }
 
-  body.widget-mode .tile.selected .ring-icon {
-    color: #fff;
-  }
+  body.widget-mode .tile .ring-icon { opacity: 0.86; transition: opacity 0.15s ease; }
+  body.widget-mode .tile:hover .ring-icon,
+  body.widget-mode .tile.selected .ring-icon { opacity: 1; }
 
   body.widget-mode .tile.dragging { opacity: 0.4; }
 
   body:not(.widget-mode) .tile {
     padding: 14px 14px 12px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--card);
+    border: 1px solid var(--card-stroke);
   }
 
   body:not(.widget-mode) .tile + .tile {
@@ -586,7 +581,8 @@
   .ring-track,
   .ring-fill {
     fill: none;
-    stroke-width: 3.4;
+    stroke-width: 3.6;
+    shape-rendering: geometricPrecision;
   }
 
   .ring-track { stroke: var(--track); }
@@ -595,7 +591,7 @@
     stroke: var(--ok);
     stroke-linecap: round;
     stroke-dasharray: 0 100;
-    transition: stroke-dasharray 0.55s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.3s ease;
+    transition: stroke-dasharray 0.8s var(--ease-out), stroke 0.4s ease, opacity 0.2s ease;
   }
 
   .ring.warning .ring-fill { stroke: var(--warning); }
@@ -607,7 +603,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #fff;
+    color: var(--text-on-ring);
     pointer-events: none;
   }
 
@@ -626,44 +622,35 @@
 
   .tile-status {
     display: none;
-    font-size: 10px;
-    line-height: 1;
+    width: 12px;
+    height: 12px;
+    color: var(--text-muted);
   }
+
+  .tile-status.error-icon { color: var(--warning); }
 
   .tile.stale .tile-status.stale-icon,
   .tile.error-state .tile-status.error-icon {
-    display: inline;
+    display: block;
   }
 
   .meter {
-    height: 7px;
+    height: 6px;
     border-radius: 99px;
     background: var(--track);
     overflow: hidden;
   }
-
-  .meter.ok { background: color-mix(in srgb, var(--ok) 18%, #1a1a1a); }
-  .meter.warning { background: color-mix(in srgb, var(--warning) 18%, #1a1a1a); }
-  .meter.critical { background: color-mix(in srgb, var(--critical) 18%, #1a1a1a); }
 
   .meter-fill {
     display: block;
     height: 100%;
     border-radius: 99px;
     background: var(--ok);
-    box-shadow: 0 0 10px color-mix(in srgb, var(--ok) 45%, transparent);
-    transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.3s ease;
+    transition: width 0.8s var(--ease-out), background-color 0.4s ease;
   }
 
-  .meter.warning .meter-fill {
-    background: var(--warning);
-    box-shadow: 0 0 10px color-mix(in srgb, var(--warning) 45%, transparent);
-  }
-
-  .meter.critical .meter-fill {
-    background: var(--critical);
-    box-shadow: 0 0 10px color-mix(in srgb, var(--critical) 45%, transparent);
-  }
+  .meter.warning .meter-fill { background: var(--warning); }
+  .meter.critical .meter-fill { background: var(--critical); }
 
   .detail-row + .detail-row {
     margin-top: 14px;
@@ -814,7 +801,7 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    border: 2px solid var(--flyout);
+    border: 2px solid var(--notch);
     box-sizing: border-box;
     pointer-events: none;
   }
@@ -895,6 +882,24 @@
     height: 48px;
   }
 
+  /* Docked pills: no stroke on the side that meets the screen edge. */
+  body.widget-mode.edge-right .notch,
+  body.widget-mode.edge-right.edge-collapsed .notch {
+    box-shadow: inset 1px 1px 0 var(--notch-stroke), inset 0 -1px 0 var(--notch-stroke) !important;
+  }
+  body.widget-mode.edge-left .notch,
+  body.widget-mode.edge-left.edge-collapsed .notch {
+    box-shadow: inset -1px 1px 0 var(--notch-stroke), inset 0 -1px 0 var(--notch-stroke) !important;
+  }
+  body.widget-mode.edge-top .notch,
+  body.widget-mode.edge-top.edge-collapsed .notch {
+    box-shadow: inset 1px -1px 0 var(--notch-stroke), inset -1px 0 0 var(--notch-stroke) !important;
+  }
+  body.widget-mode.edge-bottom .notch,
+  body.widget-mode.edge-bottom.edge-collapsed .notch {
+    box-shadow: inset 1px 1px 0 var(--notch-stroke), inset -1px 0 0 var(--notch-stroke) !important;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .ring-fill, .meter-fill { transition: none; }
   }
@@ -939,8 +944,8 @@
                 </span>
               </div>
               <span class="ring-value" id="claude-value">–</span>
-              <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
-              <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <svg class="tile-status stale-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.8V8l2.2 1.4"/></svg>
+              <svg class="tile-status error-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M7.1 2.1a1 1 0 0 1 1.8 0l5.6 10.4a1 1 0 0 1-.9 1.5H2.4a1 1 0 0 1-.9-1.5Zm.1 4.1v3.3a.8.8 0 0 0 1.6 0V6.2a.8.8 0 0 0-1.6 0ZM8 12.6a.9.9 0 1 0 0-1.8.9.9 0 0 0 0 1.8Z"/></svg>
               <span class="status-dot" aria-hidden="true"></span>
             </div>
             <div class="tile-body">
@@ -967,8 +972,8 @@
                 </span>
               </div>
               <span class="ring-value" id="codex-value">–</span>
-              <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
-              <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <svg class="tile-status stale-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.8V8l2.2 1.4"/></svg>
+              <svg class="tile-status error-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M7.1 2.1a1 1 0 0 1 1.8 0l5.6 10.4a1 1 0 0 1-.9 1.5H2.4a1 1 0 0 1-.9-1.5Zm.1 4.1v3.3a.8.8 0 0 0 1.6 0V6.2a.8.8 0 0 0-1.6 0ZM8 12.6a.9.9 0 1 0 0-1.8.9.9 0 0 0 0 1.8Z"/></svg>
               <span class="status-dot" aria-hidden="true"></span>
             </div>
             <div class="tile-body">
@@ -995,8 +1000,8 @@
                 </span>
               </div>
               <span class="ring-value" id="copilot-value">–</span>
-              <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
-              <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <svg class="tile-status stale-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.8V8l2.2 1.4"/></svg>
+              <svg class="tile-status error-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M7.1 2.1a1 1 0 0 1 1.8 0l5.6 10.4a1 1 0 0 1-.9 1.5H2.4a1 1 0 0 1-.9-1.5Zm.1 4.1v3.3a.8.8 0 0 0 1.6 0V6.2a.8.8 0 0 0-1.6 0ZM8 12.6a.9.9 0 1 0 0-1.8.9.9 0 0 0 0 1.8Z"/></svg>
               <span class="status-dot" aria-hidden="true"></span>
             </div>
             <div class="tile-body">
@@ -1023,8 +1028,8 @@
                 </span>
               </div>
               <span class="ring-value" id="antigravity-value">–</span>
-              <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
-              <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <svg class="tile-status stale-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.8V8l2.2 1.4"/></svg>
+              <svg class="tile-status error-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M7.1 2.1a1 1 0 0 1 1.8 0l5.6 10.4a1 1 0 0 1-.9 1.5H2.4a1 1 0 0 1-.9-1.5Zm.1 4.1v3.3a.8.8 0 0 0 1.6 0V6.2a.8.8 0 0 0-1.6 0ZM8 12.6a.9.9 0 1 0 0-1.8.9.9 0 0 0 0 1.8Z"/></svg>
               <span class="status-dot" aria-hidden="true"></span>
             </div>
             <div class="tile-body">
@@ -1051,8 +1056,8 @@
                 </span>
               </div>
               <span class="ring-value" id="gemini-value">–</span>
-              <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
-              <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <svg class="tile-status stale-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.8V8l2.2 1.4"/></svg>
+              <svg class="tile-status error-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M7.1 2.1a1 1 0 0 1 1.8 0l5.6 10.4a1 1 0 0 1-.9 1.5H2.4a1 1 0 0 1-.9-1.5Zm.1 4.1v3.3a.8.8 0 0 0 1.6 0V6.2a.8.8 0 0 0-1.6 0ZM8 12.6a.9.9 0 1 0 0-1.8.9.9 0 0 0 0 1.8Z"/></svg>
               <span class="status-dot" aria-hidden="true"></span>
             </div>
             <div class="tile-body">
@@ -1079,8 +1084,8 @@
                 </span>
               </div>
               <span class="ring-value" id="cursor-value">–</span>
-              <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
-              <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <svg class="tile-status stale-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.8V8l2.2 1.4"/></svg>
+              <svg class="tile-status error-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M7.1 2.1a1 1 0 0 1 1.8 0l5.6 10.4a1 1 0 0 1-.9 1.5H2.4a1 1 0 0 1-.9-1.5Zm.1 4.1v3.3a.8.8 0 0 0 1.6 0V6.2a.8.8 0 0 0-1.6 0ZM8 12.6a.9.9 0 1 0 0-1.8.9.9 0 0 0 0 1.8Z"/></svg>
               <span class="status-dot" aria-hidden="true"></span>
             </div>
             <div class="tile-body">
@@ -1107,8 +1112,8 @@
                 </span>
               </div>
               <span class="ring-value" id="windsurf-value">–</span>
-              <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
-              <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <svg class="tile-status stale-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.8V8l2.2 1.4"/></svg>
+              <svg class="tile-status error-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M7.1 2.1a1 1 0 0 1 1.8 0l5.6 10.4a1 1 0 0 1-.9 1.5H2.4a1 1 0 0 1-.9-1.5Zm.1 4.1v3.3a.8.8 0 0 0 1.6 0V6.2a.8.8 0 0 0-1.6 0ZM8 12.6a.9.9 0 1 0 0-1.8.9.9 0 0 0 0 1.8Z"/></svg>
               <span class="status-dot" aria-hidden="true"></span>
             </div>
             <div class="tile-body">
@@ -1135,8 +1140,8 @@
                 </span>
               </div>
               <span class="ring-value" id="kiro-value">–</span>
-              <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
-              <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <svg class="tile-status stale-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.8V8l2.2 1.4"/></svg>
+              <svg class="tile-status error-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M7.1 2.1a1 1 0 0 1 1.8 0l5.6 10.4a1 1 0 0 1-.9 1.5H2.4a1 1 0 0 1-.9-1.5Zm.1 4.1v3.3a.8.8 0 0 0 1.6 0V6.2a.8.8 0 0 0-1.6 0ZM8 12.6a.9.9 0 1 0 0-1.8.9.9 0 0 0 0 1.8Z"/></svg>
               <span class="status-dot" aria-hidden="true"></span>
             </div>
             <div class="tile-body">
@@ -1163,8 +1168,8 @@
                 </span>
               </div>
               <span class="ring-value" id="zai-value">–</span>
-              <span class="tile-status stale-icon" aria-hidden="true">&#9203;</span>
-              <span class="tile-status error-icon" aria-hidden="true">&#9888;</span>
+              <svg class="tile-status stale-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.8V8l2.2 1.4"/></svg>
+              <svg class="tile-status error-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M7.1 2.1a1 1 0 0 1 1.8 0l5.6 10.4a1 1 0 0 1-.9 1.5H2.4a1 1 0 0 1-.9-1.5Zm.1 4.1v3.3a.8.8 0 0 0 1.6 0V6.2a.8.8 0 0 0-1.6 0ZM8 12.6a.9.9 0 1 0 0-1.8.9.9 0 0 0 0 1.8Z"/></svg>
               <span class="status-dot" aria-hidden="true"></span>
             </div>
             <div class="tile-body">
