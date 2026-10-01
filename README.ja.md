@@ -7,18 +7,23 @@ AIコーディングツールの使用量上限を追う、クロスプラット
 Windows / Linux 向けの別プロジェクトです。移植版ではなく、開発元とも無関係で、そのまま置き換えるものでもありません。
 
 <p align="center">
+  <img src="docs/screenshots/widget-demo-full-sm.gif" alt="Claude、Codex、Copilot、Cursor の使用量カードを順に見せるトレイポップアップのデモ" width="360">
+</p>
+<p align="center"><sub>デモ（<code>GENAI_USAGE_DEMO=1</code>）。</sub></p>
+
+<p align="center">
   <img src="docs/screenshots/widget-flyout.png" alt="右端にドックしたデスクトップウィジェット。円形の使用量リングと Claude の詳細フライアウト" width="380">
   &nbsp;&nbsp;
   <img src="docs/screenshots/tray-popup.png" alt="Claude / Codex / Copilot / Antigravity / Gemini / Cursor の使用量カードを並べたトレイのポップアップ" width="230">
 </p>
-<p align="center"><sub>ウィジェット（左）、トレイのポップアップ（右）。デモデータ（<code>GENAI_USAGE_DEMO=1</code>）。</sub></p>
+<p align="center"><sub>ウィジェット（左）、トレイのポップアップ（右）。</sub></p>
 
 ## ダウンロード
 
-最新リリース **[v2026.9.1-a551105](https://github.com/m8i-51/GenAIUsageWidget/releases/tag/v2026.9.1-a551105)** — [すべてのリリース](https://github.com/m8i-51/GenAIUsageWidget/releases):
+最新リリース **[v2026.9.25-8406d29](https://github.com/m8i-51/GenAIUsageWidget/releases/tag/v2026.9.25-8406d29)** — [すべてのリリース](https://github.com/m8i-51/GenAIUsageWidget/releases):
 
-- **Windows** — [GenAIUsageWidget.Setup.2026.9.1-a551105.exe](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.1-a551105/GenAIUsageWidget.Setup.2026.9.1-a551105.exe)
-- **Linux** — [GenAIUsageWidget-2026.9.1-a551105.AppImage](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.1-a551105/GenAIUsageWidget-2026.9.1-a551105.AppImage) · [genai-usage-widget_2026.9.1-a551105_amd64.deb](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.1-a551105/genai-usage-widget_2026.9.1-a551105_amd64.deb)
+- **Windows** — [GenAIUsageWidget.Setup.2026.9.25-8406d29.exe](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.25-8406d29/GenAIUsageWidget.Setup.2026.9.25-8406d29.exe)
+- **Linux** — [GenAIUsageWidget-2026.9.25-8406d29.AppImage](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.25-8406d29/GenAIUsageWidget-2026.9.25-8406d29.AppImage) · [genai-usage-widget_2026.9.25-8406d29_amd64.deb](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.25-8406d29/genai-usage-widget_2026.9.25-8406d29_amd64.deb)
 
 Windows の `.exe` は未署名です。SmartScreen が出たら「詳細情報」→「実行」を選んでください。詳しくは[既知の制限](#既知の制限)。ソースからビルドする場合は[セットアップ](#セットアップ)。
 

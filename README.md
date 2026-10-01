@@ -7,18 +7,23 @@ Cross-platform tray app / desktop widget tracking AI coding provider usage limit
 A separate Windows & Linux project — not a port, not affiliated, and not a drop-in replacement.
 
 <p align="center">
+  <img src="docs/screenshots/widget-demo-full-sm.gif" alt="Tray popup demo cycling through Claude, Codex, Copilot, and Cursor usage cards" width="360">
+</p>
+<p align="center"><sub>Demo (<code>GENAI_USAGE_DEMO=1</code>).</sub></p>
+
+<p align="center">
   <img src="docs/screenshots/widget-flyout.png" alt="Desktop widget docked to the right edge, with circular usage rings and a Claude detail flyout" width="380">
   &nbsp;&nbsp;
   <img src="docs/screenshots/tray-popup.png" alt="Tray popup with usage cards for Claude, Codex, Copilot, Antigravity, Gemini, and Cursor" width="230">
 </p>
-<p align="center"><sub>Widget (left), tray popup (right). Demo data (<code>GENAI_USAGE_DEMO=1</code>).</sub></p>
+<p align="center"><sub>Widget (left), tray popup (right).</sub></p>
 
 ## Downloads
 
-Latest release **[v2026.9.1-a551105](https://github.com/m8i-51/GenAIUsageWidget/releases/tag/v2026.9.1-a551105)** — [all releases](https://github.com/m8i-51/GenAIUsageWidget/releases):
+Latest release **[v2026.9.25-8406d29](https://github.com/m8i-51/GenAIUsageWidget/releases/tag/v2026.9.25-8406d29)** — [all releases](https://github.com/m8i-51/GenAIUsageWidget/releases):
 
-- **Windows** — [GenAIUsageWidget.Setup.2026.9.1-a551105.exe](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.1-a551105/GenAIUsageWidget.Setup.2026.9.1-a551105.exe)
-- **Linux** — [GenAIUsageWidget-2026.9.1-a551105.AppImage](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.1-a551105/GenAIUsageWidget-2026.9.1-a551105.AppImage) · [genai-usage-widget_2026.9.1-a551105_amd64.deb](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.1-a551105/genai-usage-widget_2026.9.1-a551105_amd64.deb)
+- **Windows** — [GenAIUsageWidget.Setup.2026.9.25-8406d29.exe](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.25-8406d29/GenAIUsageWidget.Setup.2026.9.25-8406d29.exe)
+- **Linux** — [GenAIUsageWidget-2026.9.25-8406d29.AppImage](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.25-8406d29/GenAIUsageWidget-2026.9.25-8406d29.AppImage) · [genai-usage-widget_2026.9.25-8406d29_amd64.deb](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.25-8406d29/genai-usage-widget_2026.9.25-8406d29_amd64.deb)
 
 The Windows `.exe` is unsigned. SmartScreen may warn on first launch: choose **More info**, then **Run anyway**. See [Known limitations](#known-limitations). Build from source under [Setup](#setup).
 
