@@ -20,10 +20,10 @@ Windows / Linux 向けの別プロジェクトです。移植版ではなく、�
 
 ## ダウンロード
 
-最新リリース **[v2026.9.25-8406d29](https://github.com/m8i-51/GenAIUsageWidget/releases/tag/v2026.9.25-8406d29)** — [すべてのリリース](https://github.com/m8i-51/GenAIUsageWidget/releases):
+最新リリース **[v2026.10.1-89923fa](https://github.com/m8i-51/GenAIUsageWidget/releases/tag/v2026.10.1-89923fa)** — [すべてのリリース](https://github.com/m8i-51/GenAIUsageWidget/releases):
 
-- **Windows** — [GenAIUsageWidget.Setup.2026.9.25-8406d29.exe](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.25-8406d29/GenAIUsageWidget.Setup.2026.9.25-8406d29.exe)
-- **Linux** — [GenAIUsageWidget-2026.9.25-8406d29.AppImage](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.25-8406d29/GenAIUsageWidget-2026.9.25-8406d29.AppImage) · [genai-usage-widget_2026.9.25-8406d29_amd64.deb](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.9.25-8406d29/genai-usage-widget_2026.9.25-8406d29_amd64.deb)
+- **Windows** — [GenAIUsageWidget.Setup.2026.10.1-89923fa.exe](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.10.1-89923fa/GenAIUsageWidget.Setup.2026.10.1-89923fa.exe)
+- **Linux** — [GenAIUsageWidget-2026.10.1-89923fa.AppImage](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.10.1-89923fa/GenAIUsageWidget-2026.10.1-89923fa.AppImage) · [genai-usage-widget_2026.10.1-89923fa_amd64.deb](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.10.1-89923fa/genai-usage-widget_2026.10.1-89923fa_amd64.deb)
 
 Windows の `.exe` は未署名です。SmartScreen が出たら「詳細情報」→「実行」を選んでください。詳しくは[既知の制限](#既知の制限)。ソースからビルドする場合は[セットアップ](#セットアップ)。
 
