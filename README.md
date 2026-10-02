@@ -20,10 +20,10 @@ A separate Windows & Linux project — not a port, not affiliated, and not a dro
 
 ## Downloads
 
-Latest release **[v2026.10.1-89923fa](https://github.com/m8i-51/GenAIUsageWidget/releases/tag/v2026.10.1-89923fa)** — [all releases](https://github.com/m8i-51/GenAIUsageWidget/releases):
+Latest release **[v2026.10.2-77e5a63](https://github.com/m8i-51/GenAIUsageWidget/releases/tag/v2026.10.2-77e5a63)** — [all releases](https://github.com/m8i-51/GenAIUsageWidget/releases):
 
-- **Windows** — [GenAIUsageWidget.Setup.2026.10.1-89923fa.exe](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.10.1-89923fa/GenAIUsageWidget.Setup.2026.10.1-89923fa.exe)
-- **Linux** — [GenAIUsageWidget-2026.10.1-89923fa.AppImage](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.10.1-89923fa/GenAIUsageWidget-2026.10.1-89923fa.AppImage) · [genai-usage-widget_2026.10.1-89923fa_amd64.deb](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.10.1-89923fa/genai-usage-widget_2026.10.1-89923fa_amd64.deb)
+- **Windows** — [GenAIUsageWidget.Setup.2026.10.2-77e5a63.exe](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.10.2-77e5a63/GenAIUsageWidget.Setup.2026.10.2-77e5a63.exe)
+- **Linux** — [GenAIUsageWidget-2026.10.2-77e5a63.AppImage](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.10.2-77e5a63/GenAIUsageWidget-2026.10.2-77e5a63.AppImage) · [genai-usage-widget_2026.10.2-77e5a63_amd64.deb](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.10.2-77e5a63/genai-usage-widget_2026.10.2-77e5a63_amd64.deb)
 
 The Windows `.exe` is unsigned. SmartScreen may warn on first launch: choose **More info**, then **Run anyway**. See [Known limitations](#known-limitations). Build from source under [Setup](#setup).
 
