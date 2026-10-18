@@ -306,21 +306,24 @@ function setDetail(prefix, rows) {
   // Pace and prompts-left only appear when they are a warning (pace first);
   // the full numbers are in the row's tooltip.
   detailEl.innerHTML = rows.map((row, index) => {
+    const amountOnly = row.usedText != null && row.percent == null;
     const clamped = Math.max(0, Math.min(100, row.percent ?? 0));
-    const used = row.percent == null ? '–' : `${Math.round(clamped)}%`;
+    const used = amountOnly ? row.usedText : (row.percent == null ? '–' : `${Math.round(clamped)}%`);
     const sub = [row.sub, row.amount].filter(Boolean).join(' · ');
     const pace = formatPace(row.forecast);
     const prompts = formatPromptsLeft(row.promptsLeft);
     // One warning at most, so the reset time never gets squeezed out.
     const warn = pace?.warn ?? prompts?.short ?? '';
-    const title = [pace?.title, prompts?.title].filter(Boolean).join('\n');
+    const title = [row.note, pace?.title, prompts?.title].filter(Boolean).join('\n');
     return (
-      `<div class="detail-row"${title ? ` title="${escapeHtml(title)}"` : ''}>` +
+      `<div class="detail-row${amountOnly ? ' amount-only' : ''}"${title ? ` title="${escapeHtml(title)}"` : ''}>` +
         `<div class="detail-head">` +
           `<span class="detail-label">${escapeHtml(row.label)}</span>` +
-          `<span class="detail-used">${escapeHtml(used)}<span class="detail-used-unit">${row.percent == null ? '' : ' used'}</span></span>` +
+          `<span class="detail-used">${escapeHtml(used)}<span class="detail-used-unit">${amountOnly || row.percent == null ? '' : ' used'}</span></span>` +
         `</div>` +
-        `<div class="meter ${severityClass(clamped)}"><span class="meter-fill" data-width="${clamped}" style="width:${lastMeterWidths.get(`${prefix}:${index}`) ?? 0}%"></span></div>` +
+        (amountOnly
+          ? ''
+          : `<div class="meter ${severityClass(clamped)}"><span class="meter-fill" data-width="${clamped}" style="width:${lastMeterWidths.get(`${prefix}:${index}`) ?? 0}%"></span></div>`) +
         ((sub || warn)
           ? `<div class="detail-sub">` +
               `<span class="detail-reset">${escapeHtml(sub)}</span>` +
@@ -605,6 +608,8 @@ function syncFlyout() {
   }
 
   const provider = PROVIDERS.find((p) => p.id === selectedProvider);
+  const planLabel = tile.dataset.plan;
+  const heading = planLabel ? `${provider.label} · ${planLabel}` : provider.label;
   const icon = tile.querySelector('.ring-icon')?.innerHTML ?? '';
   const detail = document.getElementById(`${selectedProvider}-detail`)?.innerHTML ?? '';
   const resetEl = document.getElementById(`${selectedProvider}-reset`);
@@ -636,7 +641,7 @@ function syncFlyout() {
   }
 
   content.innerHTML =
-    `<div class="flyout-head">${icon}<span>${escapeHtml(provider.label)}</span></div>` +
+    `<div class="flyout-head">${icon}<span>${escapeHtml(heading)}</span></div>` +
     incident +
     body +
     (updated ? `<div class="flyout-updated">${escapeHtml(updated)}</div>` : '');
@@ -864,28 +869,80 @@ async function updateKiroCard() {
   setDetail('kiro', rows);
 }
 
+function cursorSpendRow(apiSpend) {
+  if (!apiSpend || typeof apiSpend.usedCents !== 'number' || apiSpend.usedCents <= 0) return null;
+  const used = formatUsd(apiSpend.usedCents / 100);
+  const reset = formatResetLabel(apiSpend.resetsAt);
+  const limitCents = apiSpend.limitCents;
+  const note = 'Third-party models. Separate from the weekly pool shared by Cursor, Grok, and Grok Bot.';
+  if (typeof limitCents === 'number' && limitCents > 0) {
+    return {
+      label: 'API spend',
+      percent: (apiSpend.usedCents / limitCents) * 100,
+      amount: `${used} / ${formatUsd(limitCents / 100)}`,
+      sub: reset,
+      note,
+    };
+  }
+  const capNote = limitCents === 0 ? 'Spending cap is $0.' : null;
+  return {
+    label: 'API spend',
+    usedText: used,
+    sub: reset,
+    note: [capNote, note].filter(Boolean).join(' '),
+  };
+}
+
 async function updateCursorCard() {
   const result = await window.api.getCursorUsage();
   if (!beginCard('cursor', result)) return;
   const resetEl = document.getElementById('cursor-reset');
 
-  const { percent, autoPercent, apiPercent, billingCycleEnd, grokBot } = result.usage;
+  const { percent, autoPercent, apiPercent, billingCycleEnd, grokBot, unified, plan, apiSpend } = result.usage;
+  const tileEl = document.getElementById('cursor-provider');
+  if (unified && plan) tileEl.dataset.plan = plan;
+  else delete tileEl.dataset.plan;
+  const nameEl = tileEl.querySelector('.flyout-head span');
+  if (nameEl) nameEl.textContent = unified && plan ? `Cursor · ${plan}` : 'Cursor';
   setMeter('cursor', percent);
-  applyStaleState('cursor', result, resetEl, `cycle ends in ${formatCountdown(billingCycleEnd)}`);
+  const planPrefix = formatPlanPrefix(plan);
+  const when = `in ${formatCountdown(billingCycleEnd)}`;
+  applyStaleState(
+    'cursor',
+    result,
+    resetEl,
+    unified ? `${planPrefix}resets ${when}` : `${planPrefix}cycle ends ${when}`,
+  );
 
   const forecasts = result.forecasts ?? {};
-  const rows = [
-    { label: 'Total', percent, sub: formatResetLabel(billingCycleEnd), forecast: forecasts.total },
-  ];
-  if (autoPercent != null) rows.push({ label: 'Auto', percent: autoPercent });
-  if (apiPercent != null) rows.push({ label: 'API', percent: apiPercent });
-  if (grokBot?.percent != null) {
+  const rows = [];
+  if (unified) {
     rows.push({
-      label: 'Grok Bot',
-      percent: grokBot.percent,
-      sub: formatResetLabel(grokBot.resetsAt),
-      forecast: forecasts.grokBot,
+      label: 'Weekly pool',
+      percent,
+      sub: formatResetLabel(billingCycleEnd),
+      forecast: forecasts.total,
+      note: 'Shared by Cursor, Grok, and Grok Bot.',
     });
+    const spend = cursorSpendRow(apiSpend);
+    if (spend) rows.push(spend);
+  } else {
+    rows.push({
+      label: 'Total',
+      percent,
+      sub: formatResetLabel(billingCycleEnd),
+      forecast: forecasts.total,
+    });
+    if (autoPercent != null) rows.push({ label: 'Auto', percent: autoPercent });
+    if (apiPercent != null) rows.push({ label: 'API', percent: apiPercent });
+    if (grokBot?.percent != null) {
+      rows.push({
+        label: 'Grok Bot',
+        percent: grokBot.percent,
+        sub: formatResetLabel(grokBot.resetsAt),
+        forecast: forecasts.grokBot,
+      });
+    }
   }
   setDetail('cursor', rows);
 }

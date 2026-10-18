@@ -36,7 +36,7 @@ Windows の `.exe` は未署名です。SmartScreen が出たら「詳細情報�
 - **Claude** — セッション(5時間)・週間・モデル別週間の使用量
 - **Codex** — プライマリ(および存在すれば週間)レート制限枠の使用量
 - **Copilot** — 月間の Premium リクエスト枠と Chat 枠の使用量(GitHub Copilot CLI のサインイン経由)
-- **Cursor** — プラン使用量(Total / Auto / API の内訳)、利用可能な場合は Grok Bot 週次枠、請求サイクルのカウントダウン
+- **Cursor** — The X Subscription では Cursor・Grok・Grok Bot で共有する週次枠と、サードパーティの API 利用額。従来プランは Total / Auto / API の内訳、Grok Bot の週次枠(ある場合)、請求サイクルのカウントダウン
 - **Antigravity (Gemini Code Assist)** — モデルグループごとの週間クォータ
 - **Gemini CLI** — Pro / Flash モデルの1日あたりのクォータ(Gemini CLI の Google サインイン経由)
 
@@ -59,8 +59,8 @@ Windows の `.exe` は未署名です。SmartScreen が出たら「詳細情報�
     ピルが画面端に張り付きます。リングをクリックするとフライアウトが開き、トレイ
     メニューの **Restore Widget Position** で端からのドックを解除できます。
 - **フライアウト** — デスクトップウィジェットではリングをクリックすると詳細
-  メーターを表示（Claudeの Current session / All models、Cursorの Total / Auto /
-  API など）。トレイのポップアップでは各カードに最初から詳細が出ます。
+  メーターを表示（Claudeの Current session / All models、Cursorの週次共通枠、
+  従来プランでは Total / Auto / API など）。トレイのポップアップでは各カードに最初から詳細が出ます。
 - **ドラッグ&ドロップ並び替え** — カードを掴んで上下にドラッグすると、他の
   カードがスッと滑って場所を空けます。並び順は保存され、再起動後も維持されます。
 - **未セットアップのプロバイダは非表示** — 使っていないツールのエラーは出ません。
