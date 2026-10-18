@@ -43,7 +43,7 @@ function knownLongMeters(providerId, usage) {
     case 'copilot':
       return { primary: 'premium requests' };
     case 'cursor':
-      return { total: 'monthly usage' };
+      return usage.unified ? { total: 'weekly usage' } : { total: 'monthly usage' };
     case 'windsurf':
       return usage.kind === 'credits'
         ? { primary: 'prompt credits', secondary: 'flow actions' }

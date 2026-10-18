@@ -36,7 +36,7 @@ Shows usage / rate-limit info for the AI coding tools you're already signed into
 - **Claude** — session (5h), weekly, and model-scoped weekly usage
 - **Codex** — primary (and, when present, weekly) rate-limit window usage
 - **Copilot** — monthly Premium request and Chat quota usage (via your GitHub Copilot CLI sign-in)
-- **Cursor** — plan usage with Total / Auto / API breakdown, Grok Bot weekly allowance when available, and billing-cycle countdown
+- **Cursor** — on The X Subscription, the weekly pool shared by Cursor, Grok, and Grok Bot, plus third-party API spend. Older plans still show Total / Auto / API, a separate Grok Bot week when that allowance exists, and the billing-cycle countdown
 - **Antigravity (Gemini Code Assist)** — weekly quota per model group
 - **Gemini CLI** — daily Pro and Flash model quota (via your Gemini CLI Google sign-in)
 - **Windsurf** — daily and weekly quota (or prompt credits / flow actions on older plans)
@@ -64,8 +64,9 @@ you to log in again, and polls their usage APIs about once a minute.
     the ring pill sits flush on that edge. Click a ring to open the flyout, or use
     **Restore Widget Position** in the tray menu to undock.
 - **Expandable flyout** — in the desktop widget, click a ring to open that
-  provider's meters (e.g. Claude's Current session / All models; Cursor's Total /
-  Auto / API). The tray popup always shows those details on each card.
+  provider's meters (e.g. Claude's Current session / All models; Cursor's weekly
+  pool, or Total / Auto / API on older plans). The tray popup always shows
+  those details on each card.
 - **Drag & drop reordering** — grab a card and drag it up or down; the other
   cards glide out of the way. The order is saved and restored across restarts.
 - **Unconfigured providers are hidden** — no error spam for tools you don't use.

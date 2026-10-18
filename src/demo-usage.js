@@ -30,12 +30,29 @@ function codex() {
 }
 
 function cursor() {
+  // GENAI_CURSOR_PLAN=legacy keeps the older Total / Auto / API card.
+  if (process.env.GENAI_CURSOR_PLAN === 'legacy') {
+    return ok({
+      percent: 52,
+      autoPercent: 48,
+      apiPercent: 12,
+      billingCycleEnd: nextWeekdayMidnight(1),
+      grokBot: { percent: 18, resetsAt: nextWeekdayMidnight(1) },
+    });
+  }
+  const firstOfNextMonth = new Date();
+  firstOfNextMonth.setUTCMonth(firstOfNextMonth.getUTCMonth() + 1, 1);
+  firstOfNextMonth.setUTCHours(0, 0, 0, 0);
   return ok({
-    percent: 52,
-    autoPercent: 48,
-    apiPercent: 12,
-    billingCycleEnd: nextWeekdayMidnight(1),
-    grokBot: { percent: 18, resetsAt: nextWeekdayMidnight(1) },
+    unified: true,
+    plan: 'Premium',
+    percent: 10.2,
+    billingCycleEnd: nextWeekdayMidnight(4),
+    apiSpend: {
+      usedCents: 447,
+      limitCents: process.env.GENAI_CURSOR_PLAN === 'capped' ? 1000 : 0,
+      resetsAt: firstOfNextMonth.toISOString(),
+    },
   });
 }
 

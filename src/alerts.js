@@ -33,7 +33,7 @@ function headlineUsage(providerId, usage) {
     case 'zai':
       return usage.primary ? { percent: usage.primary.percent, label: usage.primary.label } : null;
     case 'cursor':
-      return { percent: usage.percent, label: 'total' };
+      return { percent: usage.percent, label: usage.unified ? 'weekly pool' : 'total' };
     case 'antigravity': {
       const buckets = (usage.groups ?? []).flatMap((g) => g.buckets ?? []);
       if (buckets.length === 0) return null;
