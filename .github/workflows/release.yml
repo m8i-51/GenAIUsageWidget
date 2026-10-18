@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+    # README-only pushes must not publish. Pinning the new tag back into the
+    # README would be another push to main, and another release.
+    paths-ignore:
+      - 'README.md'
+      - 'README.ja.md'
+      - 'AGENTS.md'
 
 permissions:
   contents: write

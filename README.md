@@ -18,15 +18,6 @@ A separate Windows & Linux project — not a port, not affiliated, and not a dro
 </p>
 <p align="center"><sub>Widget (left), tray popup (right).</sub></p>
 
-## Downloads
-
-Latest release **[v2026.10.2-77e5a63](https://github.com/m8i-51/GenAIUsageWidget/releases/tag/v2026.10.2-77e5a63)** — [all releases](https://github.com/m8i-51/GenAIUsageWidget/releases):
-
-- **Windows** — [GenAIUsageWidget.Setup.2026.10.2-77e5a63.exe](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.10.2-77e5a63/GenAIUsageWidget.Setup.2026.10.2-77e5a63.exe)
-- **Linux** — [GenAIUsageWidget-2026.10.2-77e5a63.AppImage](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.10.2-77e5a63/GenAIUsageWidget-2026.10.2-77e5a63.AppImage) · [genai-usage-widget_2026.10.2-77e5a63_amd64.deb](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.10.2-77e5a63/genai-usage-widget_2026.10.2-77e5a63_amd64.deb)
-
-The Windows `.exe` is unsigned. SmartScreen may warn on first launch: choose **More info**, then **Run anyway**. See [Known limitations](#known-limitations). Build from source under [Setup](#setup).
-
 ## Who this is for
 
 - Windows and Linux users who want Claude, Codex, Copilot, Gemini, and Cursor remaining quota visible without opening dashboards.
@@ -162,7 +153,7 @@ GENAI_USAGE_DEMO=1 npm start
 
 ### Installers
 
-Prebuilt Windows `.exe` and Linux AppImage / `.deb` files are in [Downloads](#downloads), published for every tagged version by [`.github/workflows/release.yml`](.github/workflows/release.yml).
+Each push to `main` publishes a Windows `.exe` and a Linux AppImage / `.deb` on the [releases page](https://github.com/m8i-51/GenAIUsageWidget/releases). The `.exe` is unsigned.
 
 To build them yourself:
 
