@@ -25,6 +25,10 @@ authoritative command list.
 - `npm start` runs in the foreground and does not detach; run it in a `tmux` session
   if you need the shell back while keeping the app alive.
 
+### Releases
+- Every push to `main` publishes installers (`.github/workflows/release.yml`), except a push that only touches `README.md`, `README.ja.md`, or `AGENTS.md`.
+- Do not pin a release tag or asset URL in the README. Link the [releases page](https://github.com/m8i-51/GenAIUsageWidget/releases) with no version. A follow-up commit that names the tag just published is another push, and that push publishes again.
+
 ### Demonstrating usage cards without real credentials (non-obvious)
 - With no provider signed in, every card is hidden and the widget shows
   "No AI providers detected on this machine" — this is correct behavior, not a bug.

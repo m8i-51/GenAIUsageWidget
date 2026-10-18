@@ -18,15 +18,6 @@ Windows / Linux 向けの別プロジェクトです。移植版ではなく、�
 </p>
 <p align="center"><sub>ウィジェット（左）、トレイのポップアップ（右）。</sub></p>
 
-## ダウンロード
-
-最新リリース **[v2026.10.2-77e5a63](https://github.com/m8i-51/GenAIUsageWidget/releases/tag/v2026.10.2-77e5a63)** — [すべてのリリース](https://github.com/m8i-51/GenAIUsageWidget/releases):
-
-- **Windows** — [GenAIUsageWidget.Setup.2026.10.2-77e5a63.exe](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.10.2-77e5a63/GenAIUsageWidget.Setup.2026.10.2-77e5a63.exe)
-- **Linux** — [GenAIUsageWidget-2026.10.2-77e5a63.AppImage](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.10.2-77e5a63/GenAIUsageWidget-2026.10.2-77e5a63.AppImage) · [genai-usage-widget_2026.10.2-77e5a63_amd64.deb](https://github.com/m8i-51/GenAIUsageWidget/releases/download/v2026.10.2-77e5a63/genai-usage-widget_2026.10.2-77e5a63_amd64.deb)
-
-Windows の `.exe` は未署名です。SmartScreen が出たら「詳細情報」→「実行」を選んでください。詳しくは[既知の制限](#既知の制限)。ソースからビルドする場合は[セットアップ](#セットアップ)。
-
 ## こんな人向け
 
 - Windows / Linux で、Claude・Codex・Copilot・Gemini・Cursor の残り枠を、各ダッシュボードを開かずに見ておきたい人。
@@ -129,7 +120,7 @@ GENAI_USAGE_DEMO=1 npm start
 
 ### インストーラ
 
-ビルド済みの Windows `.exe` と Linux AppImage / `.deb` は[ダウンロード](#ダウンロード)にあります。タグ付きバージョンごとに [`.github/workflows/release.yml`](.github/workflows/release.yml) が公開します。
+`main` への push ごとに、Windows の `.exe` と Linux の AppImage / `.deb` が[リリースページ](https://github.com/m8i-51/GenAIUsageWidget/releases)に出ます。`.exe` は未署名です。
 
 自分でビルドする場合:
 
