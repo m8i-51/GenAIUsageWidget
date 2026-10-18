@@ -608,6 +608,8 @@ function syncFlyout() {
   }
 
   const provider = PROVIDERS.find((p) => p.id === selectedProvider);
+  const planLabel = tile.dataset.plan;
+  const heading = planLabel ? `${provider.label} · ${planLabel}` : provider.label;
   const icon = tile.querySelector('.ring-icon')?.innerHTML ?? '';
   const detail = document.getElementById(`${selectedProvider}-detail`)?.innerHTML ?? '';
   const resetEl = document.getElementById(`${selectedProvider}-reset`);
@@ -639,7 +641,7 @@ function syncFlyout() {
   }
 
   content.innerHTML =
-    `<div class="flyout-head">${icon}<span>${escapeHtml(provider.label)}</span></div>` +
+    `<div class="flyout-head">${icon}<span>${escapeHtml(heading)}</span></div>` +
     incident +
     body +
     (updated ? `<div class="flyout-updated">${escapeHtml(updated)}</div>` : '');
@@ -897,6 +899,11 @@ async function updateCursorCard() {
   const resetEl = document.getElementById('cursor-reset');
 
   const { percent, autoPercent, apiPercent, billingCycleEnd, grokBot, unified, plan, apiSpend } = result.usage;
+  const tileEl = document.getElementById('cursor-provider');
+  if (unified && plan) tileEl.dataset.plan = plan;
+  else delete tileEl.dataset.plan;
+  const nameEl = tileEl.querySelector('.flyout-head span');
+  if (nameEl) nameEl.textContent = unified && plan ? `Cursor · ${plan}` : 'Cursor';
   setMeter('cursor', percent);
   const planPrefix = formatPlanPrefix(plan);
   const when = `in ${formatCountdown(billingCycleEnd)}`;
