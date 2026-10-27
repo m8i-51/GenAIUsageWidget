@@ -1,3 +1,8 @@
 node_modules/
 dist/
 *.log
+.superpowers/
+streamdeck/*.sdPlugin/bin/
+*.streamDeckPlugin
+streamdeck/dist/
+streamdeck/marketplace/.work/

@@ -166,6 +166,40 @@ npm run dist -- --linux   # Linux AppImage + deb (dist/*.AppImage, dist/*.deb)
 The app can launch automatically at login — toggle **Start at Login** from the
 tray icon's right-click menu (off by default).
 
+## Stream Deck plugin
+
+The `streamdeck/` folder is an Elgato Stream Deck plugin (Windows, Stream Deck 6.5+)
+that puts one usage limit on each key — for example Claude's 5-hour window or
+Codex's week. The key fills from the bottom like a water level, colored with
+the same thresholds as the cards.
+
+- **Press** a key to show the time until that limit resets (it switches back after 10 seconds).
+- **Hold** a key to refresh now (within the same rate-limit floor the widget uses).
+- Pick the provider and limit in the key's settings; the label can be renamed.
+- **Closest Limit** is a second action that always shows whichever limit is closest to its cap, across the providers you tick.
+
+It works on its own, and when GenAIUsageWidget is running it reads the widget's
+numbers instead of calling the providers again, so running both never doubles
+Claude's rate-limited polling. z.ai keeps its API key in the widget's encrypted
+store, so z.ai keys need the widget running.
+
+Install the `.streamDeckPlugin` file from the [releases page](https://github.com/m8i-51/GenAIUsageWidget/releases)
+by double-clicking it. To build it yourself:
+
+```
+npm install
+cd streamdeck
+npm install
+npm run build      # bundles into com.github.m8i-51.genaiusage.sdPlugin/bin
+npm test
+npm run pack       # streamdeck/dist/com.github.m8i-51.genaiusage.streamDeckPlugin
+```
+
+**Privacy:** the plugin reads the same local sign-ins listed below and sends them
+only to each provider's own API. The widget's feed for it listens on
+`127.0.0.1:47821` only, answers read-only requests from this PC, and never
+returns credentials.
+
 ## Where each provider's credentials come from
 
 | Provider | Source | Notes |
@@ -199,8 +233,10 @@ src/
   providers/           One module per provider, each exporting a fetchXUsage()
                        function; not-configured.js marks "not set up" errors
   service-status.js    Polls provider status pages for outages
+  local-api.js         Read-only usage feed on 127.0.0.1 for the Stream Deck plugin
   demo-usage.js        Sample usage payloads for GENAI_USAGE_DEMO=1
 scripts/capture-readme-screenshots.js  Regenerates README screenshots (`npm run screenshots`)
+streamdeck/           Stream Deck plugin (shares src/providers and usage-cache.js)
 assets/icon.png        Tray icon
 docs/screenshots/      README images (widget flyout + tray popup)
 ```
