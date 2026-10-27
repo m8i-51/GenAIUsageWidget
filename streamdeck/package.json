@@ -1,0 +1,24 @@
+{
+  "name": "genai-usage-streamdeck",
+  "description": "Stream Deck plugin for GenAIUsageWidget",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w",
+    "test": "node --test test/limits.test.js test/key-image.test.js test/key-state.test.js test/usage-source.test.js",
+    "validate": "streamdeck validate com.github.m8i-51.genaiusage.sdPlugin",
+    "pack": "streamdeck pack com.github.m8i-51.genaiusage.sdPlugin --output dist --force"
+  },
+  "author": "m8i-51 <51511166+m8i-51@users.noreply.github.com>",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@elgato/streamdeck": "^1.4.1"
+  },
+  "devDependencies": {
+    "@elgato/cli": "^1.10.3",
+    "@rollup/plugin-commonjs": "^29.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "rollup": "^4.65.1"
+  },
+  "private": true
+}

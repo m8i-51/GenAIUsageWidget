@@ -1,0 +1,10 @@
+{
+  "Name": "GenAI Usage",
+  "Description": "Claude・Codex・Cursor などの AI コーディングツールの使用量をキーに表示します。単体で動作し、GenAIUsageWidget が起動しているときはその値を共有します。",
+  "Category": "GenAI Usage",
+  "com.github.m8i-51.genaiusage.limit": {
+    "Name": "使用量の制限",
+    "Tooltip": "1 つの制限を水位で表示。押すとリセットまでの時間、長押しで今すぐ更新。"
+  },
+  "Localization": {}
+}

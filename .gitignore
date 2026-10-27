@@ -4,3 +4,4 @@ dist/
 .superpowers/
 streamdeck/*.sdPlugin/bin/
 *.streamDeckPlugin
+streamdeck/dist/

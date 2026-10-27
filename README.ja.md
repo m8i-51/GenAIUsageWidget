@@ -133,6 +133,36 @@ npm run dist -- --linux   # Linux AppImage + deb (dist/*.AppImage, dist/*.deb)
 PC起動時の自動起動にも対応しています — トレイアイコンの右クリックメニューの
 「Start at Login」で切り替えられます(デフォルトOFF)。
 
+## Stream Deck プラグイン
+
+`streamdeck/` フォルダは Elgato Stream Deck 用のプラグインです（Windows、Stream Deck 6.5 以上）。
+1 つのキーに 1 つの制限（たとえば Claude の 5 時間枠や Codex の週枠）を表示します。
+キーは使用率のぶんだけ下から水位のように満ち、色はカードと同じしきい値で変わります。
+
+- キーを**押す**と、その制限がリセットされるまでの時間を表示します（10 秒で元に戻ります）。
+- キーを**長押し**すると今すぐ取り直します（ウィジェットと同じ最小間隔は守ります）。
+- プロバイダと制限はキーの設定で選びます。ラベルは書き換えられます。
+
+単体でも動き、GenAIUsageWidget が起動しているときはウィジェットの値を読むので、
+プロバイダの API を二重に叩きません（Claude のレート制限に引っかかりにくくなります）。
+z.ai は API キーをウィジェットの暗号化ストアに保存しているため、ウィジェットの起動が必要です。
+
+[リリースページ](https://github.com/m8i-51/GenAIUsageWidget/releases)の `.streamDeckPlugin` を
+ダブルクリックするとインストールできます。自分でビルドする場合:
+
+```
+npm install
+cd streamdeck
+npm install
+npm run build      # com.github.m8i-51.genaiusage.sdPlugin/bin にまとめる
+npm test
+npm run pack       # streamdeck/dist/com.github.m8i-51.genaiusage.streamDeckPlugin
+```
+
+**プライバシー:** プラグインは下の表と同じローカルのログイン情報を読み、各プロバイダの
+API にだけ送信します。ウィジェット側の連携用 API は `127.0.0.1:47821` でのみ待ち受け、
+この PC からの読み取り専用リクエストにだけ応答し、認証情報は返しません。
+
 ## 各プロバイダの認証情報の取得元
 
 | プロバイダ | 取得元 | 備考 |
@@ -164,7 +194,9 @@ src/
   providers/           プロバイダごとに1モジュール(fetchXUsage() をエクスポート)。
                        not-configured.js は「未セットアップ」エラーの目印
   demo-usage.js        GENAI_USAGE_DEMO=1 用のサンプル使用量
+  local-api.js         Stream Deck プラグイン向けの読み取り専用 API (127.0.0.1)
 scripts/capture-readme-screenshots.js  README用スクリーンショットの再生成 (`npm run screenshots`)
+streamdeck/           Stream Deck プラグイン（src/providers と usage-cache.js を共有）
 assets/icon.png        トレイアイコン
 docs/screenshots/      README用画像（ウィジェットのフライアウトとトレイのポップアップ）
 ```

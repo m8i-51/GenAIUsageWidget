@@ -20,6 +20,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
+      plugin-version: ${{ steps.version.outputs.plugin-version }}
     steps:
       - name: Compute release version
         id: version
@@ -27,6 +28,8 @@ jobs:
           VERSION="$(date -u +%Y.%-m.%-d)-${GITHUB_SHA::7}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          # Stream Deck manifests need four numeric parts.
+          echo "plugin-version=$(date -u +%Y.%-m.%-d).${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
   build:
     needs: meta
@@ -63,8 +66,43 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
+  streamdeck:
+    needs: meta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            streamdeck/package-lock.json
+
+      - run: npm ci
+
+      - run: npm ci
+        working-directory: streamdeck
+
+      - name: Stamp plugin version
+        run: node scripts/stamp-version.mjs "${{ needs.meta.outputs.plugin-version }}"
+        working-directory: streamdeck
+
+      - run: npm run build
+        working-directory: streamdeck
+
+      - run: npm run pack
+        working-directory: streamdeck
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: streamdeck
+          path: streamdeck/dist/*.streamDeckPlugin
+          if-no-files-found: error
+
   release:
-    needs: [meta, build]
+    needs: [meta, build, streamdeck]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "Name": "GenAI Usage",
+  "Version": "0.1.0.0",
+  "Author": "m8i-51",
+  "Description": "Show Claude, Codex, Cursor and other AI coding usage limits on your keys. Works on its own, and shares numbers with GenAIUsageWidget when it is running.",
+  "URL": "https://github.com/m8i-51/GenAIUsageWidget",
+  "Icon": "imgs/plugin",
+  "Category": "GenAI Usage",
+  "CategoryIcon": "imgs/category",
+  "CodePath": "bin/plugin.js",
+  "SDKVersion": 2,
+  "Software": {
+    "MinimumVersion": "6.5"
+  },
+  "OS": [
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "Nodejs": {
+    "Version": "20"
+  },
+  "UUID": "com.github.m8i-51.genaiusage",
+  "Actions": [
+    {
+      "Name": "Usage Limit",
+      "UUID": "com.github.m8i-51.genaiusage.limit",
+      "Icon": "imgs/action",
+      "Tooltip": "One usage limit as a water level. Press for time until reset, hold to refresh.",
+      "PropertyInspectorPath": "ui/limit.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "imgs/key",
+          "ShowTitle": false
+        }
+      ]
+    }
+  ]
+}
