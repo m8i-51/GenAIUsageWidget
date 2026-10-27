@@ -135,7 +135,7 @@ PC起動時の自動起動にも対応しています — トレイアイコン�
 
 ## Stream Deck プラグイン
 
-`streamdeck/` フォルダは Elgato Stream Deck 用のプラグインです（Windows、Stream Deck 6.5 以上）。
+`streamdeck/` フォルダは Elgato Stream Deck 用のプラグインです（Windows、Stream Deck 6.9 以上）。
 1 つのキーに 1 つの制限（たとえば Claude の 5 時間枠や Codex の週枠）を表示します。
 キーは使用率のぶんだけ下から水位のように満ち、色はカードと同じしきい値で変わります。
 

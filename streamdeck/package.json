@@ -12,7 +12,7 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "@elgato/streamdeck": "^1.4.1"
+    "@elgato/streamdeck": "^2.1.2"
   },
   "devDependencies": {
     "@elgato/cli": "^1.10.3",
