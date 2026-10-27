@@ -42,10 +42,23 @@ export function formatReset(resetsAt, now = Date.now()) {
   return `${Math.floor(hours / 24)}d ${hours % 24}h`;
 }
 
+// Segoe UI semibold averages ~0.56em per character; keep a 12px side margin.
+function titleSize(title) {
+  return Math.max(9, Math.min(16, Math.floor((120 / (title.length * 0.56)) * 10) / 10));
+}
+
 function titleText(title) {
-  // Segoe UI semibold averages ~0.56em per character; keep a 12px side margin.
-  const size = Math.max(9, Math.min(16, Math.floor((120 / (title.length * 0.56)) * 10) / 10));
-  return `<text id="title" x="72" y="30" text-anchor="middle" ${FONT} font-weight="600" font-size="${size}" fill="${MUTED}">${escape(title)}</text>`;
+  return `<text id="title" x="72" y="30" text-anchor="middle" ${FONT} font-weight="600" font-size="${titleSize(title)}" fill="${MUTED}">${escape(title)}</text>`;
+}
+
+/** The level line, split around the label when it would run through it. */
+function levelLine(y, title, color, opacity) {
+  const attrs = `height="3" fill="${color}"${opacity ? ` opacity="${opacity}"` : ''}`;
+  if (y < 12 || y > 36) return `<rect id="level" x="0" y="${y}" width="144" ${attrs}/>`;
+  const half = (title.length * 0.56 * titleSize(title)) / 2 + 6;
+  const left = Math.max(0, Math.round(72 - half));
+  return `<rect id="level" x="0" y="${y}" width="${left}" ${attrs}/>`
+    + `<rect id="level-right" x="${144 - left}" y="${y}" width="${left}" ${attrs}/>`;
 }
 
 function centerText(value, size, color = TEXT) {
@@ -72,7 +85,7 @@ export function renderKey({ title, status, percent, resetsAt, view = 'percent', 
     const height = Math.round((144 * percent) / 100);
     const level = [
       `<rect id="fill" x="0" y="${144 - height}" width="144" height="${height}" fill="${color}" fill-opacity="${view === 'reset' ? 0.1 : 0.22}"/>`,
-      `<rect id="level" x="0" y="${Math.max(0, 144 - height - 1.5)}" width="144" height="3" fill="${color}"${view === 'reset' ? ' opacity="0.35"' : ''}/>`,
+      levelLine(Math.max(0, 144 - height - 1.5), title, color, view === 'reset' ? 0.35 : null),
     ];
     let body;
     if (view === 'reset') {

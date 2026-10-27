@@ -65,3 +65,15 @@ test('says when no provider is signed in', () => {
   assert.strictEqual(text(renderKey({ title: 'Closest limit', status: 'none', now: NOW })), 'No sign-ins Closest limit');
   assert.strictEqual(text(renderKey({ title: 'Closest limit', status: 'none', now: NOW, lang: 'ja' })), 'サインインなし Closest limit');
 });
+
+test('breaks the level line around the label so it never strikes through it', () => {
+  const svg = renderKey({ title: 'Codex · 5h', status: 'ok', percent: 81, now: NOW });
+  const segments = [...svg.matchAll(/<rect id="level[^"]*" x="([\d.]+)" y="[\d.]+" width="([\d.]+)"/g)]
+    .map((m) => [Number(m[1]), Number(m[1]) + Number(m[2])]);
+  assert.strictEqual(segments.length, 2);
+  assert.strictEqual(segments[0][0], 0);
+  assert.strictEqual(segments[1][1], 144);
+  assert.ok(segments[0][1] < 40 && segments[1][0] > 104, JSON.stringify(segments));
+  // Below the label the line is one piece.
+  assert.strictEqual([...renderKey({ title: 'Codex · 5h', status: 'ok', percent: 50, now: NOW }).matchAll(/id="level/g)].length, 1);
+});

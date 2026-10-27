@@ -5,3 +5,4 @@ dist/
 streamdeck/*.sdPlugin/bin/
 *.streamDeckPlugin
 streamdeck/dist/
+streamdeck/marketplace/.work/
