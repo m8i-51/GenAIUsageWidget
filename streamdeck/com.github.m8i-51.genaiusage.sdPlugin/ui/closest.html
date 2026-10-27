@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Closest Limit</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 8px 10px 12px 0;
+      background: #2d2d2d;
+      color: #d8d8d8;
+      font: 12px/1.4 "Segoe UI", sans-serif;
+    }
+    .row { display: flex; align-items: flex-start; }
+    .row > .label { flex: 0 0 96px; text-align: right; padding: 4px 10px 0 0; color: #9a9a9a; }
+    .checks { flex: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 8px; }
+    .checks label { display: flex; align-items: center; gap: 6px; min-height: 24px; cursor: pointer; }
+    input[type="checkbox"] { width: 14px; height: 14px; margin: 0; accent-color: #0a84ff; }
+    .hint { margin: 8px 0 0 106px; color: #8a8a8a; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <div class="row">
+    <div class="label" data-i18n="include">Include</div>
+    <div class="checks" id="providers"></div>
+  </div>
+  <p class="hint" data-i18n="about">Shows whichever included limit is closest to its cap.</p>
+  <p class="hint" data-i18n="howto">Press: time until reset. Hold: refresh now.</p>
+
+  <script>
+    const PROVIDERS = [
+      ['claude', 'Claude'], ['codex', 'Codex'], ['cursor', 'Cursor'], ['antigravity', 'Antigravity'],
+      ['copilot', 'Copilot'], ['gemini', 'Gemini'], ['windsurf', 'Windsurf'], ['kiro', 'Kiro'], ['zai', 'z.ai'],
+    ];
+    const STRINGS = {
+      en: {
+        include: 'Include',
+        about: 'Shows whichever included limit is closest to its cap.',
+        howto: 'Press: time until reset. Hold: refresh now.',
+      },
+      ja: {
+        include: '対象',
+        about: '対象のうち、上限にいちばん近い制限を表示します。',
+        howto: '押す: リセットまでの時間 / 長押し: 今すぐ更新',
+      },
+    };
+
+    // Called by Stream Deck when the inspector opens.
+    // eslint-disable-next-line no-unused-vars
+    function connectElgatoStreamDeckSocket(port, uuid, registerEvent, info, actionInfo) {
+      const parsedAction = JSON.parse(actionInfo);
+      const settings = { exclude: [], ...parsedAction.payload.settings };
+      const t = STRINGS[JSON.parse(info).application.language] ?? STRINGS.en;
+      for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t[el.dataset.i18n];
+
+      const socket = new WebSocket(`ws://127.0.0.1:${port}`);
+      socket.onopen = () => socket.send(JSON.stringify({ event: registerEvent, uuid }));
+
+      const box = document.getElementById('providers');
+      for (const [id, name] of PROVIDERS) {
+        const label = document.createElement('label');
+        const check = document.createElement('input');
+        check.type = 'checkbox';
+        check.checked = !settings.exclude.includes(id);
+        check.addEventListener('change', () => {
+          settings.exclude = PROVIDERS.map(([pid]) => pid)
+            .filter((pid) => !box.querySelector(`input[data-id="${pid}"]`).checked);
+          socket.send(JSON.stringify({ event: 'setSettings', context: uuid, payload: settings }));
+        });
+        check.dataset.id = id;
+        label.append(check, name);
+        box.append(label);
+      }
+    }
+  </script>
+</body>
+</html>

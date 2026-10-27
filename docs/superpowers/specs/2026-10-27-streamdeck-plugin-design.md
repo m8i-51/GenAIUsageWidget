@@ -35,7 +35,9 @@ GenAIUsageWidget/
 
 ## Keys
 
-アクションは `Usage Limit` の 1 種類。Property Inspector で **プロバイダ** と **制限** を選ぶ。制限の選択肢は最後に取得した payload から作る（モデル名やグループ名が変わっても追従する）。
+アクションは 2 種類（Marketplace のガイドラインはアクション 2〜30 個を求める）。
+
+- **Usage Limit**: Property Inspector で **プロバイダ** と **制限** を選ぶ。制限の選択肢は最後に取得した payload から作る（モデル名やグループ名が変わっても追従する）。
 
 | Provider | Limits |
 |---|---|
@@ -51,6 +53,8 @@ GenAIUsageWidget/
 
 ラベルは「Claude · 5h」のように自動生成し、Property Inspector で上書きできる。
 
+- **Closest Limit**: 対象プロバイダ（Property Inspector のチェックボックス、既定は全部）の中で使用率がいちばん高い制限を表示する（トレイアイコンと同じ考え方）。ラベルは選ばれた制限の「Codex · 5h」など。どれもサインインしていなければ「No sign-ins」。押す・長押しの動作は Usage Limit と同じ。
+
 ### Key face（水位）
 
 - キー全体が下から使用率ぶん満ちる。色はトレイ／カードと同じしきい値: 45% 未満 ok、45% 以上 warning、70% 以上 critical。
@@ -65,6 +69,7 @@ GenAIUsageWidget/
 | 未ログイン（notConfigured） | グレー、「Sign in」 |
 | 認証切れ（authExpired） | グレー、「Sign in again」 |
 | z.ai 単体 | グレー、「Needs widget」 |
+| Closest Limit で対象がどれもサインインしていない | グレー、「No sign-ins」 |
 | 取得失敗・データなし | グレー、「—」 |
 | 初回取得中 | グレー、「…」 |
 

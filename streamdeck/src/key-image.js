@@ -17,8 +17,8 @@ const MUTED = '#a3a3a3';
 const FONT = "font-family=\"'Segoe UI', sans-serif\"";
 
 const STRINGS = {
-  en: { toReset: 'to reset', signin: 'Sign in', reauth: 'Sign in again', needsWidget: 'Needs widget' },
-  ja: { toReset: 'でリセット', signin: '未ログイン', reauth: '再ログイン', needsWidget: 'ウィジェット要' },
+  en: { toReset: 'to reset', signin: 'Sign in', reauth: 'Sign in again', needsWidget: 'Needs widget', none: 'No sign-ins' },
+  ja: { toReset: 'でリセット', signin: '未ログイン', reauth: '再ログイン', needsWidget: 'ウィジェット要', none: 'サインインなし' },
 };
 
 function severity(percent) {
@@ -55,7 +55,7 @@ function centerText(value, size, color = TEXT) {
 /**
  * @param {object} key
  * @param {string} key.title
- * @param {'ok'|'signin'|'reauth'|'needsWidget'|'error'|'loading'} key.status
+ * @param {'ok'|'signin'|'reauth'|'needsWidget'|'none'|'error'|'loading'} key.status
  * @param {number} [key.percent]
  * @param {string|null} [key.resetsAt]
  * @param {'percent'|'reset'} [key.view]

@@ -40,6 +40,23 @@
           "ShowTitle": false
         }
       ]
+    },
+    {
+      "Name": "Closest Limit",
+      "UUID": "com.github.m8i-51.genaiusage.closest",
+      "Icon": "imgs/closest",
+      "Tooltip": "Whichever limit is closest to its cap. Press for time until reset, hold to refresh.",
+      "PropertyInspectorPath": "ui/closest.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "imgs/key",
+          "ShowTitle": false
+        }
+      ]
     }
   ]
 }

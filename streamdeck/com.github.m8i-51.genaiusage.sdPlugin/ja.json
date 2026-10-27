@@ -6,5 +6,9 @@
     "Name": "使用量の制限",
     "Tooltip": "1 つの制限を水位で表示。押すとリセットまでの時間、長押しで今すぐ更新。"
   },
-  "Localization": {}
+  "Localization": {},
+  "com.github.m8i-51.genaiusage.closest": {
+    "Name": "いちばん近い上限",
+    "Tooltip": "上限にいちばん近い制限を表示。押すとリセットまでの時間、長押しで今すぐ更新。"
+  }
 }

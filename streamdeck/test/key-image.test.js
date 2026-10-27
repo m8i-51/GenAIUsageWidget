@@ -60,3 +60,8 @@ test('escapes the title and shrinks long ones to fit', () => {
   const size = Number(svg.match(/id="title"[^>]*font-size="([\d.]+)"/)[1]);
   assert.ok(size < 16 && size >= 9, `font size ${size}`);
 });
+
+test('says when no provider is signed in', () => {
+  assert.strictEqual(text(renderKey({ title: 'Closest limit', status: 'none', now: NOW })), 'No sign-ins Closest limit');
+  assert.strictEqual(text(renderKey({ title: 'Closest limit', status: 'none', now: NOW, lang: 'ja' })), 'サインインなし Closest limit');
+});

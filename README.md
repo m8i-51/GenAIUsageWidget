@@ -176,6 +176,7 @@ the same thresholds as the cards.
 - **Press** a key to show the time until that limit resets (it switches back after 10 seconds).
 - **Hold** a key to refresh now (within the same rate-limit floor the widget uses).
 - Pick the provider and limit in the key's settings; the label can be renamed.
+- **Closest Limit** is a second action that always shows whichever limit is closest to its cap, across the providers you tick.
 
 It works on its own, and when GenAIUsageWidget is running it reads the widget's
 numbers instead of calling the providers again, so running both never doubles

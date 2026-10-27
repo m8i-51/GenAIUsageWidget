@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert';
 
-import { keyState } from '../src/key-state.js';
+import { keyState, closestState } from '../src/key-state.js';
 
 const usage = { primary: { percent: 21, resetsAt: '2026-10-27T16:00:00Z' }, secondary: { percent: 9, resetsAt: null } };
 
@@ -36,4 +36,24 @@ test('titles keys without data from the settings', () => {
   assert.strictEqual(keyState({ provider: 'claude', limit: 'session', limitLabel: '5h' }, undefined).title, 'Claude · 5h');
   assert.strictEqual(keyState({ provider: 'cursor' }, undefined).title, 'Cursor');
   assert.strictEqual(keyState({}, undefined).title, 'Claude');
+});
+
+test('closest limit picks the highest percent across providers', () => {
+  const results = {
+    claude: { ok: true, usage: { session: { percent: 40, resetsAt: null }, week: { percent: 12, resetsAt: null } } },
+    codex: { ok: true, stale: true, usage: { primary: { percent: 81, resetsAt: 'r' }, secondary: { percent: 30, resetsAt: null } } },
+    cursor: { ok: false, notConfigured: true },
+  };
+  assert.deepStrictEqual(closestState({}, results, ['claude', 'codex', 'cursor']), {
+    title: 'Codex · 5h', status: 'ok', percent: 81, resetsAt: 'r', stale: true,
+  });
+  assert.strictEqual(closestState({ exclude: ['codex'] }, results, ['claude', 'codex', 'cursor']).title, 'Claude · 5h');
+});
+
+test('closest limit waits for data and says when nothing is signed in', () => {
+  const ids = ['claude', 'codex'];
+  assert.strictEqual(closestState({}, {}, ids).status, 'loading');
+  assert.strictEqual(closestState({}, { claude: { ok: false, notConfigured: true } }, ids).status, 'loading');
+  const none = closestState({}, { claude: { ok: false, notConfigured: true }, codex: { ok: false, error: 'x' } }, ids);
+  assert.deepStrictEqual(none, { title: 'Closest limit', status: 'none' });
 });
