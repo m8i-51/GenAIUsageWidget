@@ -25,7 +25,7 @@ On every key
 - If a provider can't be reached, the key keeps the last good numbers and marks them with a clock.
 
 Requirements
-- Windows 10 or later and Stream Deck 6.5 or later.
+- Windows 10 or later and Stream Deck 6.9 or later.
 - Sign in to each tool on this PC first (for example the Claude Code or Codex CLI, or the Cursor app). The plugin reads those existing sign-ins.
 - Antigravity and Copilot on Windows need Python on PATH.
 - z.ai keys need the free GenAIUsageWidget app running.

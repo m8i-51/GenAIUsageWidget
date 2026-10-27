@@ -76,7 +76,7 @@ GenAIUsageWidget/
 ## Platform / packaging
 
 - Windows のみ（macOS は Claude が Keychain、Antigravity が別保存先で、今の取得コードでは読めない）。
-- UUID: `com.github.m8i-51.genaiusage`。Node.js 20（Stream Deck 同梱）。SDKVersion 2、Stream Deck 6.5 以上。
+- UUID: `com.github.m8i-51.genaiusage`。Node.js 20（Stream Deck 同梱）。SDKVersion 3、Stream Deck 6.9 以上。`@elgato/streamdeck` は 2 系（Marketplace の DRM 要件）。配布物の `manifest.json` は実行時に読まない。
 - rollup で `src/providers` と `usage-cache` を `bin/plugin.js` にまとめる。`sql.js` は external にして `bin/node_modules/sql.js` にコピー、`win-cred-read.py` は `bin/` にコピー。
 - UI 文言は英語を基本に、`ja.json` で日本語化。キーの文言は `streamDeck.info.application.language` で切り替える。
 - `release.yml` に `streamdeck pack` のジョブを追加し、`.streamDeckPlugin` を同じ Release に添付。Marketplace への申請は手作業（素材は動作確認後に用意）。

@@ -157,10 +157,11 @@ function poll(extraProviders = []) {
 let inspectorProvider = null;
 
 async function sendLimitsToInspector() {
-  const inspector = streamDeck.ui.current;
-  if (!inspector || !inspectorProvider || inspector.action.manifestId !== actions[0].manifestId) return;
+  // v2 removed streamDeck.ui.current; the open inspector's action is streamDeck.ui.action.
+  const action = streamDeck.ui.action;
+  if (!action || !inspectorProvider || action.manifestId !== actions[0].manifestId) return;
   const payload = latest[inspectorProvider];
-  await inspector.sendToPropertyInspector({
+  await streamDeck.ui.sendToPropertyInspector({
     event: 'limits',
     provider: inspectorProvider,
     providers: Object.entries(PROVIDERS).map(([id, label]) => ({ id, label })),

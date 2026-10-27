@@ -168,7 +168,7 @@ tray icon's right-click menu (off by default).
 
 ## Stream Deck plugin
 
-The `streamdeck/` folder is an Elgato Stream Deck plugin (Windows, Stream Deck 6.5+)
+The `streamdeck/` folder is an Elgato Stream Deck plugin (Windows, Stream Deck 6.9+)
 that puts one usage limit on each key — for example Claude's 5-hour window or
 Codex's week. The key fills from the bottom like a water level, colored with
 the same thresholds as the cards.
