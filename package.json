@@ -6,6 +6,7 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
+    "test": "node --test test/local-api.test.js test/usage-cache.test.js",
     "dist": "electron-builder",
     "verify:edge-hide": "electron scripts/verify-edge-hide.js",
     "screenshots": "electron scripts/capture-readme-screenshots.js"

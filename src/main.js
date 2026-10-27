@@ -20,6 +20,7 @@ const serviceStatus = require('./service-status');
 const { loadSettings, saveSettings } = require('./settings');
 const { fetchWithCache, preloadLastGood, invalidate: invalidateUsage, requestRefresh } = require('./usage-cache');
 const { watchUsageActivity } = require('./usage-watch');
+const { startLocalApi } = require('./local-api');
 const { summarizeForTray, formatTooltip, renderTrayPng, PROVIDER_LABELS } = require('./tray-icon');
 const {
   detectSnapEdge,
@@ -1283,6 +1284,8 @@ app.whenReady().then(() => {
   createWidget();
   createTray();
   applyLiveRefresh();
+  // Lets the Stream Deck plugin show these same cached numbers.
+  startLocalApi({ providerIds: Object.keys(USAGE_FETCHERS), getUsage, version: app.getVersion() });
 });
 
 app.on('window-all-closed', (event) => {

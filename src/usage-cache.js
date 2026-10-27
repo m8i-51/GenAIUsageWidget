@@ -1,6 +1,5 @@
 const fs = require('fs');
 const path = require('path');
-const { app } = require('electron');
 
 const DEFAULT_CACHE_TTL_MS = 60 * 1000;
 const CLAUDE_CACHE_TTL_MS = 150 * 1000;
@@ -19,8 +18,16 @@ const lastGood = new Map();
 /** Bumped by invalidate() so a fetch that started before it can't cache its result. */
 const generations = new Map();
 
+// Defaults to Electron's userData; the Stream Deck plugin runs outside
+// Electron and points this at its own folder.
+let dataDir = null;
+
+function setDataDir(dir) {
+  dataDir = dir;
+}
+
 function userDataPath() {
-  return app.getPath('userData');
+  return dataDir ?? require('electron').app.getPath('userData');
 }
 
 function lastGoodPath(providerId) {
@@ -161,4 +168,4 @@ function invalidate(providerId) {
   }
 }
 
-module.exports = { fetchWithCache, preloadLastGood, invalidate, requestRefresh };
+module.exports = { fetchWithCache, preloadLastGood, invalidate, requestRefresh, setDataDir };
